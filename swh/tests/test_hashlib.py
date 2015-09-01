@@ -32,6 +32,13 @@ class Hashlib(unittest.TestCase):
             hashutil.hashdata(self.data, algorithms=['does-not-exist'])
 
     @istest
+    def algo_selection(self):
+        checksums = hashutil.hashdata(self.data, algorithms=['sha1', 'sha256'])
+        self.assertIn('sha1', checksums)
+        self.assertIn('sha256', checksums)
+        self.assertNotIn('sha1_git', checksums)
+
+    @istest
     def hashfile_by_name(self):
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.data)
