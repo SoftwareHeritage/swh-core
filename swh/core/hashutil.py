@@ -17,7 +17,7 @@ HASH_BLOCK_SIZE = 32768
 
 
 def _new_hash(algo, length=None):
-    """Initialize a digest object (as returned by python's hashli) for the
+    """Initialize a digest object (as returned by python's hashlib) for the
     requested algorithm. See the constant ALGORITHMS for the list of supported
     algorithms. If a git-specific hashing algorithm is requested (e.g.,
     "sha1_git"), the hasing object will be pre-fed with the needed header; for
