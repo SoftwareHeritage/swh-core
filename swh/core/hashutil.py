@@ -39,8 +39,10 @@ def _new_hash(algo, length=None):
     return h
 
 
-def _hash_file_obj(f, length, algorithms=ALGORITHMS):
+def _hash_file_obj(f, length, algorithms=ALGORITHMS, chunk_cb=None):
     """hash the content of a file-like object
+
+    If chunk_cb is given, call it on each data chunk after updating the hash
 
     """
     hashers = {algo: _new_hash(algo, length)
@@ -51,6 +53,8 @@ def _hash_file_obj(f, length, algorithms=ALGORITHMS):
             break
         for h in hashers.values():
             h.update(chunk)
+            if chunk_cb:
+                chunk_cb(chunk)
 
     return {algo: hashers[algo].hexdigest() for algo in hashers}
 
