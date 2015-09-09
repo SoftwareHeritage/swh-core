@@ -18,3 +18,8 @@ if __name__ == '__main__':
         for name in files:
             path = os.path.join(root, name)
             hashes[path] = hashfile(path)
+            hashes[path]['length'] = os.path.getsize(path)
+
+    for (path, checksums) in hashes.items():
+        print("%(sha1)s\t%(sha1_git)s\t%(sha256)s\t%(length)d\tvisible" %  # NOQA
+              checksums)
