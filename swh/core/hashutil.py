@@ -3,6 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import binascii
+import functools
 import hashlib
 import os
 
@@ -56,7 +58,7 @@ def _hash_file_obj(f, length, algorithms=ALGORITHMS, chunk_cb=None):
             if chunk_cb:
                 chunk_cb(chunk)
 
-    return {algo: hashers[algo].hexdigest() for algo in hashers}
+    return {algo: hashers[algo].digest() for algo in hashers}
 
 
 def _hash_fname(fname, algorithms=ALGORITHMS):
@@ -90,3 +92,15 @@ def hashdata(data, algorithms=ALGORITHMS):
     """
     buf = BytesIO(data)
     return _hash_file_obj(buf, len(data), algorithms)
+
+
+@functools.lru_cache()
+def hash_to_hex(hash):
+    """Converts a hash to its hexadecimal string representation"""
+    return binascii.hexlify(hash).decode('ascii')
+
+
+@functools.lru_cache()
+def hex_to_hash(hex):
+    """Converts a hexadecimal string representation of a hash to that hash"""
+    return bytes.fromhex(hex)

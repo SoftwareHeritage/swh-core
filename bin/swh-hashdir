@@ -8,7 +8,7 @@
 import os
 import sys
 
-from swh.core.hashutil import hashfile
+from swh.core.hashutil import hashfile, hash_to_hex
 
 if __name__ == '__main__':
     dirname = sys.argv[1]
@@ -17,7 +17,10 @@ if __name__ == '__main__':
     for root, _dirs, files in os.walk(dirname):
         for name in files:
             path = os.path.join(root, name)
-            hashes[path] = hashfile(path)
+            hashes[path] = {
+                algo: hash_to_hex(checksum)
+                for algo, checksum in hashfile(path).items()
+            }
             hashes[path]['length'] = os.path.getsize(path)
 
     for (path, checksums) in hashes.items():

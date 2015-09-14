@@ -7,9 +7,9 @@
 
 import sys
 
-from swh.core.hashutil import hashfile
+from swh.core.hashutil import hashfile, hash_to_hex
 
 if __name__ == '__main__':
     fname = sys.argv[1]
     for (algo, checksum) in sorted(hashfile(fname).items()):
-        print('%s\t%s' % (algo, checksum))
+        print('%s\t%s' % (algo, hash_to_hex(checksum)))
