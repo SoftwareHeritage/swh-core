@@ -9,8 +9,11 @@ import configparser
 import os
 
 
-_map_convert_fn = {'int': int,
-                   'bool': lambda x: x == 'true'}  # conversion per type
+# conversion per type
+_map_convert_fn = {
+    'int': int,
+    'bool': lambda x: x.lower() == 'true',
+}
 
 
 def read(conf_file, default_conf=None):
