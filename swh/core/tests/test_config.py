@@ -13,30 +13,23 @@ from nose.tools import istest
 from swh.core import config
 
 
-def prepare_dummy_conf_file(tmp_dir):
-    tmp_conf_file = tempfile.NamedTemporaryFile(
-        mode='w', suffix="swh-core-test-read-conf",
-        delete=False)
-    with open(tmp_conf_file.name, 'w') as f:
-        f.write("""[main]
-a = 1
-b = this is a string
-c = true
-""")
-    return tmp_conf_file.name
-
-
 class ConfReaderTest(unittest.TestCase):
 
     @classmethod
     def setUp(self):
         # create a temporary folder
-        self.tmp_work_folder = tempfile.mkdtemp(prefix='test-swh-core.')
-        self.tmp_conf_file = prepare_dummy_conf_file(self.tmp_work_folder)
+        self.tmpdir = tempfile.mkdtemp(prefix='test-swh-core.')
+        self.conffile = os.path.join(self.tmpdir, 'config.ini')
+        with open(self.conffile, 'w') as conf:
+            conf.write("""[main]
+a = 1
+b = this is a string
+c = true
+""")
 
     @classmethod
-    def teardown(self):
-        shutil.rmtree(self.tmp_work_folder)
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
 
     @istest
     def read(self):
@@ -47,7 +40,7 @@ class ConfReaderTest(unittest.TestCase):
                         'd': ('int', 10)}
 
         # when
-        res = config.read(self.tmp_conf_file, default_conf)
+        res = config.read(self.conffile, default_conf)
 
         # then
         self.assertEquals(res, {'a': 1,
@@ -58,8 +51,8 @@ class ConfReaderTest(unittest.TestCase):
     @istest
     def prepare_folder(self):
         # given
-        conf = {'path1': self.tmp_work_folder + 'path1',
-                'path2': self.tmp_work_folder + 'path2/depth1'}
+        conf = {'path1': self.tmpdir + 'path1',
+                'path2': self.tmpdir + 'path2/depth1'}
 
         # the folders does not exists
         self.assertFalse(os.path.exists(conf['path1']),
