@@ -10,7 +10,7 @@ import shutil
 
 from nose.tools import istest
 
-from swh.core.conf import reader
+from swh.core import config
 
 
 def prepare_dummy_conf_file(tmp_dir):
@@ -42,7 +42,7 @@ class ConfReaderTest(unittest.TestCase):
         shutil.rmtree(self.tmp_work_folder)
 
     @istest
-    def test_read(self):
+    def read(self):
         # given
         default_conf = {'a': ('int', 2),
                         'b': ('string', 'default-string'),
@@ -50,7 +50,7 @@ class ConfReaderTest(unittest.TestCase):
                         'd': ('int', 10)}
 
         # when
-        res = reader.read(self.tmp_conf_file, default_conf)
+        res = config.read(self.tmp_conf_file, default_conf)
 
         # then
         self.assertEquals(res, {'a': 1,
@@ -59,7 +59,7 @@ class ConfReaderTest(unittest.TestCase):
                                 'd': 10})
 
     @istest
-    def test_prepare_folder(self):
+    def prepare_folder(self):
         # given
         conf = {'path1': self.tmp_work_folder + 'path1',
                 'path2': self.tmp_work_folder + 'path2/depth1'}
@@ -69,14 +69,14 @@ class ConfReaderTest(unittest.TestCase):
         self.assertFalse(os.path.exists(conf['path2']), "path2 should not exist.")
 
         # when
-        reader.prepare_folders(conf, 'path1')
+        config.prepare_folders(conf, 'path1')
 
         # path1 exists but not path2
         self.assertTrue(os.path.exists(conf['path1']), "path1 should now exist!")
         self.assertFalse(os.path.exists(conf['path2']), "path2 should not exist.")
 
         # path1 already exists, skips it but creates path2
-        reader.prepare_folders(conf, 'path1', 'path2')
+        config.prepare_folders(conf, 'path1', 'path2')
 
         self.assertTrue(os.path.exists(conf['path1']), "path1 should still exist!")
         self.assertTrue(os.path.exists(conf['path2']), "path2 should now exist.")
