@@ -16,7 +16,7 @@ from swh.core import config
 def prepare_dummy_conf_file(tmp_dir):
     tmp_conf_file = tempfile.NamedTemporaryFile(
         mode='w', suffix="swh-core-test-read-conf",
-        dir=tmp_dir, delete=False)
+        delete=False)
     with open(tmp_conf_file.name, 'w') as f:
         f.write("""[main]
 a = 1
@@ -31,9 +31,7 @@ class ConfReaderTest(unittest.TestCase):
     @classmethod
     def setUp(self):
         # create a temporary folder
-        self.tmp_work_folder = tempfile.mkdtemp(
-            prefix='test-swh-core.', dir='/tmp')
-
+        self.tmp_work_folder = tempfile.mkdtemp(prefix='test-swh-core.')
         self.tmp_conf_file = prepare_dummy_conf_file(self.tmp_work_folder)
 
     @classmethod
