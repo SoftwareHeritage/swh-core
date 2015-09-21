@@ -23,6 +23,9 @@ class JSON(unittest.TestCase):
                                              tzinfo=self.tz),
             "datetime_utc": datetime.datetime(2015, 3, 4, 18, 25, 13, 1234,
                                               tzinfo=datetime.timezone.utc),
+            "swhtype": "fake",
+            "swh_dict": {"swhtype": 42, "d": "test"},
+            "random_dict": {"swhtype": 43},
         }
 
         self.encoded_data = {
@@ -33,6 +36,9 @@ class JSON(unittest.TestCase):
                             "d": "2015-03-04T18:25:13.001234+01:58"},
             "datetime_utc": {"swhtype": "datetime",
                              "d": "2015-03-04T18:25:13.001234+00:00"},
+            "swhtype": "fake",
+            "swh_dict": {"swhtype": 42, "d": "test"},
+            "random_dict": {"swhtype": 43},
         }
 
     @istest

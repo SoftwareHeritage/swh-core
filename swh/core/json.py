@@ -36,11 +36,12 @@ class SWHJSONEncoder(JSONEncoder):
 class SWHJSONDecoder(JSONDecoder):
     def decode_data(self, o):
         if isinstance(o, dict):
-            datatype = o.get('swhtype')
-            if datatype == 'bytes':
-                return base64.b85decode(o['d'])
-            elif datatype == 'datetime':
-                return dateutil.parser.parse(o['d'])
+            if set(o.keys()) == {'d', 'swhtype'}:
+                datatype = o['swhtype']
+                if datatype == 'bytes':
+                    return base64.b85decode(o['d'])
+                elif datatype == 'datetime':
+                    return dateutil.parser.parse(o['d'])
             return {key: self.decode_data(value) for key, value in o.items()}
         if isinstance(o, list):
             return [self.decode_data(value) for value in o]
