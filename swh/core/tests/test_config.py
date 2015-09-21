@@ -51,8 +51,8 @@ c = true
     @istest
     def prepare_folder(self):
         # given
-        conf = {'path1': self.tmpdir + 'path1',
-                'path2': self.tmpdir + 'path2/depth1'}
+        conf = {'path1': os.path.join(self.tmpdir, 'path1'),
+                'path2': os.path.join(self.tmpdir, 'path2', 'depth1')}
 
         # the folders does not exists
         self.assertFalse(os.path.exists(conf['path1']),
