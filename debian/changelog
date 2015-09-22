@@ -1,0 +1,6 @@
+swh-core (0.0.1-1~swh1) unstable-swh; urgency=medium
+
+  * Initial release
+  * Tag v0.0.1 for deployment
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Tue, 22 Sep 2015 14:52:26 +0200
