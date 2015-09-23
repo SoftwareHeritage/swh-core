@@ -16,11 +16,11 @@ from swh.core import config
 class ConfReaderTest(unittest.TestCase):
 
     @classmethod
-    def setUp(self):
+    def setUp(cls):
         # create a temporary folder
-        self.tmpdir = tempfile.mkdtemp(prefix='test-swh-core.')
-        self.conffile = os.path.join(self.tmpdir, 'config.ini')
-        with open(self.conffile, 'w') as conf:
+        cls.tmpdir = tempfile.mkdtemp(prefix='test-swh-core.')
+        cls.conffile = os.path.join(cls.tmpdir, 'config.ini')
+        with open(cls.conffile, 'w') as conf:
             conf.write("""[main]
 a = 1
 b = this is a string
@@ -28,31 +28,35 @@ c = true
 """)
 
     @classmethod
-    def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+    def tearDown(cls):
+        shutil.rmtree(cls.tmpdir)
 
     @istest
     def read(self):
         # given
-        default_conf = {'a': ('int', 2),
-                        'b': ('string', 'default-string'),
-                        'c': ('bool', True),
-                        'd': ('int', 10),
-                        'e': ('int', None),
-                        'f': ('bool', None),
-                        'g': ('string', None),}
+        default_conf = {
+            'a': ('int', 2),
+            'b': ('string', 'default-string'),
+            'c': ('bool', True),
+            'd': ('int', 10),
+            'e': ('int', None),
+            'f': ('bool', None),
+            'g': ('string', None),
+        }
 
         # when
         res = config.read(self.conffile, default_conf)
 
         # then
-        self.assertEquals(res, {'a': 1,
-                                'b': 'this is a string',
-                                'c': True,
-                                'd': 10,
-                                'e': None,
-                                'f': None,
-                                'g': None})
+        self.assertEquals(res, {
+            'a': 1,
+            'b': 'this is a string',
+            'c': True,
+            'd': 10,
+            'e': None,
+            'f': None,
+            'g': None,
+        })
 
     @istest
     def prepare_folder(self):
