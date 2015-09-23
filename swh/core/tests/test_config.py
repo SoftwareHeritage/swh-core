@@ -25,6 +25,8 @@ class ConfReaderTest(unittest.TestCase):
 a = 1
 b = this is a string
 c = true
+ls = list, of, strings
+li = 1, 2, 3, 4
 """)
 
     @classmethod
@@ -42,6 +44,8 @@ c = true
             'e': ('int', None),
             'f': ('bool', None),
             'g': ('string', None),
+            'ls': ('list[str]', ['a', 'b', 'c']),
+            'li': ('list[int]', [42, 43]),
         }
 
         # when
@@ -56,6 +60,8 @@ c = true
             'e': None,
             'f': None,
             'g': None,
+            'ls': ['list', 'of', 'strings'],
+            'li': [1, 2, 3, 4],
         })
 
     @istest
