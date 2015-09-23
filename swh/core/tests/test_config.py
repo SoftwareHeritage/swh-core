@@ -37,7 +37,10 @@ c = true
         default_conf = {'a': ('int', 2),
                         'b': ('string', 'default-string'),
                         'c': ('bool', True),
-                        'd': ('int', 10)}
+                        'd': ('int', 10),
+                        'e': ('int', None),
+                        'f': ('bool', None),
+                        'g': ('string', None),}
 
         # when
         res = config.read(self.conffile, default_conf)
@@ -46,7 +49,10 @@ c = true
         self.assertEquals(res, {'a': 1,
                                 'b': 'this is a string',
                                 'c': True,
-                                'd': 10})
+                                'd': 10,
+                                'e': None,
+                                'f': None,
+                                'g': None})
 
     @istest
     def prepare_folder(self):
