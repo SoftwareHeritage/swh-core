@@ -1,3 +1,9 @@
+swh-core (0.0.2-1~swh1) unstable-swh; urgency=medium
+
+  * Deploy v0.0.2
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Wed, 23 Sep 2015 12:08:50 +0200
+
 swh-core (0.0.1-1~swh1) unstable-swh; urgency=medium
 
   * Initial release
