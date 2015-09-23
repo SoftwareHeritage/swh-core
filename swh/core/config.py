@@ -11,6 +11,8 @@ import os
 _map_convert_fn = {
     'int': int,
     'bool': lambda x: x.lower() == 'true',
+    'list[str]': lambda x: [value.strip() for value in x.split(',')],
+    'list[int]': lambda x: [int(value.strip()) for value in x.split(',')],
 }
 
 
