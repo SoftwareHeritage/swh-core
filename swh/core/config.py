@@ -108,3 +108,55 @@ def prepare_folders(conf, *keys):
 
     for key in keys:
         makedir(conf[key])
+
+
+class SWHConfig:
+    """Mixin to add configuration parsing abilities to classes
+
+    The class should override the class attributes:
+        - DEFAULT_CONFIG (default configuration to be parsed)
+        - CONFIG_FILENAME (the filename of the configuration to be used)
+
+    This class defines one classmethod, parse_config_file, which
+    parses a configuration file using the default config as set in the
+    class attribute.
+
+    """
+
+    DEFAULT_CONFIG = {}
+    CONFIG_BASE_FILENAME = ''
+
+    @classmethod
+    def parse_config_file(cls, base_filename=None, config_filename=None,
+                          additional_configs=None):
+        """Parse the configuration file associated to the current class.
+
+        By default, parse_config_file will load the configuration
+        cls.CONFIG_BASE_FILENAME from one of the Software Heritage
+        configuration directories, in order, unless it is overridden
+        by base_filename or config_filename (which shortcuts the file
+        lookup completely).
+
+        Args:
+            - base_filename (str) overrides the default
+                cls.CONFIG_BASE_FILENAME
+            - config_filename (str) sets the file to parse instead of
+                the defaults set from cls.CONFIG_BASE_FILENAME
+            - additional_configs (list of default configuration dicts)
+                allows to override or extend the configuration set in
+                cls.DEFAULT_CONFIG.
+        """
+
+        if config_filename:
+            config_filenames = [config_filename]
+        else:
+            if not base_filename:
+                base_filename = cls.CONFIG_BASE_FILENAME
+            config_filenames = swh_config_paths(base_filename)
+        if not additional_configs:
+            additional_configs = []
+
+        full_default_config = merge_default_configs(cls.DEFAULT_CONFIG,
+                                                    *additional_configs)
+
+        return priority_read(config_filenames, full_default_config)
