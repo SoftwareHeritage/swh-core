@@ -16,7 +16,7 @@ from swh.core import config
 class ConfReaderTest(unittest.TestCase):
 
     @classmethod
-    def setUp(cls):
+    def setUpClass(cls):
         # create a temporary folder
         cls.tmpdir = tempfile.mkdtemp(prefix='test-swh-core.')
         cls.conffile = os.path.join(cls.tmpdir, 'config.ini')
@@ -51,7 +51,7 @@ li = 1, 2, 3, 4
         }
 
     @classmethod
-    def tearDown(cls):
+    def tearDownClass(cls):
         shutil.rmtree(cls.tmpdir)
 
     @istest
@@ -73,7 +73,7 @@ li = 1, 2, 3, 4
         })
 
     @istest
-    def non_existing_conffile(self):
+    def support_non_existing_conffile(self):
         # when
         res = config.read(self.non_existing_conffile, self.default_conf)
 
