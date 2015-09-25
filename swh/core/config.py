@@ -16,7 +16,7 @@ _map_convert_fn = {
 }
 
 
-def read(conf_file, default_conf=None):
+def read(conf_file=None, default_conf=None):
     """Read the user's configuration file.
     Fill in the gap using `default_conf`.
 `default_conf` is similar to this:
@@ -31,12 +31,16 @@ DEFAULT_CONF = {
     """
     conf = {}
 
-    config_path = os.path.expanduser(conf_file)
-    if os.path.exists(config_path):
-        config = configparser.ConfigParser(defaults=default_conf)
-        config.read(os.path.expanduser(conf_file))
-        if 'main' in config._sections:
-            conf = config._sections['main']
+    if conf_file:
+        config_path = os.path.expanduser(conf_file)
+        if os.path.exists(config_path):
+            config = configparser.ConfigParser(defaults=default_conf)
+            config.read(os.path.expanduser(conf_file))
+            if 'main' in config._sections:
+                conf = config._sections['main']
+
+    if not default_conf:
+        default_conf = {}
 
     # remaining missing default configuration key are set
     # also type conversion is enforced for underneath layer

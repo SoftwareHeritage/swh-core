@@ -83,6 +83,14 @@ li = 1, 2, 3, 4
         })
 
     @istest
+    def read_empty_file(self):
+        # when
+        res = config.read(None, self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_default_conf)
+
+    @istest
     def support_non_existing_conffile(self):
         # when
         res = config.read(self.non_existing_conffile, self.default_conf)
