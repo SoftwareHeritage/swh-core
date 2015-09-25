@@ -6,6 +6,12 @@ setup.py
 version.txt
 bin/swh-hashdir
 bin/swh-hashfile
+debian/changelog
+debian/compat
+debian/control
+debian/copyright
+debian/rules
+debian/source/format
 swh.core.egg-info/PKG-INFO
 swh.core.egg-info/SOURCES.txt
 swh.core.egg-info/dependency_links.txt
