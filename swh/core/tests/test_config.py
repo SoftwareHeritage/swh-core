@@ -60,6 +60,18 @@ li = 1, 2, 3, 4
             in cls.default_conf.items()
         }
 
+        cls.parsed_conffile = {
+            'a': 1,
+            'b': 'this is a string',
+            'c': True,
+            'd': 10,
+            'e': None,
+            'f': None,
+            'g': None,
+            'ls': ['list', 'of', 'strings'],
+            'li': [1, 2, 3, 4],
+        }
+
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(cls.tmpdir)
@@ -70,17 +82,7 @@ li = 1, 2, 3, 4
         res = config.read(self.conffile, self.default_conf)
 
         # then
-        self.assertEquals(res, {
-            'a': 1,
-            'b': 'this is a string',
-            'c': True,
-            'd': 10,
-            'e': None,
-            'f': None,
-            'g': None,
-            'ls': ['list', 'of', 'strings'],
-            'li': [1, 2, 3, 4],
-        })
+        self.assertEquals(res, self.parsed_conffile)
 
     @istest
     def read_empty_file(self):
@@ -114,6 +116,35 @@ li = 1, 2, 3, 4
 
         # then
         self.assertEquals(res, self.full_default_conf)
+
+    @istest
+    def priority_read(self):
+        # when
+        res = config.priority_read([self.non_existing_conffile, self.conffile],
+                                   self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_conffile)
+
+        # when
+        res = config.priority_read([
+            self.conffile,
+            self.non_existing_conffile,
+            self.empty_conffile,
+        ], self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_conffile)
+
+        # when
+        res = config.priority_read([
+            self.empty_conffile,
+            self.conffile,
+            self.non_existing_conffile,
+        ], self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_default_conf)
 
     @istest
     def prepare_folder(self):

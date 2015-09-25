@@ -57,6 +57,23 @@ If conf_file is None, return the default config.
     return conf
 
 
+def priority_read(conf_filenames, default_conf=None):
+    """Try reading the configuration files from conf_filenames, in order,
+       and return the configuration from the first one that exists.
+
+       default_conf has the same specification as it does in read.
+    """
+
+    # Try all the files in order
+    for filename in conf_filenames:
+        full_filename = os.path.expanduser(filename)
+        if os.path.exists(full_filename):
+            return read(full_filename, default_conf)
+
+    # Else, return the default configuration
+    return read(None, default_conf)
+
+
 def merge_default_configs(base_config, *other_configs):
     """Merge several default config dictionaries, from left to right"""
     full_config = base_config.copy()
