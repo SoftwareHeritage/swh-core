@@ -7,6 +7,13 @@ import configparser
 import os
 
 
+SWH_CONFIG_DIRECTORIES = [
+    '~/.config/softwareheritage',
+    '~/.swh',
+    '/etc/softwareheritage',
+]
+
+
 # conversion per type
 _map_convert_fn = {
     'int': int,
@@ -82,6 +89,14 @@ def merge_default_configs(base_config, *other_configs):
         full_config.update(config)
 
     return full_config
+
+
+def swh_config_paths(filename):
+    """Return the Software Heritage specific configuration paths for the given
+       filename."""
+
+    return [os.path.join(dirname, filename)
+            for dirname in SWH_CONFIG_DIRECTORIES]
 
 
 def prepare_folders(conf, *keys):

@@ -147,6 +147,16 @@ li = 1, 2, 3, 4
         self.assertEquals(res, self.parsed_default_conf)
 
     @istest
+    def swh_config_paths(self):
+        res = config.swh_config_paths('foo/bar.ini')
+
+        self.assertEqual(res, [
+            '~/.config/softwareheritage/foo/bar.ini',
+            '~/.swh/foo/bar.ini',
+            '/etc/softwareheritage/foo/bar.ini',
+        ])
+
+    @istest
     def prepare_folder(self):
         # given
         conf = {'path1': os.path.join(self.tmpdir, 'path1'),
