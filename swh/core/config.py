@@ -28,6 +28,8 @@ DEFAULT_CONF = {
     'd': ('int', 10)
 }
 
+If conf_file is None, return the default config.
+
     """
     conf = {}
 
