@@ -51,6 +51,16 @@ DEFAULT_CONF = {
     return conf
 
 
+def merge_default_configs(base_config, *other_configs):
+    """Merge several default config dictionaries, from left to right"""
+    full_config = base_config.copy()
+
+    for config in other_configs:
+        full_config.update(config)
+
+    return full_config
+
+
 def prepare_folders(conf, *keys):
     """Prepare the folder mentioned in config under keys.
     """

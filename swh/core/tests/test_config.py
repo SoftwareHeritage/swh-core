@@ -47,6 +47,13 @@ li = 1, 2, 3, 4
             'li': ('list[int]', [42, 43]),
         }
 
+        cls.other_default_conf = {
+            'a': ('int', 3),
+        }
+
+        cls.full_default_conf = cls.default_conf.copy()
+        cls.full_default_conf['a'] = cls.other_default_conf['a']
+
         cls.parsed_default_conf = {
             key: value
             for key, (type, value)
@@ -90,6 +97,15 @@ li = 1, 2, 3, 4
 
         # then
         self.assertEquals(res, self.parsed_default_conf)
+
+    @istest
+    def merge_default_configs(self):
+        # when
+        res = config.merge_default_configs(self.default_conf,
+                                           self.other_default_conf)
+
+        # then
+        self.assertEquals(res, self.full_default_conf)
 
     @istest
     def prepare_folder(self):
