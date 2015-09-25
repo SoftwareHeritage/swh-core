@@ -1,3 +1,9 @@
+swh-core (0.0.3-1~swh1) unstable-swh; urgency=medium
+
+  * Tag swh.core v0.0.3
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 25 Sep 2015 11:07:10 +0200
+
 swh-core (0.0.2-1~swh1) unstable-swh; urgency=medium
 
   * Deploy v0.0.2
