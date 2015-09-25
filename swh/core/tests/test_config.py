@@ -16,7 +16,7 @@ from swh.core import config
 class ConfReaderTest(unittest.TestCase):
 
     @classmethod
-    def setUp(cls):
+    def setUpClass(cls):
         # create a temporary folder
         cls.tmpdir = tempfile.mkdtemp(prefix='test-swh-core.')
         cls.conffile = os.path.join(cls.tmpdir, 'config.ini')
@@ -29,14 +29,13 @@ ls = list, of, strings
 li = 1, 2, 3, 4
 """)
 
-    @classmethod
-    def tearDown(cls):
-        shutil.rmtree(cls.tmpdir)
+        cls.non_existing_conffile = os.path.join(cls.tmpdir,
+                                                 'config-nonexisting.ini')
 
-    @istest
-    def read(self):
-        # given
-        default_conf = {
+        cls.empty_conffile = os.path.join(cls.tmpdir, 'empty.ini')
+        open(cls.empty_conffile, 'w').close()
+
+        cls.default_conf = {
             'a': ('int', 2),
             'b': ('string', 'default-string'),
             'c': ('bool', True),
@@ -48,11 +47,20 @@ li = 1, 2, 3, 4
             'li': ('list[int]', [42, 43]),
         }
 
-        # when
-        res = config.read(self.conffile, default_conf)
+        cls.other_default_conf = {
+            'a': ('int', 3),
+        }
 
-        # then
-        self.assertEquals(res, {
+        cls.full_default_conf = cls.default_conf.copy()
+        cls.full_default_conf['a'] = cls.other_default_conf['a']
+
+        cls.parsed_default_conf = {
+            key: value
+            for key, (type, value)
+            in cls.default_conf.items()
+        }
+
+        cls.parsed_conffile = {
             'a': 1,
             'b': 'this is a string',
             'c': True,
@@ -62,7 +70,91 @@ li = 1, 2, 3, 4
             'g': None,
             'ls': ['list', 'of', 'strings'],
             'li': [1, 2, 3, 4],
-        })
+        }
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmpdir)
+
+    @istest
+    def read(self):
+        # when
+        res = config.read(self.conffile, self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_conffile)
+
+    @istest
+    def read_empty_file(self):
+        # when
+        res = config.read(None, self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_default_conf)
+
+    @istest
+    def support_non_existing_conffile(self):
+        # when
+        res = config.read(self.non_existing_conffile, self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_default_conf)
+
+    @istest
+    def support_empty_conffile(self):
+        # when
+        res = config.read(self.empty_conffile, self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_default_conf)
+
+    @istest
+    def merge_default_configs(self):
+        # when
+        res = config.merge_default_configs(self.default_conf,
+                                           self.other_default_conf)
+
+        # then
+        self.assertEquals(res, self.full_default_conf)
+
+    @istest
+    def priority_read(self):
+        # when
+        res = config.priority_read([self.non_existing_conffile, self.conffile],
+                                   self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_conffile)
+
+        # when
+        res = config.priority_read([
+            self.conffile,
+            self.non_existing_conffile,
+            self.empty_conffile,
+        ], self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_conffile)
+
+        # when
+        res = config.priority_read([
+            self.empty_conffile,
+            self.conffile,
+            self.non_existing_conffile,
+        ], self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_default_conf)
+
+    @istest
+    def swh_config_paths(self):
+        res = config.swh_config_paths('foo/bar.ini')
+
+        self.assertEqual(res, [
+            '~/.config/softwareheritage/foo/bar.ini',
+            '~/.swh/foo/bar.ini',
+            '/etc/softwareheritage/foo/bar.ini',
+        ])
 
     @istest
     def prepare_folder(self):
