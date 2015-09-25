@@ -91,11 +91,11 @@ def merge_default_configs(base_config, *other_configs):
     return full_config
 
 
-def swh_config_paths(filename):
+def swh_config_paths(base_filename):
     """Return the Software Heritage specific configuration paths for the given
        filename."""
 
-    return [os.path.join(dirname, filename)
+    return [os.path.join(dirname, base_filename)
             for dirname in SWH_CONFIG_DIRECTORIES]
 
 
