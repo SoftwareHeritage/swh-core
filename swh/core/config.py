@@ -29,13 +29,14 @@ DEFAULT_CONF = {
 }
 
     """
+    conf = {}
+
     config_path = os.path.expanduser(conf_file)
     if os.path.exists(config_path):
         config = configparser.ConfigParser(defaults=default_conf)
         config.read(os.path.expanduser(conf_file))
-        conf = config._sections['main']
-    else:
-        conf = {}
+        if 'main' in config._sections:
+            conf = config._sections['main']
 
     # remaining missing default configuration key are set
     # also type conversion is enforced for underneath layer

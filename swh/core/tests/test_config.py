@@ -32,6 +32,9 @@ li = 1, 2, 3, 4
         cls.non_existing_conffile = os.path.join(cls.tmpdir,
                                                  'config-nonexisting.ini')
 
+        cls.empty_conffile = os.path.join(cls.tmpdir, 'empty.ini')
+        open(cls.empty_conffile, 'w').close()
+
         cls.default_conf = {
             'a': ('int', 2),
             'b': ('string', 'default-string'),
@@ -76,6 +79,14 @@ li = 1, 2, 3, 4
     def support_non_existing_conffile(self):
         # when
         res = config.read(self.non_existing_conffile, self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_default_conf)
+
+    @istest
+    def support_empty_conffile(self):
+        # when
+        res = config.read(self.empty_conffile, self.default_conf)
 
         # then
         self.assertEquals(res, self.parsed_default_conf)
