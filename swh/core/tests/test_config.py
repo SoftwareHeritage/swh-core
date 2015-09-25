@@ -29,14 +29,10 @@ ls = list, of, strings
 li = 1, 2, 3, 4
 """)
 
-    @classmethod
-    def tearDown(cls):
-        shutil.rmtree(cls.tmpdir)
+        cls.non_existing_conffile = os.path.join(cls.tmpdir,
+                                                 'config-nonexisting.ini')
 
-    @istest
-    def read(self):
-        # given
-        default_conf = {
+        cls.default_conf = {
             'a': ('int', 2),
             'b': ('string', 'default-string'),
             'c': ('bool', True),
@@ -48,8 +44,20 @@ li = 1, 2, 3, 4
             'li': ('list[int]', [42, 43]),
         }
 
+        cls.parsed_default_conf = {
+            key: value
+            for key, (type, value)
+            in cls.default_conf.items()
+        }
+
+    @classmethod
+    def tearDown(cls):
+        shutil.rmtree(cls.tmpdir)
+
+    @istest
+    def read(self):
         # when
-        res = config.read(self.conffile, default_conf)
+        res = config.read(self.conffile, self.default_conf)
 
         # then
         self.assertEquals(res, {
@@ -63,6 +71,14 @@ li = 1, 2, 3, 4
             'ls': ['list', 'of', 'strings'],
             'li': [1, 2, 3, 4],
         })
+
+    @istest
+    def non_existing_conffile(self):
+        # when
+        res = config.read(self.non_existing_conffile, self.default_conf)
+
+        # then
+        self.assertEquals(res, self.parsed_default_conf)
 
     @istest
     def prepare_folder(self):
