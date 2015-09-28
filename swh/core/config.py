@@ -8,7 +8,7 @@ import os
 
 
 SWH_CONFIG_DIRECTORIES = [
-    '~/.config/softwareheritage',
+    '~/.config/swh',
     '~/.swh',
     '/etc/softwareheritage',
 ]
