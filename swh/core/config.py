@@ -13,6 +13,11 @@ SWH_CONFIG_DIRECTORIES = [
     '/etc/softwareheritage',
 ]
 
+SWH_GLOBAL_CONFIG = 'global.ini'
+
+SWH_DEFAULT_GLOBAL_CONFIG = {
+    'object_size_limit': ('int', 100 * 1024 * 1024),
+}
 
 # conversion per type
 _map_convert_fn = {
@@ -110,6 +115,15 @@ def prepare_folders(conf, *keys):
         makedir(conf[key])
 
 
+def load_global_config():
+    """Load the global Software Heritage config"""
+
+    return priority_read(
+        swh_config_paths(SWH_GLOBAL_CONFIG),
+        SWH_DEFAULT_GLOBAL_CONFIG,
+    )
+
+
 class SWHConfig:
     """Mixin to add configuration parsing abilities to classes
 
@@ -128,7 +142,7 @@ class SWHConfig:
 
     @classmethod
     def parse_config_file(cls, base_filename=None, config_filename=None,
-                          additional_configs=None):
+                          additional_configs=None, global_config=True):
         """Parse the configuration file associated to the current class.
 
         By default, parse_config_file will load the configuration
@@ -145,6 +159,8 @@ class SWHConfig:
             - additional_configs (list of default configuration dicts)
                 allows to override or extend the configuration set in
                 cls.DEFAULT_CONFIG.
+            - global_config (bool): Load the global configuration (default:
+                True)
         """
 
         if config_filename:
@@ -159,4 +175,10 @@ class SWHConfig:
         full_default_config = merge_default_configs(cls.DEFAULT_CONFIG,
                                                     *additional_configs)
 
-        return priority_read(config_filenames, full_default_config)
+        config = {}
+        if global_config:
+            config = load_global_config()
+
+        config.update(priority_read(config_filenames, full_default_config))
+
+        return config
