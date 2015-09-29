@@ -1,3 +1,9 @@
+swh-core (0.0.5-1~swh1~bpo9+1) stretch-swh; urgency=medium
+
+  * Rebuild for stretch-backports.
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Tue, 29 Sep 2015 16:08:32 +0200
+
 swh-core (0.0.5-1~swh1) unstable-swh; urgency=medium
 
   * Prepare v0.0.5 deployment
