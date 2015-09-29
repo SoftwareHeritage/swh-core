@@ -130,7 +130,7 @@ class SWHConfig:
 
     The class should override the class attributes:
         - DEFAULT_CONFIG (default configuration to be parsed)
-        - CONFIG_FILENAME (the filename of the configuration to be used)
+        - CONFIG_BASE_FILENAME (the filename of the configuration to be used)
 
     This class defines one classmethod, parse_config_file, which
     parses a configuration file using the default config as set in the
