@@ -1,3 +1,4 @@
 celery
+msgpack-python
 python-dateutil
 vcversioner
