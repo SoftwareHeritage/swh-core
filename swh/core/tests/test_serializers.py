@@ -42,6 +42,9 @@ class Serializers(unittest.TestCase):
             "random_dict": {"swhtype": 43},
         }
 
+        self.generator = (i for i in range(5))
+        self.gen_lst = list(range(5))
+
     @istest
     def round_trip_json(self):
         data = json.dumps(self.data, cls=SWHJSONEncoder)
@@ -56,3 +59,13 @@ class Serializers(unittest.TestCase):
     def round_trip_msgpack(self):
         data = msgpack_dumps(self.data)
         self.assertEqual(self.data, msgpack_loads(data))
+
+    @istest
+    def generator_json(self):
+        data = json.dumps(self.generator, cls=SWHJSONEncoder)
+        self.assertEqual(self.gen_lst, json.loads(data, cls=SWHJSONDecoder))
+
+    @istest
+    def generator_msgpack(self):
+        data = msgpack_dumps(self.generator)
+        self.assertEqual(self.gen_lst, msgpack_loads(data))
