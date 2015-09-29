@@ -1,4 +1,5 @@
 celery
 msgpack-python
+psycopg2
 python-dateutil
 vcversioner
