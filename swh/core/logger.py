@@ -61,6 +61,10 @@ class PostgresHandler(logging.Handler):
 
         self.fqdn = socket.getfqdn()  # cache FQDN value
 
+    def close(self):
+        self.conn.close()
+        super().close()
+
     def emit(self, record):
         log_data = record.__dict__
 
