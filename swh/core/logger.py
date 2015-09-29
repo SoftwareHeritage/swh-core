@@ -34,6 +34,8 @@ class PostgresHandler(logging.Handler):
     EXTRA_LOGDATA_PREFIX (currently: 'swh_') will be extracted to form the
     JSONB dictionary. The prefix will be stripped and not included in the DB.
 
+    Note: the logger name will be used to fill the 'module' DB column.
+
     Sample usage:
 
         logging.basicConfig(level=logging.INFO)
@@ -73,7 +75,7 @@ class PostgresHandler(logging.Handler):
                       if k.startswith(EXTRA_LOGDATA_PREFIX)}
         log_entry = (db_level_of_py_level(log_data['levelno']),
                      log_data['msg'], Json(extra_data),
-                     log_data['module'], self.fqdn, os.getpid())
+                     log_data['name'], self.fqdn, os.getpid())
 
         with self.conn.cursor() as cur:
             cur.execute('INSERT INTO log '
