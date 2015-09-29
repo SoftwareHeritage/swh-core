@@ -37,7 +37,7 @@ class PostgresHandler(logging.Handler):
     Sample usage:
 
         logging.basicConfig(level=logging.INFO)
-        h = PostgresHandler({'log_db': 'dbname=softwareheritage-log'})
+        h = PostgresHandler('dbname=softwareheritage-log')
         logging.getLogger().addHandler(h)
 
         logger.info('not so important notice',
@@ -47,7 +47,7 @@ class PostgresHandler(logging.Handler):
 
     """
 
-    def __init__(self, config):
+    def __init__(self, connstring):
         """
         Create a Postgres log handler.
 
@@ -56,9 +56,8 @@ class PostgresHandler(logging.Handler):
                libpq connection string to the log DB
         """
         super().__init__()
-        self.config = config
 
-        self.conn = psycopg2.connect(self.config['log_db'])
+        self.conn = psycopg2.connect(connstring)
 
         self.fqdn = socket.getfqdn()  # cache FQDN value
 
@@ -69,11 +68,8 @@ class PostgresHandler(logging.Handler):
                       for k, v in log_data.items()
                       if k.startswith(EXTRA_LOGDATA_PREFIX)}
         log_entry = (db_level_of_py_level(log_data['levelno']),
-                     log_data['msg'],
-                     Json(extra_data),
-                     log_data['module'],
-                     self.fqdn,
-                     os.getpid())
+                     log_data['msg'], Json(extra_data),
+                     log_data['module'], self.fqdn, os.getpid())
 
         with self.conn.cursor() as cur:
             cur.execute('INSERT INTO log '
