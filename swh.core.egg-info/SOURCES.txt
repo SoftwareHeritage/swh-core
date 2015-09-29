@@ -19,9 +19,9 @@ swh.core.egg-info/requires.txt
 swh.core.egg-info/top_level.txt
 swh/core/config.py
 swh/core/hashutil.py
-swh/core/json.py
 swh/core/scheduling.py
+swh/core/serializers.py
 swh/core/tests/test_config.py
 swh/core/tests/test_hashutil.py
-swh/core/tests/test_json.py
 swh/core/tests/test_scheduling.py
+swh/core/tests/test_serializers.py

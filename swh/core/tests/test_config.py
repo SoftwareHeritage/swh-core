@@ -151,7 +151,7 @@ li = 1, 2, 3, 4
         res = config.swh_config_paths('foo/bar.ini')
 
         self.assertEqual(res, [
-            '~/.config/softwareheritage/foo/bar.ini',
+            '~/.config/swh/foo/bar.ini',
             '~/.swh/foo/bar.ini',
             '/etc/softwareheritage/foo/bar.ini',
         ])

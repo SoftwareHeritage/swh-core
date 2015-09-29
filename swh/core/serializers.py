@@ -6,8 +6,10 @@
 import base64
 import datetime
 from json import JSONDecoder, JSONEncoder
+import types
 
 import dateutil.parser
+import msgpack
 
 
 class SWHJSONEncoder(JSONEncoder):
@@ -88,3 +90,25 @@ class SWHJSONDecoder(JSONDecoder):
     def raw_decode(self, s, idx=0):
         data, index = super().raw_decode(s, idx)
         return self.decode_data(data), index
+
+
+def msgpack_dumps(data):
+    """Write data as a msgpack stream"""
+    def encode_types(obj):
+        if isinstance(obj, datetime.datetime):
+            return {b'__datetime__': True, b's': obj.isoformat()}
+        if isinstance(obj, types.GeneratorType):
+            return list(obj)
+        return obj
+
+    return msgpack.packb(data, use_bin_type=True, default=encode_types)
+
+
+def msgpack_loads(data):
+    """Read data as a msgpack stream"""
+    def decode_types(obj):
+        if b'__datetime__' in obj and obj[b'__datetime__']:
+            return dateutil.parser.parse(obj[b's'])
+        return obj
+
+    return msgpack.unpackb(data, encoding='utf-8', object_hook=decode_types)
