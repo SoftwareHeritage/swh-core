@@ -9,10 +9,11 @@ import unittest
 
 from nose.tools import istest
 
-from swh.core.json import SWHJSONDecoder, SWHJSONEncoder
+from swh.core.serializers import SWHJSONDecoder, SWHJSONEncoder
+from swh.core.serializers import msgpack_dumps, msgpack_loads
 
 
-class JSON(unittest.TestCase):
+class Serializers(unittest.TestCase):
     def setUp(self):
         self.tz = datetime.timezone(datetime.timedelta(minutes=118))
 
@@ -42,11 +43,16 @@ class JSON(unittest.TestCase):
         }
 
     @istest
-    def round_trip(self):
+    def round_trip_json(self):
         data = json.dumps(self.data, cls=SWHJSONEncoder)
         self.assertEqual(self.data, json.loads(data, cls=SWHJSONDecoder))
 
     @istest
-    def encode(self):
+    def encode_swh_json(self):
         data = json.dumps(self.data, cls=SWHJSONEncoder)
         self.assertEqual(self.encoded_data, json.loads(data))
+
+    @istest
+    def round_trip_msgpack(self):
+        data = msgpack_dumps(self.data)
+        self.assertEqual(self.data, msgpack_loads(data))
