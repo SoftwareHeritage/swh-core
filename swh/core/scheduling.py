@@ -16,5 +16,8 @@ class Task(celery.Task):
     how to use tasks once instantiated
 
     """
+
+    abstract = True
+
     def run(self, *args, **kwargs):
         raise NotImplementedError('tasks must implement the run() method')
