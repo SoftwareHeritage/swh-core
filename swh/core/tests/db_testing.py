@@ -3,20 +3,23 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import os
 import psycopg2
 import subprocess
 
 
-TEST_DB_NAME = 'softwareheritage-test'
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_DATA_DIR = os.path.join(TEST_DIR, '../../../../swh-storage-testdata')
-TEST_DB_DUMP = os.path.join(TEST_DATA_DIR, 'dumps/swh.dump')
-
-
-def pg_restore(dbname, dumpfile):
-    subprocess.check_call(['pg_restore', '--no-owner', '--no-privileges',
-                           '--dbname', dbname, dumpfile])
+def pg_restore(dbname, dumpfile, dumptype='pg_dump'):
+    """
+    Args:
+        dbname: name of the DB to restore into
+        dumpfile: path fo the dump file
+        dumptype: one of 'pg_dump' (for binary dumps), 'psql' (for SQL dumps)
+    """
+    assert dumptype in ['pg_dump', 'psql']
+    if dumptype == 'pg_dump':
+        subprocess.check_call(['pg_restore', '--no-owner', '--no-privileges',
+                               '--dbname', dbname, dumpfile])
+    elif dumptype == 'psql':
+        subprocess.check_call(['psql', '--quiet', '-f', dumpfile, dbname])
 
 
 def pg_dump(dbname, dumpfile):
@@ -32,7 +35,7 @@ def pg_createdb(dbname):
     subprocess.check_call(['createdb', dbname])
 
 
-def db_create(test_subj, dbname=TEST_DB_NAME, dbdump=TEST_DB_DUMP):
+def db_create(test_subj, dbname, dump=None, dumptype='pg_dump'):
     """create the test DB and load the test data dump into it
 
     context: setUpClass
@@ -43,7 +46,8 @@ def db_create(test_subj, dbname=TEST_DB_NAME, dbdump=TEST_DB_DUMP):
     except subprocess.CalledProcessError:  # try recovering once, in case
         pg_dropdb(dbname)                  # the db already existed
         pg_createdb(dbname)
-    pg_restore(dbname, dbdump)
+    if dump:
+        pg_restore(dbname, dump, dumptype)
     test_subj.dbname = dbname
 
 
@@ -79,6 +83,12 @@ def db_close(test_subj):
 
 class DbTestFixture():
     """Mix this in a test subject class to get DB testing support.
+
+    The class can override the following class attributes:
+        TEST_DB_NAME: name of the DB used for testing
+        TEST_DB_DUMP: DB dump to be restored before running test methods; can
+            be set to None if no restore from dump is required
+        TEST_DB_DUMP_TYPE: one of 'pg_dump' (binary dump) or 'psql' (SQL dump)
 
     The test case class will then have the following attributes, accessible via
     self:
@@ -121,9 +131,14 @@ class DbTestFixture():
 
     """
 
+    TEST_DB_NAME = 'softwareheritage-test'
+    TEST_DB_DUMP = None
+    TEST_DB_DUMP_TYPE = 'pg_dump'
+
     @classmethod
     def setUpClass(cls):
-        db_create(cls)
+        db_create(cls, dbname=cls.TEST_DB_NAME,
+                  dump=cls.TEST_DB_DUMP, dumptype=cls.TEST_DB_DUMP_TYPE)
         super().setUpClass()
 
     def setUp(self):

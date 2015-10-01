@@ -34,10 +34,12 @@ class PostgresHandler(logging.Handler):
     EXTRA_LOGDATA_PREFIX (currently: 'swh_') will be extracted to form the
     JSONB dictionary. The prefix will be stripped and not included in the DB.
 
+    Note: the logger name will be used to fill the 'module' DB column.
+
     Sample usage:
 
         logging.basicConfig(level=logging.INFO)
-        h = PostgresHandler({'log_db': 'dbname=softwareheritage-log'})
+        h = PostgresHandler('dbname=softwareheritage-log')
         logging.getLogger().addHandler(h)
 
         logger.info('not so important notice',
@@ -47,7 +49,7 @@ class PostgresHandler(logging.Handler):
 
     """
 
-    def __init__(self, config):
+    def __init__(self, connstring):
         """
         Create a Postgres log handler.
 
@@ -56,23 +58,25 @@ class PostgresHandler(logging.Handler):
                libpq connection string to the log DB
         """
         super().__init__()
-        self.config = config
 
-        self.conn = psycopg2.connect(self.config['log_db'])
+        self.conn = psycopg2.connect(connstring)
 
         self.fqdn = socket.getfqdn()  # cache FQDN value
+
+    def close(self):
+        self.conn.close()
+        super().close()
 
     def emit(self, record):
         log_data = record.__dict__
 
+        msg = self.format(record)
+
         extra_data = {k[len(EXTRA_LOGDATA_PREFIX):]: v
                       for k, v in log_data.items()
                       if k.startswith(EXTRA_LOGDATA_PREFIX)}
-        log_entry = (db_level_of_py_level(log_data['levelno']),
-                     log_data['msg'],
-                     Json(extra_data),
-                     log_data['module'],
-                     self.fqdn,
+        log_entry = (db_level_of_py_level(log_data['levelno']), msg,
+                     Json(extra_data), log_data['name'], self.fqdn,
                      os.getpid())
 
         with self.conn.cursor() as cur:

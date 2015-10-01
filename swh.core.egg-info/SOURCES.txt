@@ -23,8 +23,10 @@ swh/core/hashutil.py
 swh/core/logger.py
 swh/core/scheduling.py
 swh/core/serializers.py
+swh/core/worker.py
 swh/core/tests/db_testing.py
 swh/core/tests/test_config.py
 swh/core/tests/test_hashutil.py
+swh/core/tests/test_logger.py
 swh/core/tests/test_scheduling.py
 swh/core/tests/test_serializers.py
