@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import celery
+from celery.utils.log import get_task_logger
 
 
 class Task(celery.Task):
@@ -21,3 +22,10 @@ class Task(celery.Task):
 
     def run(self, *args, **kwargs):
         raise NotImplementedError('tasks must implement the run() method')
+
+    @property
+    def log(self):
+        if not hasattr(self, '__log'):
+            self.__log = get_task_logger('%s.%s' %
+                                         (__name__, self.__class__.__name__))
+        return self.__log
