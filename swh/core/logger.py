@@ -59,12 +59,31 @@ class PostgresHandler(logging.Handler):
         """
         super().__init__()
 
-        self.conn = psycopg2.connect(connstring)
+        self.connstring = connstring
+
+        # Attributes for pid-safe psycopg2 connection handling
+        self.__conn = None
+        self.__conn_pid = None
 
         self.fqdn = socket.getfqdn()  # cache FQDN value
 
+    def _connect(self):
+        return psycopg2.connect(self.connstring)
+
+    @property
+    def conn(self):
+        mypid = os.getpid()
+        # Reconnect if we changed pid or the connection is broken
+        if not self.__conn or self.__conn_pid != mypid or self.__conn.closed:
+            self.__conn = self._connect()
+            self.__conn_pid = mypid
+
+        return self.__conn
+
     def close(self):
-        self.conn.close()
+        # Only close the connection if we created it
+        if self.__conn and self.__conn_pid == os.getpid():
+            self.__conn.close()
         super().close()
 
     def emit(self, record):
