@@ -125,12 +125,30 @@ def load_global_config():
     )
 
 
+def load_named_config(name, default_conf=None, global_conf=True):
+    """Load the config named `name` from the Software Heritage
+       configuration paths.
+
+       If global_conf is True (default), read the global configuration
+       too.
+    """
+
+    conf = {}
+
+    if global_conf:
+        conf.update(load_global_config())
+
+    conf.update(priority_read(swh_config_paths(name), default_conf))
+
+    return conf
+
+
 class SWHConfig:
     """Mixin to add configuration parsing abilities to classes
 
     The class should override the class attributes:
         - DEFAULT_CONFIG (default configuration to be parsed)
-        - CONFIG_FILENAME (the filename of the configuration to be used)
+        - CONFIG_BASE_FILENAME (the filename of the configuration to be used)
 
     This class defines one classmethod, parse_config_file, which
     parses a configuration file using the default config as set in the
