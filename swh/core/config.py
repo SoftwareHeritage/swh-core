@@ -125,6 +125,24 @@ def load_global_config():
     )
 
 
+def load_named_config(name, default_conf=None, global_conf=True):
+    """Load the config named `name` from the Software Heritage
+       configuration paths.
+
+       If global_conf is True (default), read the global configuration
+       too.
+    """
+
+    conf = {}
+
+    if global_conf:
+        conf.update(load_global_config())
+
+    conf.update(priority_read(swh_config_paths(name), default_conf))
+
+    return conf
+
+
 class SWHConfig:
     """Mixin to add configuration parsing abilities to classes
 
