@@ -70,12 +70,14 @@ class PostgresHandler(logging.Handler):
     def emit(self, record):
         log_data = record.__dict__
 
+        msg = self.format(record)
+
         extra_data = {k[len(EXTRA_LOGDATA_PREFIX):]: v
                       for k, v in log_data.items()
                       if k.startswith(EXTRA_LOGDATA_PREFIX)}
-        log_entry = (db_level_of_py_level(log_data['levelno']),
-                     log_data['msg'], Json(extra_data),
-                     log_data['name'], self.fqdn, os.getpid())
+        log_entry = (db_level_of_py_level(log_data['levelno']), msg,
+                     Json(extra_data), log_data['name'], self.fqdn,
+                     os.getpid())
 
         with self.conn.cursor() as cur:
             cur.execute('INSERT INTO log '
