@@ -50,6 +50,18 @@ class Hashlib(unittest.TestCase):
         with self.assertRaises(ValueError):
             hashutil.hashdata(self.data, algorithms=['does-not-exist'])
 
+        for known_hash_algo in hashutil.KNOWN_ALGORITHMS:
+            self.assertIsNotNone(hashutil._new_hash(known_hash_algo, length=10))
+
+    @istest
+    def fail_without_length_on_sha1_git_but_ok_otherwise(self):
+        for hash_algo in ['sha1_git', 'sha1_blob_git', 'sha1_tree_git', 'sha1_commit_git']:
+            with self.assertRaises(ValueError):
+                hashutil._new_hash(hash_algo, length=None)
+
+        for other_hash_algo in ['sha1', 'sha256']:
+            self.assertIsNotNone(hashutil._new_hash(other_hash_algo, length=None))
+
     @istest
     def algo_selection(self):
         checksums = hashutil.hashdata(self.data, algorithms=['sha1', 'sha256'])
