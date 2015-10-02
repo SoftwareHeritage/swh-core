@@ -11,7 +11,8 @@ import os
 from io import BytesIO
 
 # supported hashing algorithms
-ALGORITHMS = set(['sha1', 'sha256', 'sha1_git'])
+ALGORITHMS = set(['sha1', 'sha256', 'sha1_git',
+                  'sha1_blob_git', 'sha1_tree_git', 'sha1_commit_git'])
 
 # should be a multiple of 64 (sha1/sha256's block size)
 # FWIW coreutils' sha1sum uses 32768
@@ -22,8 +23,21 @@ def _new_hash(algo, length=None):
     """Initialize a digest object (as returned by python's hashlib) for the
     requested algorithm. See the constant ALGORITHMS for the list of supported
     algorithms. If a git-specific hashing algorithm is requested (e.g.,
-    "sha1_git"), the hashing object will be pre-fed with the needed header; for
+    "sha1_git", "sha1_blob_git", "sha1_tree_git", "sha1_commit_git"), the
+    hashing object will be pre-fed with the needed header; for
     this to work, length must be given.
+
+    Args:
+        algo: List of algorithms in ALGORITHMS
+        length: Length of content to hash. Could be None if when hashing
+        with sha1 and sha256
+
+    Returns:
+        A digest object
+
+    Raises:
+        ValueError when on sha1_*git algorithms with length to None
+        ValueError when sha1_*git with * not in ('blob', 'commit', 'tree')
 
     """
     if algo not in ALGORITHMS:
@@ -33,8 +47,16 @@ def _new_hash(algo, length=None):
     if algo.endswith('_git'):
         if length is None:
             raise ValueError('missing length for git hashing algorithm')
-        h = hashlib.new(algo.split('_')[0])
-        h.update(('blob %d\0' % length).encode('ascii'))  # git hash header
+
+        algo_hash = algo.split('_')
+        h = hashlib.new(algo_hash[0])
+        obj_type = 'blob' if algo_hash[1] == 'git' else algo_hash[1]
+        if obj_type not in ('blob', 'commit', 'tree'):
+            raise ValueError(
+                'For `a la git` sha1 computation, the only supported types are'
+                ' blob, commit, tree')
+
+        h.update(('%s %d\0' % (obj_type, length)).encode('ascii'))  # git hash header
     else:
         h = hashlib.new(algo)
 
