@@ -42,7 +42,7 @@ class Hashlib(unittest.TestCase):
 
     @istest
     def hashdata(self):
-        checksums = hashutil.hashdata(self.data)
+        checksums = hashutil.hashdata(self.data, algorithms=hashutil.KNOWN_ALGORITHMS)
         self.assertEqual(checksums, self.checksums)
 
     @istest
@@ -62,7 +62,9 @@ class Hashlib(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.data)
             f.flush()
-            checksums = hashutil.hashfile(f.name)
+            checksums = hashutil.hashfile(f.name,
+                                          length=None,
+                                          algorithms=hashutil.KNOWN_ALGORITHMS)
             self.assertEqual(checksums, self.checksums)
 
     @istest
@@ -70,7 +72,9 @@ class Hashlib(unittest.TestCase):
         with tempfile.TemporaryFile() as f:
             f.write(self.data)
             f.seek(0)
-            checksums = hashutil.hashfile(f, len(self.data))
+            checksums = hashutil.hashfile(f,
+                                          len(self.data),
+                                          algorithms=hashutil.KNOWN_ALGORITHMS)
             self.assertEqual(checksums, self.checksums)
 
     @istest

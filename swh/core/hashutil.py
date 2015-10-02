@@ -11,8 +11,11 @@ import os
 from io import BytesIO
 
 # supported hashing algorithms
-ALGORITHMS = set(['sha1', 'sha256', 'sha1_git',
-                  'sha1_blob_git', 'sha1_tree_git', 'sha1_commit_git'])
+ALGORITHMS = set(['sha1', 'sha256', 'sha1_git'])
+
+# Default algorithms when not mentioned
+KNOWN_ALGORITHMS = ALGORITHMS | set(['sha1_blob_git', 'sha1_tree_git',
+                                     'sha1_commit_git'])
 
 # should be a multiple of 64 (sha1/sha256's block size)
 # FWIW coreutils' sha1sum uses 32768
@@ -40,7 +43,7 @@ def _new_hash(algo, length=None):
         ValueError when sha1_*git with * not in ('blob', 'commit', 'tree')
 
     """
-    if algo not in ALGORITHMS:
+    if algo not in KNOWN_ALGORITHMS:
         raise ValueError('unknown hashing algorithm ' + algo)
 
     h = None
@@ -89,7 +92,7 @@ def _hash_fname(fname, algorithms=ALGORITHMS):
     """
     length = os.path.getsize(fname)
     with open(fname, 'rb') as f:
-        return _hash_file_obj(f, length)
+        return _hash_file_obj(f, length, algorithms)
 
 
 def hashfile(f, length=None, algorithms=ALGORITHMS):
