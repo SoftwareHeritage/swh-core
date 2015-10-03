@@ -90,8 +90,8 @@ app.conf.update(
     # Imported modules
     CELERY_IMPORTS=CONFIG['task_modules'],
     # Time (in seconds, or a timedelta object) for when after stored task
-    # tombstones will be deleted.
-    CELERY_TASK_RESULT_EXPIRES=3600,
+    # tombstones will be deleted. None means to never expire results.
+    CELERY_TASK_RESULT_EXPIRES=None,
     # Late ack means the task messages will be acknowledged after the task has
     # been executed, not just before, which is the default behavior.
     CELERY_ACKS_LATE=True,
