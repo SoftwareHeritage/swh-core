@@ -8,6 +8,7 @@ import os
 import psycopg2
 import socket
 
+from celery import current_task
 from psycopg2.extras import Json
 
 
@@ -74,6 +75,16 @@ class PostgresHandler(logging.Handler):
         extra_data = {k[len(EXTRA_LOGDATA_PREFIX):]: v
                       for k, v in log_data.items()
                       if k.startswith(EXTRA_LOGDATA_PREFIX)}
+
+        # Retrieve Celery task info
+        if current_task and current_task.request:
+            extra_data['task'] = {
+                'id': current_task.request.id,
+                'name': current_task.name,
+                'kwargs': current_task.request.kwargs,
+                'args': current_task.request.args,
+            }
+
         log_entry = (db_level_of_py_level(log_data['levelno']), msg,
                      Json(extra_data), log_data['name'], self.fqdn,
                      os.getpid())
