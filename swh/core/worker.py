@@ -60,7 +60,7 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
 
     # Silence useless "Starting new HTTP connection" messages
     urllib3_logger = logging.getLogger('urllib3')
-    urllib3_logger.setLevel(logging.CRITICAL)
+    urllib3_logger.setLevel(logging.WARNING)
 
     swh_logger = logging.getLogger('swh')
     swh_logger.setLevel(loglevel)
@@ -90,8 +90,8 @@ app.conf.update(
     # Imported modules
     CELERY_IMPORTS=CONFIG['task_modules'],
     # Time (in seconds, or a timedelta object) for when after stored task
-    # tombstones will be deleted.
-    CELERY_TASK_RESULT_EXPIRES=3600,
+    # tombstones will be deleted. None means to never expire results.
+    CELERY_TASK_RESULT_EXPIRES=None,
     # Late ack means the task messages will be acknowledged after the task has
     # been executed, not just before, which is the default behavior.
     CELERY_ACKS_LATE=True,
@@ -134,4 +134,6 @@ app.conf.update(
     CELERY_QUEUES=CELERY_QUEUES,
     # Allow pool restarts from remote
     CELERYD_POOL_RESTARTS=True,
+    # Do not prefetch tasks
+    CELERYD_PREFETCH_MULTIPLIER=1,
 )
