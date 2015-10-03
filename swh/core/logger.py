@@ -61,30 +61,10 @@ class PostgresHandler(logging.Handler):
 
         self.connstring = connstring
 
-        # Attributes for pid-safe psycopg2 connection handling
-        self.__conn = None
-        self.__conn_pid = None
-
         self.fqdn = socket.getfqdn()  # cache FQDN value
 
     def _connect(self):
         return psycopg2.connect(self.connstring)
-
-    @property
-    def conn(self):
-        mypid = os.getpid()
-        # Reconnect if we changed pid or the connection is broken
-        if not self.__conn or self.__conn_pid != mypid or self.__conn.closed:
-            self.__conn = self._connect()
-            self.__conn_pid = mypid
-
-        return self.__conn
-
-    def close(self):
-        # Only close the connection if we created it
-        if self.__conn and self.__conn_pid == os.getpid():
-            self.__conn.close()
-        super().close()
 
     def emit(self, record):
         log_data = record.__dict__
@@ -97,10 +77,11 @@ class PostgresHandler(logging.Handler):
         log_entry = (db_level_of_py_level(log_data['levelno']), msg,
                      Json(extra_data), log_data['name'], self.fqdn,
                      os.getpid())
-
-        with self.conn.cursor() as cur:
+        db = self._connect()
+        with db.cursor() as cur:
             cur.execute('INSERT INTO log '
                         '(level, message, data, src_module, src_host, src_pid)'
                         'VALUES (%s, %s, %s, %s, %s, %s)',
                         log_entry)
-            self.conn.commit()
+            db.commit()
+        db.close()

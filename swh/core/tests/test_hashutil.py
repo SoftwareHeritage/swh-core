@@ -16,30 +16,51 @@ class Hashlib(unittest.TestCase):
     def setUp(self):
         self.data = b'42\n'
         self.hex_checksums = {
-            'sha1':     '34973274ccef6ab4dfaaf86599792fa9c3fe4689',
-            'sha1_git': 'd81cc0710eb6cf9efd5b920a8453e1e07157b6cd',
-            'sha256':   '084c799cd551dd1d8d5c5f9a5d593b2e931f5e36'
-            '122ee5c793c1d08a19839cc0',
-            }
+            'sha1':            '34973274ccef6ab4dfaaf86599792fa9c3fe4689',
+            'sha1_git':        'd81cc0710eb6cf9efd5b920a8453e1e07157b6cd',
+            'sha1_blob_git':   'd81cc0710eb6cf9efd5b920a8453e1e07157b6cd',
+            'sha1_tree_git':   'a3b4138923e146bdf5b51bd6fd7c64e3f59dfcad',
+            'sha1_commit_git': 'ebbb89b3165385c35a0dfa78ff9059ddd28d5126',
+            'sha256':          '084c799cd551dd1d8d5c5f9a5d593b2e931f5e36'
+                               '122ee5c793c1d08a19839cc0',
+        }
         self.checksums = {
             'sha1':     bytes.fromhex('34973274ccef6ab4dfaaf865997'
                                       '92fa9c3fe4689'),
             'sha1_git': bytes.fromhex('d81cc0710eb6cf9efd5b920a845'
                                       '3e1e07157b6cd'),
+            'sha1_blob_git': bytes.fromhex('d81cc0710eb6cf9efd5b920a845'
+                                           '3e1e07157b6cd'),
+            'sha1_tree_git': bytes.fromhex('a3b4138923e146bdf5b51bd6fd7'
+                                           'c64e3f59dfcad'),
+            'sha1_commit_git': bytes.fromhex('ebbb89b3165385c35a0dfa78ff9'
+                                             '059ddd28d5126'),
             'sha256':   bytes.fromhex('084c799cd551dd1d8d5c5f9a5d5'
                                       '93b2e931f5e36122ee5c793c1d0'
                                       '8a19839cc0'),
-            }
+        }
 
     @istest
     def hashdata(self):
-        checksums = hashutil.hashdata(self.data)
+        checksums = hashutil.hashdata(self.data, algorithms=hashutil.KNOWN_ALGORITHMS)
         self.assertEqual(checksums, self.checksums)
 
     @istest
     def unknown_algo(self):
         with self.assertRaises(ValueError):
             hashutil.hashdata(self.data, algorithms=['does-not-exist'])
+
+        for known_hash_algo in hashutil.KNOWN_ALGORITHMS:
+            self.assertIsNotNone(hashutil._new_hash(known_hash_algo, length=10))
+
+    @istest
+    def fail_without_length_on_sha1_git_but_ok_otherwise(self):
+        for hash_algo in ['sha1_git', 'sha1_blob_git', 'sha1_tree_git', 'sha1_commit_git']:
+            with self.assertRaises(ValueError):
+                hashutil._new_hash(hash_algo, length=None)
+
+        for other_hash_algo in ['sha1', 'sha256']:
+            self.assertIsNotNone(hashutil._new_hash(other_hash_algo, length=None))
 
     @istest
     def algo_selection(self):
@@ -53,7 +74,9 @@ class Hashlib(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.data)
             f.flush()
-            checksums = hashutil.hashfile(f.name)
+            checksums = hashutil.hashfile(f.name,
+                                          length=None,
+                                          algorithms=hashutil.KNOWN_ALGORITHMS)
             self.assertEqual(checksums, self.checksums)
 
     @istest
@@ -61,7 +84,9 @@ class Hashlib(unittest.TestCase):
         with tempfile.TemporaryFile() as f:
             f.write(self.data)
             f.seek(0)
-            checksums = hashutil.hashfile(f, len(self.data))
+            checksums = hashutil.hashfile(f,
+                                          len(self.data),
+                                          algorithms=hashutil.KNOWN_ALGORITHMS)
             self.assertEqual(checksums, self.checksums)
 
     @istest
