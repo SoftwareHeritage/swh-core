@@ -7,6 +7,7 @@ import logging
 
 from celery import Celery
 from celery.signals import setup_logging
+from celery.utils.log import ColorFormatter
 from kombu import Exchange, Queue
 
 from swh.core.config import load_named_config
@@ -23,18 +24,33 @@ DEFAULT_CONFIG = {
 
 @setup_logging.connect
 def setup_log_handler(loglevel=None, logfile=None, format=None,
-                      colorize=None):
-    """Setup logging according to Software Heritage preferences"""
+                      colorize=None, **kwargs):
+    """Setup logging according to Software Heritage preferences.
+
+    We use the command-line loglevel for tasks only, as we never
+    really care about the debug messages from celery.
+    """
+
+    if loglevel is None:
+        loglevel = logging.DEBUG
+
+    formatter = logging.Formatter(format)
+    if colorize:
+        color_formatter = ColorFormatter(format)
+    else:
+        color_formatter = formatter
 
     root_logger = logging.getLogger('')
     root_logger.setLevel(logging.INFO)
 
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
+    console.setFormatter(color_formatter)
 
     pg = PostgresHandler(CONFIG['log_db'])
     pg.setFormatter(logging.Formatter(format))
     pg.setLevel(logging.DEBUG)
+    pg.setFormatter(formatter)
 
     root_logger.addHandler(console)
     root_logger.addHandler(pg)
@@ -42,11 +58,17 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     celery_logger = logging.getLogger('celery')
     celery_logger.setLevel(logging.INFO)
 
+    # Silence useless "Starting new HTTP connection" messages
     urllib3_logger = logging.getLogger('urllib3')
     urllib3_logger.setLevel(logging.CRITICAL)
 
     swh_logger = logging.getLogger('swh')
-    swh_logger.setLevel(logging.DEBUG)
+    swh_logger.setLevel(loglevel)
+
+    # get_task_logger makes the swh tasks loggers children of celery.task
+    celery_task_logger = logging.getLogger('celery.task')
+    celery_task_logger.setLevel(loglevel)
+
 
 # Load the Celery config
 CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
