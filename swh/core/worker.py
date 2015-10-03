@@ -134,4 +134,6 @@ app.conf.update(
     CELERY_QUEUES=CELERY_QUEUES,
     # Allow pool restarts from remote
     CELERYD_POOL_RESTARTS=True,
+    # Do not prefetch tasks
+    CELERYD_PREFETCH_MULTIPLIER=1,
 )
