@@ -110,4 +110,6 @@ app.conf.update(
     },
     # Task queues this worker will consume from
     CELERY_QUEUES=CELERY_QUEUES,
+    # Allow pool restarts from remote
+    CELERYD_POOL_RESTARTS=True,
 )
