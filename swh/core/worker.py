@@ -6,7 +6,7 @@
 import logging
 
 from celery import Celery
-from celery.signals import after_setup_logger, after_setup_task_logger
+from celery.signals import setup_logging
 from kombu import Exchange, Queue
 
 from swh.core.config import load_named_config
@@ -21,17 +21,32 @@ DEFAULT_CONFIG = {
 }
 
 
-@after_setup_logger.connect
-@after_setup_task_logger.connect
-def setup_log_handler(sender=None, logger=None, loglevel=None,
-                      logfile=None, format=None,
-                      colorize=None, **kwds):
-    """Setup the postgresql log handler"""
+@setup_logging.connect
+def setup_log_handler(loglevel=None, logfile=None, format=None,
+                      colorize=None):
+    """Setup logging according to Software Heritage preferences"""
 
-    handler = PostgresHandler(CONFIG['log_db'])
-    handler.setFormatter(logging.Formatter(format))
-    handler.setLevel(logging.DEBUG)
-    logger.addHandler(handler)
+    root_logger = logging.getLogger('')
+    root_logger.setLevel(logging.INFO)
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.DEBUG)
+
+    pg = PostgresHandler(CONFIG['log_db'])
+    pg.setFormatter(logging.Formatter(format))
+    pg.setLevel(logging.DEBUG)
+
+    root_logger.addHandler(console)
+    root_logger.addHandler(pg)
+
+    celery_logger = logging.getLogger('celery')
+    celery_logger.setLevel(logging.INFO)
+
+    urllib3_logger = logging.getLogger('urllib3')
+    urllib3_logger.setLevel(logging.CRITICAL)
+
+    swh_logger = logging.getLogger('swh')
+    swh_logger.setLevel(logging.DEBUG)
 
 # Load the Celery config
 CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
@@ -95,4 +110,6 @@ app.conf.update(
     },
     # Task queues this worker will consume from
     CELERY_QUEUES=CELERY_QUEUES,
+    # Allow pool restarts from remote
+    CELERYD_POOL_RESTARTS=True,
 )
