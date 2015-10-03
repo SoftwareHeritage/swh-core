@@ -60,7 +60,7 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
 
     # Silence useless "Starting new HTTP connection" messages
     urllib3_logger = logging.getLogger('urllib3')
-    urllib3_logger.setLevel(logging.CRITICAL)
+    urllib3_logger.setLevel(logging.WARNING)
 
     swh_logger = logging.getLogger('swh')
     swh_logger.setLevel(loglevel)
