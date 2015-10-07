@@ -55,8 +55,8 @@ def _hash_file_obj(f, length, algorithms=ALGORITHMS, chunk_cb=None):
             break
         for h in hashers.values():
             h.update(chunk)
-            if chunk_cb:
-                chunk_cb(chunk)
+        if chunk_cb:
+            chunk_cb(chunk)
 
     return {algo: hashers[algo].digest() for algo in hashers}
 
