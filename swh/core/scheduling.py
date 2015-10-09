@@ -10,7 +10,9 @@ from celery.utils.log import get_task_logger
 class Task(celery.Task):
     """a schedulable task (abstract class)
 
-    Sub-classes must implement the run() method
+    Sub-classes must implement the run() method.  Sub-classes that
+    want their tasks to get routed to a non-default task queue must
+    override the task_queue attribute.
 
     Current implementation is based on Celery. See
     http://docs.celeryproject.org/en/latest/reference/celery.app.task.html for
@@ -19,6 +21,7 @@ class Task(celery.Task):
     """
 
     abstract = True
+    task_queue = 'celery'
 
     def run(self, *args, **kwargs):
         raise NotImplementedError('tasks must implement the run() method')
