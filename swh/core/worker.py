@@ -70,6 +70,15 @@ def setup_log_handler(loglevel=None, logfile=None, format=None,
     celery_task_logger.setLevel(loglevel)
 
 
+class TaskRouter:
+    """Route tasks according to the task_queue attribute in the task class"""
+    def route_for_task(self, task, args=None, kwargs=None):
+        task_class = app.tasks[task]
+        if hasattr(task_class, 'task_queue'):
+            return {'queue': task_class.task_queue}
+        return None
+
+
 # Load the Celery config
 CONFIG = load_named_config(CONFIG_NAME, DEFAULT_CONFIG)
 
@@ -119,17 +128,7 @@ app.conf.update(
     # comes.
     CELERYD_TASK_SOFT_TIME_LIMIT=CONFIG['task_soft_time_limit'],
     # Task routing
-    CELERY_ROUTES={
-        'swh.loader.git.tasks.LoadGitRepository': {
-            'queue': 'swh_loader_git',
-        },
-        'swh.loader.git.tasks.LoadGitHubRepository': {
-            'queue': 'swh_loader_git',
-        },
-        'swh.cloner.git.worker.tasks.execute_with_measure': {
-            'queue': 'swh_cloner_git',
-        },
-    },
+    CELERY_ROUTES=TaskRouter(),
     # Task queues this worker will consume from
     CELERY_QUEUES=CELERY_QUEUES,
     # Allow pool restarts from remote
