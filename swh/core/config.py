@@ -50,7 +50,7 @@ If conf_file is None, return the default config.
         config_path = os.path.expanduser(conf_file)
         if os.path.exists(config_path):
             config = configparser.ConfigParser(defaults=default_conf)
-            config.read(os.path.expanduser(conf_file))
+            config.read(config_path)
             if 'main' in config._sections:
                 conf = config._sections['main']
 
