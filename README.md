@@ -18,7 +18,7 @@ worker.ini file which looks like:
 
     [main]
     task_broker = amqp://guest@localhost//
-    task_modules = swh.loader.dir.tasks, swh.loader.git.tasks
+    task_modules = swh.loader.dir.tasks, swh.loader.tar.tasks, swh.loader.git.tasks
     task_queues = swh_loader_tar, swh_loader_git, swh_loader_dir
     task_soft_time_limit = 0
 
