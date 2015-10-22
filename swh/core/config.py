@@ -34,8 +34,8 @@ def read(conf_file=None, default_conf=None):
     Fill in the gap using `default_conf`.
 `default_conf` is similar to this:
 DEFAULT_CONF = {
-    'a': ('string', '/tmp/swh-loader-git/log'),
-    'b': ('string', 'dbname=swhloadergit')
+    'a': ('str', '/tmp/swh-loader-git/log'),
+    'b': ('str', 'dbname=swhloadergit')
     'c': ('bool', true)
     'e': ('bool', None)
     'd': ('int', 10)
