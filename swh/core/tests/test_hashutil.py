@@ -57,6 +57,14 @@ class Hashlib(unittest.TestCase):
             self.assertEqual(checksums, self.checksums)
 
     @istest
+    def hashfile_by_name_as_bytes(self):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.data)
+            f.flush()
+            checksums = hashutil.hashfile(f.name.encode('utf-8'))
+            self.assertEqual(checksums, self.checksums)
+
+    @istest
     def hashfile_by_obj(self):
         with tempfile.TemporaryFile() as f:
             f.write(self.data)
