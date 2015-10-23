@@ -1,3 +1,12 @@
+swh-core (0.0.14-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.14
+  * Add simple README
+  * Update license
+  * swh.core.hashutil.hashfile can now deal with filepath as bytes
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 23 Oct 2015 11:13:14 +0200
+
 swh-core (0.0.13-1~swh1) unstable-swh; urgency=medium
 
   * Prepare deployment of swh.core v0.0.13
