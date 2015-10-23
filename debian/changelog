@@ -1,8 +1,11 @@
-swh-core (0.0.13-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.14-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.14
+  * Add simple README
+  * Update license
+  * swh.core.hashutil.hashfile can now deal with filepath as bytes
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 09 Oct 2015 17:32:49 +0200
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 23 Oct 2015 11:13:14 +0200
 
 swh-core (0.0.13-1~swh1) unstable-swh; urgency=medium
 

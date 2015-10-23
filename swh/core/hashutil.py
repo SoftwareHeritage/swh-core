@@ -80,7 +80,7 @@ def hashfile(f, length=None, algorithms=ALGORITHMS):
     a file name, content length is ignored.
 
     """
-    if isinstance(f, str):
+    if isinstance(f, (str, bytes)):
         return _hash_fname(f, algorithms)
     else:
         return _hash_file_obj(f, length, algorithms)

@@ -1,6 +1,9 @@
 .gitignore
+AUTHORS
+LICENSE
 MANIFEST.in
 Makefile
+README.md
 requirements.txt
 setup.py
 version.txt
