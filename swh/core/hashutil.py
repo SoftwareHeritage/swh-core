@@ -18,6 +18,34 @@ ALGORITHMS = set(['sha1', 'sha256', 'sha1_git'])
 HASH_BLOCK_SIZE = 32768
 
 
+def _new_git_hash(base_algo, git_type, length):
+    """Initialize a digest object (as returned by python's hashlib) for the
+    requested algorithm, and feed it with the header for a git object of the
+    given type and length.
+
+    The header for hashing a git object consists of:
+     - The type of the object (encoded in ASCII)
+     - One ASCII space (\x20)
+     - The length of the object (decimal encoded in ASCII)
+     - One NUL byte
+
+    Args:
+        base_algo: a hashlib-supported algorithm
+        git_type: the type of the git object (supposedly one of 'blob',
+                  'commit', 'tag', 'tree')
+        length: the length of the git object you're encoding
+
+    Returns:
+        a hashutil.hash object
+    """
+
+    h = hashlib.new(base_algo)
+    git_header = '%s %d\0' % (git_type, length)
+    h.update(git_header.encode('ascii'))
+
+    return h
+
+
 def _new_hash(algo, length=None):
     """Initialize a digest object (as returned by python's hashlib) for the
     requested algorithm. See the constant ALGORITHMS for the list of supported
@@ -33,8 +61,8 @@ def _new_hash(algo, length=None):
     if algo.endswith('_git'):
         if length is None:
             raise ValueError('missing length for git hashing algorithm')
-        h = hashlib.new(algo.split('_')[0])
-        h.update(('blob %d\0' % length).encode('ascii'))  # git hash header
+        base_algo = algo[:-4]
+        h = _new_git_hash(base_algo, 'blob', length)
     else:
         h = hashlib.new(algo)
 
@@ -92,6 +120,30 @@ def hashdata(data, algorithms=ALGORITHMS):
     """
     buf = BytesIO(data)
     return _hash_file_obj(buf, len(data), algorithms)
+
+
+def hash_git_object(git_object, git_type, hash_algo='sha1'):
+    """Hash a git_object of git_type using hash_algo.
+
+    Args:
+        git_object: a bytestring containing a git object
+        git_type: one of ('blob', 'commit', 'tag', 'tree')
+        hash_algo: one of BASE_ALGORITHMS
+    Returns:
+        The resulting hashutil.hash object, fed with all the needed data.
+    """
+
+    git_types = ('blob', 'commit', 'tag', 'tree')
+    if git_type not in git_types:
+        raise ValueError('Unexpected git object type %s. Expected one of %s' %
+                         (git_type, ', '.join(git_types)))
+
+    length = len(git_object)
+
+    h = _new_git_hash(hash_algo, git_type, length)
+    h.update(git_object)
+
+    return h
 
 
 @functools.lru_cache()
