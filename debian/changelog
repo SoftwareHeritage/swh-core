@@ -1,3 +1,10 @@
+swh-core (0.0.15-1~swh1) unstable-swh; urgency=medium
+
+  * Release v0.0.15
+  * Add hashutil.hash_git_object
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Wed, 16 Dec 2015 16:31:26 +0100
+
 swh-core (0.0.14-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.14
