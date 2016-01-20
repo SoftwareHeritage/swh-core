@@ -149,7 +149,13 @@ def hash_git_object(git_object, git_type, hash_algo='sha1'):
 @functools.lru_cache()
 def hash_to_hex(hash):
     """Converts a hash to its hexadecimal string representation"""
-    return binascii.hexlify(hash).decode('ascii')
+    return hash_to_bytehex(hash).decode('ascii')
+
+
+@functools.lru_cache()
+def hash_to_bytehex(hash):
+    """Converts a hash to its hexadecimal bytes representation"""
+    return binascii.hexlify(hash)
 
 
 @functools.lru_cache()
