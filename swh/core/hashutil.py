@@ -162,3 +162,9 @@ def hash_to_bytehex(hash):
 def hex_to_hash(hex):
     """Converts a hexadecimal string representation of a hash to that hash"""
     return bytes.fromhex(hex)
+
+
+@functools.lru_cache()
+def bytehex_to_hash(hex):
+    """Converts a hexadecimal bytes representation of a hash to that hash"""
+    return hex_to_hash(hex.decode())

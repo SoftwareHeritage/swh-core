@@ -90,6 +90,13 @@ class Hashlib(unittest.TestCase):
             self.assertEqual(self.hex_checksums[algo].encode('ascii'),
                              hashutil.hash_to_bytehex(self.checksums[algo]))
 
+    @istest
+    def bytehex_to_hash(self):
+        for algo in self.checksums:
+            self.assertEqual(self.checksums[algo],
+                             hashutil.bytehex_to_hash(
+                                 self.hex_checksums[algo].encode()))
+
 
 class HashlibGit(unittest.TestCase):
 
