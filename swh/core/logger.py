@@ -8,7 +8,11 @@ import os
 import psycopg2
 import socket
 
-from celery import current_task
+try:
+    from celery import current_task
+except ImportError:
+    current_task = None
+
 from psycopg2.extras import Json
 
 
