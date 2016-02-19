@@ -1,8 +1,10 @@
-swh-core (0.0.15-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.16-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh.core version 0.0.16
+  * add bytehex_to_hash and hash_to_bytehex in hashutil
+  * move scheduling utilities to swh.scheduler
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Wed, 16 Dec 2015 16:31:27 +0100
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 19 Feb 2016 18:12:10 +0100
 
 swh-core (0.0.15-1~swh1) unstable-swh; urgency=medium
 
