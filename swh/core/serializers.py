@@ -7,6 +7,7 @@ import base64
 import datetime
 from json import JSONDecoder, JSONEncoder
 import types
+from uuid import UUID
 
 import dateutil.parser
 import msgpack
@@ -45,6 +46,11 @@ class SWHJSONEncoder(JSONEncoder):
                 'swhtype': 'datetime',
                 'd': o.isoformat(),
             }
+        elif isinstance(o, UUID):
+            return {
+                'swhtype': 'uuid',
+                'd': str(o),
+            }
         try:
             return super().default(o)
         except TypeError as e:
@@ -81,6 +87,8 @@ class SWHJSONDecoder(JSONDecoder):
                     return base64.b85decode(o['d'])
                 elif datatype == 'datetime':
                     return dateutil.parser.parse(o['d'])
+                elif datatype == 'uuid':
+                    return UUID(o['d'])
             return {key: self.decode_data(value) for key, value in o.items()}
         if isinstance(o, list):
             return [self.decode_data(value) for value in o]
@@ -99,6 +107,8 @@ def msgpack_dumps(data):
             return {b'__datetime__': True, b's': obj.isoformat()}
         if isinstance(obj, types.GeneratorType):
             return list(obj)
+        if isinstance(obj, UUID):
+            return {b'__uuid__': True, b's': str(obj)}
         return obj
 
     return msgpack.packb(data, use_bin_type=True, default=encode_types)
@@ -109,6 +119,8 @@ def msgpack_loads(data):
     def decode_types(obj):
         if b'__datetime__' in obj and obj[b'__datetime__']:
             return dateutil.parser.parse(obj[b's'])
+        if b'__uuid__' in obj and obj[b'__uuid__']:
+            return UUID(obj[b's'])
         return obj
 
     return msgpack.unpackb(data, encoding='utf-8', object_hook=decode_types)
