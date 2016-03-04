@@ -6,6 +6,7 @@
 import datetime
 import json
 import unittest
+from uuid import UUID
 
 from nose.tools import istest
 
@@ -18,28 +19,31 @@ class Serializers(unittest.TestCase):
         self.tz = datetime.timezone(datetime.timedelta(minutes=118))
 
         self.data = {
-            "bytes": b"123456789\x99\xaf\xff\x00\x12",
-            "datetime_naive": datetime.datetime(2015, 1, 1, 12, 4, 42, 231455),
-            "datetime_tz": datetime.datetime(2015, 3, 4, 18, 25, 13, 1234,
+            'bytes': b'123456789\x99\xaf\xff\x00\x12',
+            'datetime_naive': datetime.datetime(2015, 1, 1, 12, 4, 42, 231455),
+            'datetime_tz': datetime.datetime(2015, 3, 4, 18, 25, 13, 1234,
                                              tzinfo=self.tz),
-            "datetime_utc": datetime.datetime(2015, 3, 4, 18, 25, 13, 1234,
+            'datetime_utc': datetime.datetime(2015, 3, 4, 18, 25, 13, 1234,
                                               tzinfo=datetime.timezone.utc),
-            "swhtype": "fake",
-            "swh_dict": {"swhtype": 42, "d": "test"},
-            "random_dict": {"swhtype": 43},
+            'swhtype': 'fake',
+            'swh_dict': {'swhtype': 42, 'd': 'test'},
+            'random_dict': {'swhtype': 43},
+            'uuid': UUID('cdd8f804-9db6-40c3-93ab-5955d3836234'),
         }
 
         self.encoded_data = {
-            "bytes": {"swhtype": "bytes", "d": "F)}kWH8wXmIhn8j01^"},
-            "datetime_naive": {"swhtype": "datetime",
-                               "d": "2015-01-01T12:04:42.231455"},
-            "datetime_tz": {"swhtype": "datetime",
-                            "d": "2015-03-04T18:25:13.001234+01:58"},
-            "datetime_utc": {"swhtype": "datetime",
-                             "d": "2015-03-04T18:25:13.001234+00:00"},
-            "swhtype": "fake",
-            "swh_dict": {"swhtype": 42, "d": "test"},
-            "random_dict": {"swhtype": 43},
+            'bytes': {'swhtype': 'bytes', 'd': 'F)}kWH8wXmIhn8j01^'},
+            'datetime_naive': {'swhtype': 'datetime',
+                               'd': '2015-01-01T12:04:42.231455'},
+            'datetime_tz': {'swhtype': 'datetime',
+                            'd': '2015-03-04T18:25:13.001234+01:58'},
+            'datetime_utc': {'swhtype': 'datetime',
+                             'd': '2015-03-04T18:25:13.001234+00:00'},
+            'swhtype': 'fake',
+            'swh_dict': {'swhtype': 42, 'd': 'test'},
+            'random_dict': {'swhtype': 43},
+            'uuid': {'swhtype': 'uuid',
+                     'd': 'cdd8f804-9db6-40c3-93ab-5955d3836234'},
         }
 
         self.generator = (i for i in range(5))
