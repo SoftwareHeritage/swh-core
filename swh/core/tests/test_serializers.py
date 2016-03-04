@@ -6,6 +6,7 @@
 import datetime
 import json
 import unittest
+from uuid import UUID
 
 from nose.tools import istest
 
@@ -27,6 +28,7 @@ class Serializers(unittest.TestCase):
             "swhtype": "fake",
             "swh_dict": {"swhtype": 42, "d": "test"},
             "random_dict": {"swhtype": 43},
+            "uuid": UUID('cdd8f804-9db6-40c3-93ab-5955d3836234'),
         }
 
         self.encoded_data = {
@@ -40,6 +42,8 @@ class Serializers(unittest.TestCase):
             "swhtype": "fake",
             "swh_dict": {"swhtype": 42, "d": "test"},
             "random_dict": {"swhtype": 43},
+            "uuid": {"swhtype": "uuid",
+                     "d": "cdd8f804-9db6-40c3-93ab-5955d3836234"},
         }
 
         self.generator = (i for i in range(5))
