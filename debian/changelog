@@ -1,3 +1,10 @@
+swh-core (0.0.17-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.17
+  * Allow serialization of UUIDs
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 04 Mar 2016 11:40:56 +0100
+
 swh-core (0.0.16-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core version 0.0.16
