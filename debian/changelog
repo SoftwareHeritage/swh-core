@@ -1,3 +1,11 @@
+swh-core (0.0.18-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.18
+  * Add swh.core.utils
+  * serializers: support UUIDs all around
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Sat, 26 Mar 2016 11:16:33 +0100
+
 swh-core (0.0.17-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core v0.0.17
