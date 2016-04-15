@@ -1,3 +1,10 @@
+swh-core (0.0.19-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.19
+  * Resurrect swh.core.utils
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Fri, 15 Apr 2016 12:40:43 +0200
+
 swh-core (0.0.18-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.18
