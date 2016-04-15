@@ -10,16 +10,24 @@ from nose.tools import istest
 from swh.core import utils
 
 
-class UtilsTest(unittest.TestCase):
+class UtilsLib(unittest.TestCase):
+
     @istest
     def grouper(self):
         # given
-        gen = (d for d in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        actual_data = utils.grouper((i for i in range(0, 9)), 2)
 
-        # when
-        actual_group = []
-        for data in utils.grouper(gen, 3):
-            actual_group.append(list(data))
+        out = []
+        for d in actual_data:
+            out.append(list(d))  # force generator resolution for checks
 
-        # then
-        self.assertEquals(actual_group, [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]])
+        self.assertEqual(out, [[0, 1], [2, 3], [4, 5], [6, 7], [8]])
+
+        # given
+        actual_data = utils.grouper((i for i in range(9, 0, -1)), 4)
+
+        out = []
+        for d in actual_data:
+            out.append(list(d))  # force generator resolution for checks
+
+        self.assertEqual(out, [[9, 8, 7, 6], [5, 4, 3, 2], [1]])
