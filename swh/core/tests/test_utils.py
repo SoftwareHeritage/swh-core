@@ -56,12 +56,55 @@ class UtilsLib(unittest.TestCase):
         )
 
     @istest
-    def decode_invalid(self):
-        # given
-        invalid_str = b'my invalid \xff \xff string'
+    def encode_with_unescape(self):
+        valid_data = '\\x01020304\\x00'
+        valid_data_encoded = b'\x01020304\x00'
 
-        # when
-        actual_data = utils.decode_with_escape(invalid_str)
+        self.assertEquals(
+            valid_data_encoded,
+            utils.encode_with_unescape(valid_data)
+        )
 
-        # then
-        self.assertEqual(actual_data, 'my invalid \\xff \\xff string')
+    @istest
+    def encode_with_unescape_invalid_escape(self):
+        invalid_data = 'test\\abcd'
+
+        with self.assertRaises(ValueError) as exc:
+            utils.encode_with_unescape(invalid_data)
+
+        self.assertIn('invalid escape', exc.exception.args[0])
+        self.assertIn('position 4', exc.exception.args[0])
+
+    @istest
+    def decode_with_escape(self):
+        backslashes = b'foo\\bar\\\\baz'
+        backslashes_escaped = 'foo\\\\bar\\\\\\\\baz'
+
+        self.assertEquals(
+            backslashes_escaped,
+            utils.decode_with_escape(backslashes),
+        )
+
+        valid_utf8 = b'foo\xc3\xa2'
+        valid_utf8_escaped = 'foo\u00e2'
+
+        self.assertEquals(
+            valid_utf8_escaped,
+            utils.decode_with_escape(valid_utf8),
+        )
+
+        invalid_utf8 = b'foo\xa2'
+        invalid_utf8_escaped = 'foo\\xa2'
+
+        self.assertEquals(
+            invalid_utf8_escaped,
+            utils.decode_with_escape(invalid_utf8),
+        )
+
+        valid_utf8_nul = b'foo\xc3\xa2\x00'
+        valid_utf8_nul_escaped = 'foo\u00e2\\x00'
+
+        self.assertEquals(
+            valid_utf8_nul_escaped,
+            utils.decode_with_escape(valid_utf8_nul),
+        )
