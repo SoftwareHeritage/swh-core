@@ -1,3 +1,10 @@
+swh-core (0.0.20-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.20
+  * Add some generic bytes <-> escaped unicode methods
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Tue, 14 Jun 2016 16:54:41 +0200
+
 swh-core (0.0.19-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.19
