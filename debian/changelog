@@ -1,3 +1,10 @@
+swh-core (0.0.21-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.21
+  * Update test tools
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 19 Jul 2016 14:47:01 +0200
+
 swh-core (0.0.20-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core v0.0.20
