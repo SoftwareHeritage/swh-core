@@ -5,6 +5,7 @@
 
 import configparser
 import os
+import yaml
 
 
 SWH_CONFIG_DIRECTORIES = [
@@ -28,6 +29,44 @@ _map_convert_fn = {
     'list[int]': lambda x: [int(value.strip()) for value in x.split(',')],
 }
 
+_map_check_fn = {
+    'int': lambda x: isinstance(x, int),
+    'bool': lambda x: isinstance(x, bool),
+    'list[str]': lambda x: (isinstance(x, list) and
+                            all(isinstance(y, str) for y in x)),
+    'list[int]': lambda x: (isinstance(x, list) and
+                            all(isinstance(y, int) for y in x)),
+}
+
+
+def config_basepath(config_path):
+    """Return the base path of a configuration file"""
+    if config_path.endswith(('.ini', '.yml')):
+        return config_path[:-4]
+
+    return config_path
+
+
+def read_raw_config(base_config_path):
+    """Read the raw config corresponding to base_config_path.
+
+    Can read yml or ini files.
+    """
+
+    yml_file = base_config_path + '.yml'
+    if os.path.exists(yml_file):
+        with open(yml_file) as f:
+            return yaml.safe_load(f)
+
+    ini_file = base_config_path + '.ini'
+    if os.path.exists(ini_file):
+        config = configparser.ConfigParser()
+        config.read(ini_file)
+        if 'main' in config._sections:
+            return config._sections['main']
+
+    return {}
+
 
 def read(conf_file=None, default_conf=None):
     """Read the user's configuration file.
@@ -47,12 +86,8 @@ If conf_file is None, return the default config.
     conf = {}
 
     if conf_file:
-        config_path = os.path.expanduser(conf_file)
-        if os.path.exists(config_path):
-            config = configparser.ConfigParser(defaults=default_conf)
-            config.read(config_path)
-            if 'main' in config._sections:
-                conf = config._sections['main']
+        base_config_path = config_basepath(os.path.expanduser(conf_file))
+        conf = read_raw_config(base_config_path)
 
     if not default_conf:
         default_conf = {}
@@ -64,7 +99,8 @@ If conf_file is None, return the default config.
         val = conf.get(key, None)
         if not val:  # fallback to default value
             conf[key] = default_value
-        else:  # value present but in string format, force type conversion
+        elif not _map_check_fn.get(nature_type, lambda x: True)(val):
+            # value present but not in the proper format, force type conversion
             conf[key] = _map_convert_fn.get(nature_type, lambda x: x)(val)
 
     return conf
