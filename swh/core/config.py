@@ -114,10 +114,12 @@ def priority_read(conf_filenames, default_conf=None):
     """
 
     # Try all the files in order
+    ret = {}
     for filename in conf_filenames:
         full_filename = os.path.expanduser(filename)
-        if os.path.exists(full_filename):
-            return read(full_filename, default_conf)
+        ret = read(full_filename, default_conf)
+        if ret:
+            return ret
 
     # Else, return the default configuration
     return read(None, default_conf)
