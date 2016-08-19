@@ -1,3 +1,10 @@
+swh-core (0.0.22-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.22
+  * Proper loading of yaml and ini files in all paths
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 19 Aug 2016 15:45:55 +0200
+
 swh-core (0.0.21-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.21
