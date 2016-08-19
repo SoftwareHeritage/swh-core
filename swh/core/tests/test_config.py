@@ -118,7 +118,7 @@ li = 1, 2, 3, 4
         self.assertEquals(res, self.full_default_conf)
 
     @istest
-    def priority_read(self):
+    def priority_read_nonexist_conf(self):
         # when
         res = config.priority_read([self.non_existing_conffile, self.conffile],
                                    self.default_conf)
@@ -126,6 +126,8 @@ li = 1, 2, 3, 4
         # then
         self.assertEquals(res, self.parsed_conffile)
 
+    @istest
+    def priority_read_conf_nonexist_empty(self):
         # when
         res = config.priority_read([
             self.conffile,
@@ -136,6 +138,8 @@ li = 1, 2, 3, 4
         # then
         self.assertEquals(res, self.parsed_conffile)
 
+    @istest
+    def priority_read_empty_conf_nonexist(self):
         # when
         res = config.priority_read([
             self.empty_conffile,

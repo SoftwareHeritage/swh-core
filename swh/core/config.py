@@ -21,6 +21,11 @@ SWH_DEFAULT_GLOBAL_CONFIG = {
     'log_db': ('str', 'dbname=softwareheritage-log'),
 }
 
+SWH_CONFIG_EXTENSIONS = [
+    '.yml',
+    '.ini',
+]
+
 # conversion per type
 _map_convert_fn = {
     'int': int,
@@ -66,6 +71,13 @@ def read_raw_config(base_config_path):
             return config._sections['main']
 
     return {}
+
+
+def config_exists(config_path):
+    """Check whether the given config exists"""
+    basepath = config_basepath(config_path)
+    return any(os.path.exists(basepath + extension)
+               for extension in SWH_CONFIG_EXTENSIONS)
 
 
 def read(conf_file=None, default_conf=None):
@@ -114,12 +126,10 @@ def priority_read(conf_filenames, default_conf=None):
     """
 
     # Try all the files in order
-    ret = {}
     for filename in conf_filenames:
         full_filename = os.path.expanduser(filename)
-        ret = read(full_filename, default_conf)
-        if ret:
-            return ret
+        if config_exists(full_filename):
+            return read(full_filename, default_conf)
 
     # Else, return the default configuration
     return read(None, default_conf)
