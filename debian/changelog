@@ -1,8 +1,9 @@
-swh-core (0.0.21-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.22-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh.core v0.0.22
+  * Proper loading of yaml and ini files in all paths
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 19 Jul 2016 14:47:01 +0200
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 19 Aug 2016 15:45:55 +0200
 
 swh-core (0.0.21-1~swh1) unstable-swh; urgency=medium
 
