@@ -1,3 +1,10 @@
+swh-core (0.0.24-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.24
+  * Deal with edge case in logger regarding json
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 22 Sep 2016 12:21:09 +0200
+
 swh-core (0.0.23-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core v0.0.23
