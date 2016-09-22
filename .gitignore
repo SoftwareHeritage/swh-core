@@ -1,0 +1,9 @@
+*.pyc
+*.sw?
+*~
+.coverage
+.eggs/
+__pycache__
+dist
+swh.core.egg-info
+version.txt

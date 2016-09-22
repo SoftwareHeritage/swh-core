@@ -85,9 +85,29 @@ class PostgresHandler(logging.Handler):
             extra_data['task'] = {
                 'id': current_task.request.id,
                 'name': current_task.name,
+            }
+
+            task_args = {
                 'kwargs': current_task.request.kwargs,
                 'args': current_task.request.args,
             }
+
+            try:
+                json_args = Json(task_args).getquoted()
+            except TypeError:
+                    task_args = {
+                        'args': ['<failed to convert arguments to JSON>'],
+                        'kwargs': {},
+                    }
+            else:
+                json_args_length = len(json_args)
+                if json_args_length >= 1000:
+                    task_args = {
+                        'args': ['<arguments too long>'],
+                        'kwargs': {},
+                    }
+
+            extra_data['task'].update(task_args)
 
         log_entry = (db_level_of_py_level(log_data['levelno']), msg,
                      Json(extra_data), log_data['name'], self.fqdn,
