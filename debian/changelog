@@ -1,8 +1,9 @@
-swh-core (0.0.24-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.25-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.25
+  * Add new function utils.cwd
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 22 Sep 2016 12:21:09 +0200
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 29 Sep 2016 21:29:37 +0200
 
 swh-core (0.0.24-1~swh1) unstable-swh; urgency=medium
 
