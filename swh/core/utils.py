@@ -3,9 +3,25 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-
+import os
 import itertools
 import codecs
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def cwd(path):
+    """Contextually change the working directory to do thy bidding.
+    Then gets back to the original location.
+
+    """
+    prev_cwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(prev_cwd)
 
 
 def grouper(iterable, n):
