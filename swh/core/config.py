@@ -44,6 +44,30 @@ _map_check_fn = {
 }
 
 
+def exists_accessible(file):
+    """Check whether a file exists, and is accessible.
+
+    Returns:
+        True if the file exists and is accessible
+        False if the file does not exist
+
+    Raises:
+        PermissionError if the file cannot be read.
+    """
+
+    try:
+        os.stat(file)
+    except PermissionError:
+        raise
+    except FileNotFoundError:
+        return False
+    else:
+        if os.access(file, os.R_OK):
+            return True
+        else:
+            raise PermissionError("Permission denied: %r" % file)
+
+
 def config_basepath(config_path):
     """Return the base path of a configuration file"""
     if config_path.endswith(('.ini', '.yml')):
@@ -59,12 +83,12 @@ def read_raw_config(base_config_path):
     """
 
     yml_file = base_config_path + '.yml'
-    if os.path.exists(yml_file):
+    if exists_accessible(yml_file):
         with open(yml_file) as f:
             return yaml.safe_load(f)
 
     ini_file = base_config_path + '.ini'
-    if os.path.exists(ini_file):
+    if exists_accessible(ini_file):
         config = configparser.ConfigParser()
         config.read(ini_file)
         if 'main' in config._sections:
@@ -76,7 +100,7 @@ def read_raw_config(base_config_path):
 def config_exists(config_path):
     """Check whether the given config exists"""
     basepath = config_basepath(config_path)
-    return any(os.path.exists(basepath + extension)
+    return any(exists_accessible(basepath + extension)
                for extension in SWH_CONFIG_EXTENSIONS)
 
 
