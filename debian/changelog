@@ -1,3 +1,11 @@
+swh-core (0.0.26-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.26
+  * Raise an exception when a configuration file exists and is
+    unreadable
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Wed, 12 Oct 2016 10:16:09 +0200
+
 swh-core (0.0.25-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.25
