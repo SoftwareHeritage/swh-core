@@ -20,17 +20,33 @@ class ConfReaderTest(unittest.TestCase):
         # create a temporary folder
         cls.tmpdir = tempfile.mkdtemp(prefix='test-swh-core.')
         cls.conffile = os.path.join(cls.tmpdir, 'config.ini')
-        with open(cls.conffile, 'w') as conf:
-            conf.write("""[main]
+        conf_contents = """[main]
 a = 1
 b = this is a string
 c = true
 ls = list, of, strings
 li = 1, 2, 3, 4
-""")
+"""
+        with open(cls.conffile, 'w') as conf:
+            conf.write(conf_contents)
 
         cls.non_existing_conffile = os.path.join(cls.tmpdir,
                                                  'config-nonexisting.ini')
+
+        # Create an unreadable, proper configuration file
+        cls.perms_broken_file = os.path.join(cls.tmpdir, 'unreadable.ini')
+        with open(cls.perms_broken_file, 'w') as conf:
+            conf.write(conf_contents)
+        os.chmod(cls.perms_broken_file, 0o000)
+
+        # Create a proper configuration file in an unreadable directory
+        cls.perms_broken_dir = os.path.join(cls.tmpdir, 'unreadabledir')
+        cls.file_in_broken_dir = os.path.join(cls.perms_broken_dir,
+                                              'unreadable.ini')
+        os.makedirs(cls.perms_broken_dir)
+        with open(cls.file_in_broken_dir, 'w') as conf:
+            conf.write(conf_contents)
+        os.chmod(cls.perms_broken_dir, 0o000)
 
         cls.empty_conffile = os.path.join(cls.tmpdir, 'empty.ini')
         open(cls.empty_conffile, 'w').close()
@@ -74,6 +90,9 @@ li = 1, 2, 3, 4
 
     @classmethod
     def tearDownClass(cls):
+        # Make the broken perms items readable again to be able to remove them
+        os.chmod(cls.perms_broken_dir, 0o755)
+        os.chmod(cls.perms_broken_file, 0o644)
         shutil.rmtree(cls.tmpdir)
 
     @istest
@@ -107,6 +126,16 @@ li = 1, 2, 3, 4
 
         # then
         self.assertEquals(res, self.parsed_default_conf)
+
+    @istest
+    def raise_on_broken_directory_perms(self):
+        with self.assertRaises(PermissionError):
+            config.read(self.file_in_broken_dir, self.default_conf)
+
+    @istest
+    def raise_on_broken_file_perms(self):
+        with self.assertRaises(PermissionError):
+            config.read(self.perms_broken_file, self.default_conf)
 
     @istest
     def merge_default_configs(self):
