@@ -24,6 +24,7 @@ class ConfReaderTest(unittest.TestCase):
 a = 1
 b = this is a string
 c = true
+h = false
 ls = list, of, strings
 li = 1, 2, 3, 4
 """
@@ -59,6 +60,8 @@ li = 1, 2, 3, 4
             'e': ('int', None),
             'f': ('bool', None),
             'g': ('string', None),
+            'h': ('bool', True),
+            'i': ('bool', True),
             'ls': ('list[str]', ['a', 'b', 'c']),
             'li': ('list[int]', [42, 43]),
         }
@@ -84,6 +87,8 @@ li = 1, 2, 3, 4
             'e': None,
             'f': None,
             'g': None,
+            'h': False,
+            'i': True,
             'ls': ['list', 'of', 'strings'],
             'li': [1, 2, 3, 4],
         }
