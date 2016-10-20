@@ -1,3 +1,10 @@
+swh-core (0.0.27-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.27
+  * Fix issue with default boolean value
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 20 Oct 2016 16:15:20 +0200
+
 swh-core (0.0.26-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core v0.0.26
