@@ -133,7 +133,7 @@ If conf_file is None, return the default config.
     for key in default_conf:
         nature_type, default_value = default_conf[key]
         val = conf.get(key, None)
-        if not val:  # fallback to default value
+        if val is None:  # fallback to default value
             conf[key] = default_value
         elif not _map_check_fn.get(nature_type, lambda x: True)(val):
             # value present but not in the proper format, force type conversion
