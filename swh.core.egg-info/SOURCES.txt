@@ -22,6 +22,7 @@ swh.core.egg-info/dependency_links.txt
 swh.core.egg-info/requires.txt
 swh.core.egg-info/top_level.txt
 swh/core/__init__.py
+swh/core/api.py
 swh/core/config.py
 swh/core/hashutil.py
 swh/core/logger.py

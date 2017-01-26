@@ -226,9 +226,7 @@ class DbsTestFixture():
                                    dump=cls.TEST_DB_DUMPS[i],
                                    dumptype=cls.TEST_DB_DUMP_TYPES[i])
             finally:
-                print(dbname)
                 dbnames.append(dbname)
-                print(dbnames)
 
         cls.dbnames = dbnames
         super().setUpClass()

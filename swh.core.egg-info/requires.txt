@@ -1,5 +1,7 @@
+Flask
 PyYAML
 msgpack-python
 psycopg2
 python-dateutil
+requests
 vcversioner
