@@ -5,6 +5,8 @@ Priority: optional
 Build-Depends: debhelper (>= 9),
                dh-python,
                python3-all,
+               python3-flask,
+               python3-requests,
                python3-dateutil,
                python3-msgpack,
                python3-nose,

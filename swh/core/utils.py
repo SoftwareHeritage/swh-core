@@ -49,6 +49,7 @@ def backslashescape_errors(exception):
 
     return codecs.backslashreplace_errors(exception)
 
+
 codecs.register_error('backslashescape', backslashescape_errors)
 
 
