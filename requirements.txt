@@ -3,3 +3,5 @@ psycopg2
 python-dateutil
 vcversioner
 PyYAML
+requests
+Flask
