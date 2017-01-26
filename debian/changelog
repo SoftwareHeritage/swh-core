@@ -1,3 +1,10 @@
+swh-core (0.0.28-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.28
+  * Refactoring some common code into swh.core
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 26 Jan 2017 14:54:22 +0100
+
 swh-core (0.0.27-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.27
