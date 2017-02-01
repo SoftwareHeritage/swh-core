@@ -35,8 +35,7 @@ class SWHRemoteAPI:
                 data=encode_data(data),
                 headers={'content-type': 'application/x-msgpack'},
             )
-        except ConnectionError as e:
-            print(str(e))
+        except requests.exceptions.ConnectionError as e:
             raise self.api_exception(e)
 
         # XXX: this breaks language-independence and should be
@@ -52,8 +51,7 @@ class SWHRemoteAPI:
                 self._url(endpoint),
                 params=data,
             )
-        except ConnectionError as e:
-            print(str(e))
+        except requests.exceptions.ConnectionError as e:
             raise self.api_exception(e)
 
         if response.status_code == 404:
