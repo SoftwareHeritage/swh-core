@@ -1,8 +1,9 @@
-swh-core (0.0.28-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.29-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh.core v0.0.29
+  * Catch proper exception in the base API client
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 26 Jan 2017 14:54:22 +0100
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 02 Feb 2017 00:19:25 +0100
 
 swh-core (0.0.28-1~swh1) unstable-swh; urgency=medium
 
