@@ -1,3 +1,10 @@
+swh-core (0.0.29-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.29
+  * Catch proper exception in the base API client
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 02 Feb 2017 00:19:25 +0100
+
 swh-core (0.0.28-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.28
