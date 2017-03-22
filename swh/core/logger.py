@@ -5,15 +5,15 @@
 
 import logging
 import os
-import psycopg2
 import socket
+
+import psycopg2
+from psycopg2.extras import Json
 
 try:
     from celery import current_task
 except ImportError:
     current_task = None
-
-from psycopg2.extras import Json
 
 
 EXTRA_LOGDATA_PREFIX = 'swh_'
@@ -25,6 +25,26 @@ def db_level_of_py_level(lvl):
 
     """
     return logging.getLevelName(lvl).lower()
+
+
+def get_extra_data(record):
+    """Get the extra data to insert to the database from the logging record"""
+    log_data = record.__dict__
+
+    extra_data = {k[len(EXTRA_LOGDATA_PREFIX):]: v
+                  for k, v in log_data.items()
+                  if k.startswith(EXTRA_LOGDATA_PREFIX)}
+
+    # Retrieve Celery task info
+    if current_task and current_task.request:
+        extra_data['task'] = {
+            'id': current_task.request.id,
+            'name': current_task.name,
+            'kwargs': current_task.request.kwargs,
+            'args': current_task.request.args,
+        }
+
+    return extra_data
 
 
 class PostgresHandler(logging.Handler):
@@ -72,24 +92,13 @@ class PostgresHandler(logging.Handler):
         return psycopg2.connect(self.connstring)
 
     def emit(self, record):
-        log_data = record.__dict__
-
         msg = self.format(record)
+        extra_data = get_extra_data(record)
 
-        extra_data = {k[len(EXTRA_LOGDATA_PREFIX):]: v
-                      for k, v in log_data.items()
-                      if k.startswith(EXTRA_LOGDATA_PREFIX)}
-
-        # Retrieve Celery task info
-        if current_task and current_task.request:
-            extra_data['task'] = {
-                'id': current_task.request.id,
-                'name': current_task.name,
-            }
-
+        if 'task' in extra_data:
             task_args = {
-                'kwargs': current_task.request.kwargs,
-                'args': current_task.request.args,
+                'args': extra_data['task']['args'],
+                'kwargs': extra_data['task']['kwargs'],
             }
 
             try:
@@ -109,8 +118,8 @@ class PostgresHandler(logging.Handler):
 
             extra_data['task'].update(task_args)
 
-        log_entry = (db_level_of_py_level(log_data['levelno']), msg,
-                     Json(extra_data), log_data['name'], self.fqdn,
+        log_entry = (db_level_of_py_level(record.levelno), msg,
+                     Json(extra_data), record.name, self.fqdn,
                      os.getpid())
         db = self._connect()
         with db.cursor() as cur:
