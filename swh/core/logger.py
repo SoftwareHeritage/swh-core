@@ -9,6 +9,7 @@ import socket
 
 import psycopg2
 from psycopg2.extras import Json
+from systemd.journal import JournalHandler as _JournalHandler, send
 
 try:
     from celery import current_task
@@ -45,6 +46,22 @@ def get_extra_data(record):
         }
 
     return extra_data
+
+
+def flatten(data, separator='_'):
+    """Flatten the data dictionary into a flat structure"""
+    def inner_flatten(data, prefix):
+        if isinstance(data, dict):
+            for key, value in data.items():
+                yield from inner_flatten(value, prefix + [key])
+        elif isinstance(data, (list, tuple)):
+            for key, value in enumerate(data):
+                yield from inner_flatten(value, prefix + [str(key)])
+        else:
+            yield prefix, data
+
+    for path, value in inner_flatten(data, []):
+        yield separator.join(path), value
 
 
 class PostgresHandler(logging.Handler):
@@ -129,3 +146,28 @@ class PostgresHandler(logging.Handler):
                         log_entry)
             db.commit()
         db.close()
+
+
+class JournalHandler(_JournalHandler):
+    def emit(self, record):
+        """Write `record` as a journal event.
+
+        MESSAGE is taken from the message provided by the user, and PRIORITY,
+        LOGGER, THREAD_NAME, CODE_{FILE,LINE,FUNC} fields are appended
+        automatically. In addition, record.MESSAGE_ID will be used if present.
+        """
+        try:
+            extra_data = {key.upper(): value
+                          for key, value in flatten(get_extra_data(record))}
+            msg = self.format(record)
+            pri = self.mapPriority(record.levelno)
+            send(msg,
+                 PRIORITY=format(pri),
+                 LOGGER=record.name,
+                 THREAD_NAME=record.threadName,
+                 CODE_FILE=record.pathname,
+                 CODE_LINE=record.lineno,
+                 CODE_FUNC=record.funcName,
+                 **extra_data)
+        except Exception:
+            self.handleError(record)
