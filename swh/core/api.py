@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import json
+import logging
 import pickle
 import requests
 
@@ -97,6 +98,7 @@ def decode_request(request):
 def error_handler(exception, encoder):
     # XXX: this breaks language-independence and should be
     # replaced by proper serialization of errors
+    logging.exception(exception)
     response = encoder(pickle.dumps(exception))
     response.status_code = 400
     return response

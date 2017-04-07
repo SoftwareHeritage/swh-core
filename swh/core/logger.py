@@ -3,17 +3,19 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import datetime
 import logging
 import os
-import psycopg2
 import socket
+
+import psycopg2
+from psycopg2.extras import Json
+from systemd.journal import JournalHandler as _JournalHandler, send
 
 try:
     from celery import current_task
 except ImportError:
     current_task = None
-
-from psycopg2.extras import Json
 
 
 EXTRA_LOGDATA_PREFIX = 'swh_'
@@ -25,6 +27,54 @@ def db_level_of_py_level(lvl):
 
     """
     return logging.getLevelName(lvl).lower()
+
+
+def get_extra_data(record):
+    """Get the extra data to insert to the database from the logging record"""
+    log_data = record.__dict__
+
+    extra_data = {k[len(EXTRA_LOGDATA_PREFIX):]: v
+                  for k, v in log_data.items()
+                  if k.startswith(EXTRA_LOGDATA_PREFIX)}
+
+    args = log_data.get('args')
+    if args:
+        extra_data['logging_args'] = args
+
+    # Retrieve Celery task info
+    if current_task and current_task.request:
+        extra_data['task'] = {
+            'id': current_task.request.id,
+            'name': current_task.name,
+            'kwargs': current_task.request.kwargs,
+            'args': current_task.request.args,
+        }
+
+    return extra_data
+
+
+def flatten(data, separator='_'):
+    """Flatten the data dictionary into a flat structure"""
+    def inner_flatten(data, prefix):
+        if isinstance(data, dict):
+            for key, value in data.items():
+                yield from inner_flatten(value, prefix + [key])
+        elif isinstance(data, (list, tuple)):
+            for key, value in enumerate(data):
+                yield from inner_flatten(value, prefix + [str(key)])
+        else:
+            yield prefix, data
+
+    for path, value in inner_flatten(data, []):
+        yield separator.join(path), value
+
+
+def stringify(value):
+    """Convert value to string"""
+    if isinstance(value, datetime.datetime):
+        return value.isoformat()
+
+    return str(value)
 
 
 class PostgresHandler(logging.Handler):
@@ -72,24 +122,13 @@ class PostgresHandler(logging.Handler):
         return psycopg2.connect(self.connstring)
 
     def emit(self, record):
-        log_data = record.__dict__
-
         msg = self.format(record)
+        extra_data = get_extra_data(record)
 
-        extra_data = {k[len(EXTRA_LOGDATA_PREFIX):]: v
-                      for k, v in log_data.items()
-                      if k.startswith(EXTRA_LOGDATA_PREFIX)}
-
-        # Retrieve Celery task info
-        if current_task and current_task.request:
-            extra_data['task'] = {
-                'id': current_task.request.id,
-                'name': current_task.name,
-            }
-
+        if 'task' in extra_data:
             task_args = {
-                'kwargs': current_task.request.kwargs,
-                'args': current_task.request.args,
+                'args': extra_data['task']['args'],
+                'kwargs': extra_data['task']['kwargs'],
             }
 
             try:
@@ -109,8 +148,8 @@ class PostgresHandler(logging.Handler):
 
             extra_data['task'].update(task_args)
 
-        log_entry = (db_level_of_py_level(log_data['levelno']), msg,
-                     Json(extra_data), log_data['name'], self.fqdn,
+        log_entry = (db_level_of_py_level(record.levelno), msg,
+                     Json(extra_data), record.name, self.fqdn,
                      os.getpid())
         db = self._connect()
         with db.cursor() as cur:
@@ -120,3 +159,30 @@ class PostgresHandler(logging.Handler):
                         log_entry)
             db.commit()
         db.close()
+
+
+class JournalHandler(_JournalHandler):
+    def emit(self, record):
+        """Write `record` as a journal event.
+
+        MESSAGE is taken from the message provided by the user, and PRIORITY,
+        LOGGER, THREAD_NAME, CODE_{FILE,LINE,FUNC} fields are appended
+        automatically. In addition, record.MESSAGE_ID will be used if present.
+        """
+        try:
+            extra_data = {
+                (EXTRA_LOGDATA_PREFIX + key).upper(): stringify(value)
+                for key, value in flatten(get_extra_data(record))
+            }
+            msg = self.format(record)
+            pri = self.mapPriority(record.levelno)
+            send(msg,
+                 PRIORITY=format(pri),
+                 LOGGER=record.name,
+                 THREAD_NAME=record.threadName,
+                 CODE_FILE=record.pathname,
+                 CODE_LINE=record.lineno,
+                 CODE_FUNC=record.funcName,
+                 **extra_data)
+        except Exception:
+            self.handleError(record)

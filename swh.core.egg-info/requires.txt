@@ -4,4 +4,5 @@ msgpack-python
 psycopg2
 python-dateutil
 requests
+systemd-python
 vcversioner
