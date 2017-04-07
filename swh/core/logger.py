@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import datetime
 import logging
 import os
 import socket
@@ -36,6 +37,10 @@ def get_extra_data(record):
                   for k, v in log_data.items()
                   if k.startswith(EXTRA_LOGDATA_PREFIX)}
 
+    args = log_data.get('args')
+    if args:
+        extra_data['logging_args'] = args
+
     # Retrieve Celery task info
     if current_task and current_task.request:
         extra_data['task'] = {
@@ -62,6 +67,14 @@ def flatten(data, separator='_'):
 
     for path, value in inner_flatten(data, []):
         yield separator.join(path), value
+
+
+def stringify(value):
+    """Convert value to string"""
+    if isinstance(value, datetime.datetime):
+        return value.isoformat()
+
+    return str(value)
 
 
 class PostgresHandler(logging.Handler):
@@ -157,8 +170,10 @@ class JournalHandler(_JournalHandler):
         automatically. In addition, record.MESSAGE_ID will be used if present.
         """
         try:
-            extra_data = {key.upper(): value
-                          for key, value in flatten(get_extra_data(record))}
+            extra_data = {
+                (EXTRA_LOGDATA_PREFIX + key).upper(): stringify(value)
+                for key, value in flatten(get_extra_data(record))
+            }
             msg = self.format(record)
             pri = self.mapPriority(record.levelno)
             send(msg,
