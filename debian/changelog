@@ -1,3 +1,10 @@
+swh-core (0.0.31-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.31
+  * Add explicit dependency on python3-systemd
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 07 Apr 2017 15:11:26 +0200
+
 swh-core (0.0.30-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core v0.0.30
