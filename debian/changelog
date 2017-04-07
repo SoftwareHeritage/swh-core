@@ -1,8 +1,10 @@
-swh-core (0.0.29-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.30-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh.core v0.0.30
+  * drop swh.core.hashutil (moved to swh.model.hashutil)
+  * add a systemd logger
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 02 Feb 2017 00:19:25 +0100
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Fri, 07 Apr 2017 11:49:15 +0200
 
 swh-core (0.0.29-1~swh1) unstable-swh; urgency=medium
 
