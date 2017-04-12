@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import collections
 import json
 import logging
 import pickle
@@ -12,6 +13,10 @@ from flask import Flask, Request, Response
 from .serializers import (decode_response,
                           encode_data_client as encode_data,
                           msgpack_dumps, msgpack_loads, SWHJSONDecoder)
+
+
+class RemoteException(Exception):
+    pass
 
 
 class SWHRemoteAPI:
@@ -29,40 +34,61 @@ class SWHRemoteAPI:
     def _url(self, endpoint):
         return '%s%s' % (self.url, endpoint)
 
-    def post(self, endpoint, data):
+    def raw_post(self, endpoint, data, **opts):
         try:
-            response = self.session.post(
+            return self.session.post(
                 self._url(endpoint),
-                data=encode_data(data),
-                headers={'content-type': 'application/x-msgpack'},
+                data=data,
+                **opts
             )
         except requests.exceptions.ConnectionError as e:
             raise self.api_exception(e)
 
-        # XXX: this breaks language-independence and should be
-        # replaced by proper unserialization
-        if response.status_code == 400:
-            raise pickle.loads(decode_response(response))
-
-        return decode_response(response)
-
-    def get(self, endpoint, data=None):
+    def raw_get(self, endpoint, params=None, **opts):
         try:
-            response = self.session.get(
+            return self.session.get(
                 self._url(endpoint),
-                params=data,
+                params=params,
+                **opts
             )
         except requests.exceptions.ConnectionError as e:
             raise self.api_exception(e)
 
+    def post(self, endpoint, data, params=None):
+        data = encode_data(data)
+        response = self.raw_post(
+            endpoint, data, params=params,
+            headers={'content-type': 'application/x-msgpack'})
+        return self._decode_response(response)
+
+    def get(self, endpoint, params=None):
+        response = self.raw_get(endpoint, params=params)
+        return self._decode_response(response)
+
+    def post_stream(self, endpoint, data, params=None):
+        if not isinstance(data, collections.Iterable):
+            raise ValueError("`data` must be Iterable")
+        response = self.raw_post(endpoint, data, params=params)
+        return self._decode_response(response)
+
+    def get_stream(self, endpoint, params=None, chunk_size=4096):
+        response = self.raw_get(endpoint, params=params, stream=True)
+        return response.iter_content(chunk_size)
+
+    def _decode_response(self, response):
         if response.status_code == 404:
             return None
+        if response.status_code == 500:
+            data = decode_response(response)
+            if 'exception_pickled' in data:
+                raise pickle.loads(data['exception_pickled'])
+            else:
+                raise RemoteException(data['exception'])
 
         # XXX: this breaks language-independence and should be
         # replaced by proper unserialization
         if response.status_code == 400:
             raise pickle.loads(decode_response(response))
-
         else:
             return decode_response(response)
 
