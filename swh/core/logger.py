@@ -29,7 +29,7 @@ def db_level_of_py_level(lvl):
     return logging.getLevelName(lvl).lower()
 
 
-def get_extra_data(record):
+def get_extra_data(record, task_args=True):
     """Get the extra data to insert to the database from the logging record"""
     log_data = record.__dict__
 
@@ -46,9 +46,12 @@ def get_extra_data(record):
         extra_data['task'] = {
             'id': current_task.request.id,
             'name': current_task.name,
-            'kwargs': current_task.request.kwargs,
-            'args': current_task.request.args,
         }
+        if task_args:
+            extra_data['task'].update({
+                'kwargs': current_task.request.kwargs,
+                'args': current_task.request.args,
+            })
 
     return extra_data
 
@@ -170,9 +173,10 @@ class JournalHandler(_JournalHandler):
         automatically. In addition, record.MESSAGE_ID will be used if present.
         """
         try:
+            extra_data = flatten(get_extra_data(record, task_args=False))
             extra_data = {
                 (EXTRA_LOGDATA_PREFIX + key).upper(): stringify(value)
-                for key, value in flatten(get_extra_data(record))
+                for key, value in extra_data
             }
             msg = self.format(record)
             pri = self.mapPriority(record.levelno)
