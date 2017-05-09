@@ -1,3 +1,11 @@
+swh-core (0.0.32-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh-core v0.0.32
+  * Add asynchronous streaming methods for internal APIs
+  * Remove task arguments from systemd-journal loggers
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Tue, 09 May 2017 14:04:22 +0200
+
 swh-core (0.0.31-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core v0.0.31
