@@ -89,8 +89,14 @@ class SWHRemoteAPI:
         # replaced by proper unserialization
         if response.status_code == 400:
             raise pickle.loads(decode_response(response))
-        else:
-            return decode_response(response)
+        elif response.status_code != 200:
+            raise RemoteException(
+                "Unexpected status code for API request: %s (%s)" % (
+                    response.status_code,
+                    response.content,
+                )
+            )
+        return decode_response(response)
 
 
 class BytesRequest(Request):
