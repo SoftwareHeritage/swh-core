@@ -1,3 +1,10 @@
+swh-core (0.0.33-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.33
+  * Be more conservative with remote API responses
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 19 Jun 2017 19:01:38 +0200
+
 swh-core (0.0.32-1~swh1) unstable-swh; urgency=medium
 
   * Release swh-core v0.0.32
