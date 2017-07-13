@@ -11,7 +11,7 @@ from nose.tools import istest
 from nose.plugins.attrib import attr
 
 from swh.core.logger import PostgresHandler
-from swh.core.tests.db_testing import DbTestFixture
+from swh.core.tests.db_testing import SingleDbTestFixture
 
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +19,7 @@ SQL_DIR = os.path.join(TEST_DIR, '../../../sql')
 
 
 @attr('db')
-class PgLogHandler(DbTestFixture, unittest.TestCase):
+class PgLogHandler(SingleDbTestFixture, unittest.TestCase):
 
     TEST_DB_DUMP = os.path.join(SQL_DIR, 'log-schema.sql')
     TEST_DB_DUMP_TYPE = 'psql'

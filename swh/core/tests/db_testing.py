@@ -84,8 +84,131 @@ def db_close(conn):
         conn.close()
 
 
-class DbTestFixture():
+class DbTestConn:
+    def __init__(self, dbname):
+        self.dbname = dbname
+
+    def __enter__(self):
+        self.db_setup = db_connect(self.dbname)
+        self.conn = self.db_setup['conn']
+        self.cursor = self.db_setup['cursor']
+        return self
+
+    def __exit__(self, *_):
+        db_close(self.conn)
+
+
+class DbTestContext:
+    def __init__(self, name='softwareheritage-test', dump=None,
+                 dump_type='pg_dump'):
+        self.dbname = name
+        self.dump = dump
+        self.dump_type = dump_type
+
+    def __enter__(self):
+        db_create(dbname=self.dbname,
+                  dump=self.dump,
+                  dumptype=self.dump_type)
+        return self
+
+    def __exit__(self, *_):
+        db_destroy(self.dbname)
+
+
+class DbTestFixture:
     """Mix this in a test subject class to get DB testing support.
+
+    Use the class method add_db() to add a new database to be tested.
+    Using this will create a DbTestConn entry in the `test_db` dictionary for
+    all the tests, indexed by the name of the database.
+
+    Example:
+
+    class TestDb(DbTestFixture, unittest.TestCase):
+        @classmethod
+        def setUpClass(cls):
+            super().setUpClass()
+            cls.add_db('db_name', DUMP)
+
+        def setUp(self):
+            db = self.test_db['db_name']
+            print('conn: {}, cursor: {}'.format(db.conn, db.cursor))
+
+    To ensure test isolation, each test method of the test case class will
+    execute in its own connection, cursor, and transaction.
+
+    Note that if you want to define setup/teardown methods, you need to
+    explicitly call super() to ensure that the fixture setup/teardown methods
+    are invoked. Here is an example where all setup/teardown methods are
+    defined in a test case:
+
+        class TestDb(DbTestFixture, unittest.TestCase):
+            @classmethod
+            def setUpClass(cls):
+                # your add_db() calls here
+                super().setUpClass()
+                # your class setup code here
+
+            def setUp(self):
+                super().setUp()
+                # your instance setup code here
+
+            def tearDown(self):
+                # your instance teardown code here
+                super().tearDown()
+
+            @classmethod
+            def tearDownClass(cls):
+                # your class teardown code here
+                super().tearDownClass()
+
+    """
+
+    _DB_DUMP_LIST = {}
+    _DB_LIST = {}
+    DB_TEST_FIXTURE_IMPORTED = True
+
+    @classmethod
+    def add_db(cls, name='softwareheritage-test', dump=None,
+               dump_type='pg_dump'):
+        cls._DB_DUMP_LIST[name] = (dump, dump_type)
+
+    @classmethod
+    def setUpClass(cls):
+        for name, (dump, dump_type) in cls._DB_DUMP_LIST.items():
+            cls._DB_LIST[name] = DbTestContext(name, dump, dump_type)
+            cls._DB_LIST[name].__enter__()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        for name, context in cls._DB_LIST.items():
+            context.__exit__()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.test_db = {}
+
+    def setUp(self):
+        for name in self._DB_LIST.keys():
+            self.test_db[name] = DbTestConn(name)
+            self.test_db[name].__enter__()
+        super().setUp()
+
+    def tearDown(self):
+        super().tearDown()
+        for name in self._DB_LIST.keys():
+            self.test_db[name].__exit__()
+
+
+class SingleDbTestFixture(DbTestFixture):
+    """Simplified fixture like DbTest but that can only handle a single DB.
+
+    Gives access to shortcuts like self.cursor and self.conn.
+
+    DO NOT use this with other fixtures that need to access databases, like
+    StorageTestFixture.
 
     The class can override the following class attributes:
         TEST_DB_NAME: name of the DB used for testing
@@ -99,39 +222,6 @@ class DbTestFixture():
         dbname: name of the test database
         conn: psycopg2 connection object
         cursor: open psycopg2 cursor to the DB
-
-    To ensure test isolation, each test method of the test case class will
-    execute in its own connection, cursor, and transaction.
-
-    To ensure setup/teardown methods are called, in case of multiple
-    inheritance DbTestFixture should be the first class in the inheritance
-    hierarchy.
-
-    Note that if you want to define setup/teardown methods, you need to
-    explicitly call super() to ensure that the fixture setup/teardown methods
-    are invoked. Here is an example where all setup/teardown methods are
-    defined in a test case:
-
-        class TestDb(DbTestFixture, unittest.TestCase):
-
-            @classmethod
-            def setUpClass(cls):
-                super().setUpClass()
-                # your class setup code here
-
-            def setUp(self):
-                super().setUp()
-                # your instance setup code here
-
-            def tearDown(self):
-                # your instance teardown code here
-                super().tearDown()
-
-            @classmethod
-            def tearDownClass(cls):
-                # your class teardown code here
-                super().tearDownClass()
-
     """
 
     TEST_DB_NAME = 'softwareheritage-test'
@@ -140,116 +230,15 @@ class DbTestFixture():
 
     @classmethod
     def setUpClass(cls):
-        cls.dbname = db_create(dbname=cls.TEST_DB_NAME,
-                               dump=cls.TEST_DB_DUMP,
-                               dumptype=cls.TEST_DB_DUMP_TYPE)
+        cls.dbname = cls.TEST_DB_NAME
+        cls.add_db(name=cls.TEST_DB_NAME,
+                   dump=cls.TEST_DB_DUMP,
+                   dump_type=cls.TEST_DB_DUMP_TYPE)
         super().setUpClass()
 
     def setUp(self):
-        db_setup = db_connect(self.dbname)
-        self.conn = db_setup['conn']
-        self.cursor = db_setup['cursor']
         super().setUp()
 
-    def tearDown(self):
-        super().tearDown()
-        db_close(self.conn)
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        db_destroy(cls.dbname)
-
-
-class DbsTestFixture():
-    """Mix this in a test subject class to get DB testing support with
-    multiple databases.
-
-    The class can override the following class attributes:
-        TEST_DB_NAMES: names of the DB used for testing
-        TEST_DB_DUMPS: DB dumps to be restored before running test methods; can
-            be set to [] if no restore from dump is required
-        TEST_DB_DUMP_TYPES: List of one of 'pg_dump' (binary dump) or 'psql'
-            (SQL dump)
-
-    The test case class will then have the following attributes, accessible via
-    self:
-
-        dbnames: name of the test database
-        conns: psycopg2 connection object
-        cursors: open psycopg2 cursor to the DB
-
-    To ensure test isolation, each test method of the test case class will
-    execute in its own connection, cursor, and transaction.
-
-    To ensure setup/teardown methods are called, in case of multiple
-    inheritance DbTestFixture should be the first class in the inheritance
-    hierarchy.
-
-    Note that if you want to define setup/teardown methods, you need to
-    explicitly call super() to ensure that the fixture setup/teardown methods
-    are invoked. Here is an example where all setup/teardown methods are
-    defined in a test case:
-
-        class TestDb(DbTestFixture, unittest.TestCase):
-
-            @classmethod
-            def setUpClass(cls):
-                super().setUpClass()
-                # your class setup code here
-
-            def setUp(self):
-                super().setUp()
-                # your instance setup code here
-
-            def tearDown(self):
-                # your instance teardown code here
-                super().tearDown()
-
-            @classmethod
-            def tearDownClass(cls):
-                # your class teardown code here
-                super().tearDownClass()
-
-    """
-
-    TEST_DB_NAMES = ['softwareheritage-test']
-    TEST_DB_DUMPS = []
-    TEST_DB_DUMP_TYPES = ['pg_dump']
-
-    @classmethod
-    def setUpClass(cls):
-        dbnames = []
-        for i, dbname in enumerate(cls.TEST_DB_NAMES):
-            try:
-                dbname = db_create(dbname,
-                                   dump=cls.TEST_DB_DUMPS[i],
-                                   dumptype=cls.TEST_DB_DUMP_TYPES[i])
-            finally:
-                dbnames.append(dbname)
-
-        cls.dbnames = dbnames
-        super().setUpClass()
-
-    def setUp(self):
-        conns = []
-        cursors = []
-        for i, dbname in enumerate(self.dbnames):
-            db_setup = db_connect(dbname)
-            conns.append(db_setup['conn'])
-            cursors.append(db_setup['cursor'])
-
-        self.conns = conns
-        self.cursors = cursors
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
-        for conn in self.conns:
-            db_close(conn)
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        for dbname in cls.dbnames:
-            db_destroy(dbname)
+        db = self.test_db[self.TEST_DB_NAME]
+        self.conn = db.conn
+        self.cursor = db.cursor
