@@ -191,6 +191,7 @@ class DbTestFixture:
         self.test_db = {}
 
     def setUp(self):
+        self.test_db = {}
         for name in self._DB_LIST.keys():
             self.test_db[name] = DbTestConn(name)
             self.test_db[name].__enter__()
@@ -200,6 +201,23 @@ class DbTestFixture:
         super().tearDown()
         for name in self._DB_LIST.keys():
             self.test_db[name].__exit__()
+
+    def reset_db_tables(self, name, excluded=None):
+        db = self.test_db[name]
+        conn = db.conn
+        cursor = db.cursor
+
+        cursor.execute("""SELECT table_name FROM information_schema.tables
+                          WHERE table_schema = %s""", ('public',))
+
+        tables = set(table for (table,) in cursor.fetchall())
+        if excluded is not None:
+            tables -= set(excluded)
+
+        for table in tables:
+            cursor.execute('truncate table %s cascade' % table)
+
+        conn.commit()
 
 
 class SingleDbTestFixture(DbTestFixture):
