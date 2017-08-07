@@ -1,3 +1,10 @@
+swh-core (0.0.34-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.34
+  * New modular database test fixture
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 07 Aug 2017 18:29:48 +0200
+
 swh-core (0.0.33-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core v0.0.33
