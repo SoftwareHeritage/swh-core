@@ -1,8 +1,9 @@
-swh-core (0.0.34-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.35-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh.core version 0.0.35
+  * Update packaging runes
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Mon, 07 Aug 2017 18:29:48 +0200
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 12 Oct 2017 18:07:50 +0200
 
 swh-core (0.0.34-1~swh1) unstable-swh; urgency=medium
 

@@ -40,12 +40,14 @@ class SWHJSONEncoder(JSONEncoder):
 
     This JSON encoder extends the default Python JSON encoder and adds
     awareness for the following specific types:
-        - bytes (get encoded as a Base85 string);
-        - datetime.datetime (get encoded as an ISO8601 string).
+
+    - bytes (get encoded as a Base85 string);
+    - datetime.datetime (get encoded as an ISO8601 string).
 
     Non-standard types get encoded as a a dictionary with two keys:
-        - swhtype with value 'bytes' or 'datetime';
-        - d containing the encoded value.
+
+    - swhtype with value 'bytes' or 'datetime';
+    - d containing the encoded value.
 
     SWHJSONEncoder also encodes arbitrary iterables as a list
     (allowing serialization of generators).
@@ -89,13 +91,15 @@ class SWHJSONDecoder(JSONDecoder):
 
     This JSON decoder extends the default Python JSON decoder,
     allowing the decoding of:
-        - bytes (encoded as a Base85 string);
-        - datetime.datetime (encoded as an ISO8601 string).
+
+    - bytes (encoded as a Base85 string);
+    - datetime.datetime (encoded as an ISO8601 string).
 
     Non-standard types must be encoded as a a dictionary with exactly
     two keys:
-        - swhtype with value 'bytes' or 'datetime';
-        - d containing the encoded value.
+
+    - swhtype with value 'bytes' or 'datetime';
+    - d containing the encoded value.
 
     To limit the impact our encoding, if the swhtype key doesn't
     contain a known value, the dictionary is decoded as-is.
