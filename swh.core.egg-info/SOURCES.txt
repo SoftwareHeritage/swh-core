@@ -16,7 +16,14 @@ debian/control
 debian/copyright
 debian/rules
 debian/source/format
+docs/.gitignore
+docs/Makefile
+docs/conf.py
+docs/index.rst
+docs/_static/.placeholder
+docs/_templates/.placeholder
 sql/log-schema.sql
+swh/__init__.py
 swh.core.egg-info/PKG-INFO
 swh.core.egg-info/SOURCES.txt
 swh.core.egg-info/dependency_links.txt

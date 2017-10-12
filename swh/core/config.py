@@ -106,17 +106,18 @@ def config_exists(config_path):
 
 def read(conf_file=None, default_conf=None):
     """Read the user's configuration file.
-    Fill in the gap using `default_conf`.
-`default_conf` is similar to this:
-DEFAULT_CONF = {
-    'a': ('str', '/tmp/swh-loader-git/log'),
-    'b': ('str', 'dbname=swhloadergit')
-    'c': ('bool', true)
-    'e': ('bool', None)
-    'd': ('int', 10)
-}
 
-If conf_file is None, return the default config.
+    Fill in the gap using `default_conf`.  `default_conf` is similar to this::
+
+        DEFAULT_CONF = {
+            'a': ('str', '/tmp/swh-loader-git/log'),
+            'b': ('str', 'dbname=swhloadergit')
+            'c': ('bool', true)
+            'e': ('bool', None)
+            'd': ('int', 10)
+        }
+
+    If conf_file is None, return the default config.
 
     """
     conf = {}
