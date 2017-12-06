@@ -1,3 +1,10 @@
+swh-core (0.0.36-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.36
+  * Migrate swh.loader.tar.tarball module in swh.core
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Wed, 06 Dec 2017 12:03:29 +0100
+
 swh-core (0.0.35-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core version 0.0.35
