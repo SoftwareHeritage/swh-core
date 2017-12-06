@@ -1,3 +1,5 @@
+.. _swh-core:
+
 Software Heritage - Development Documentation
 =============================================
 
