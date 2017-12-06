@@ -1,8 +1,9 @@
-swh-core (0.0.35-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.36-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * v0.0.36
+  * Migrate swh.loader.tar.tarball module in swh.core
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 12 Oct 2017 18:07:50 +0200
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Wed, 06 Dec 2017 12:03:29 +0100
 
 swh-core (0.0.35-1~swh1) unstable-swh; urgency=medium
 
