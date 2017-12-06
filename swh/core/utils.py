@@ -1,4 +1,4 @@
-# Copyright (C) 2016  The Software Heritage developers
+# Copyright (C) 2016-2017  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -94,3 +94,10 @@ def decode_with_escape(value):
     value = value.replace(b'\\', b'\\\\')
     value = value.replace(b'\x00', b'\\x00')
     return value.decode('utf-8', 'backslashescape')
+
+
+def commonname(path0, path1, as_str=False):
+    """Compute the commonname between the path0 and path1.
+
+    """
+    return path1.split(path0)[1]

@@ -35,6 +35,7 @@ swh/core/api_async.py
 swh/core/config.py
 swh/core/logger.py
 swh/core/serializers.py
+swh/core/tarball.py
 swh/core/utils.py
 swh/core/tests/db_testing.py
 swh/core/tests/test_config.py
