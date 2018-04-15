@@ -22,7 +22,7 @@ setup(
     author_email='swh-devel@inria.fr',
     url='https://forge.softwareheritage.org/diffusion/DCORE/',
     packages=find_packages(),
-    scripts=['bin/swh-hashdir', 'bin/swh-hashfile'],
+    scripts=[],
     install_requires=parse_requirements(),
     setup_requires=['vcversioner'],
     vcversioner={},
