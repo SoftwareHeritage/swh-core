@@ -8,8 +8,6 @@ requirements-swh.txt
 requirements.txt
 setup.py
 version.txt
-bin/swh-hashdir
-bin/swh-hashfile
 debian/changelog
 debian/compat
 debian/control
@@ -38,6 +36,7 @@ swh/core/serializers.py
 swh/core/tarball.py
 swh/core/utils.py
 swh/core/tests/db_testing.py
+swh/core/tests/server_testing.py
 swh/core/tests/test_config.py
 swh/core/tests/test_logger.py
 swh/core/tests/test_serializers.py
