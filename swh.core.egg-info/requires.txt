@@ -1,5 +1,6 @@
 Flask
 PyYAML
+aiohttp
 arrow
 msgpack-python
 psycopg2
