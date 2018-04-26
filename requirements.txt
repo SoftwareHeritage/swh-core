@@ -1,3 +1,4 @@
+arrow
 msgpack-python
 psycopg2
 python-dateutil

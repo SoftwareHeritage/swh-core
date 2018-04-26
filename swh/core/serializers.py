@@ -1,8 +1,9 @@
-# Copyright (C) 2015  The Software Heritage developers
+# Copyright (C) 2015-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import arrow
 import base64
 import datetime
 from json import JSONDecoder, JSONEncoder
@@ -75,6 +76,16 @@ class SWHJSONEncoder(JSONEncoder):
                 'swhtype': 'uuid',
                 'd': str(o),
             }
+        elif isinstance(o, datetime.timedelta):
+            return {
+                'swhtype': 'timedelta',
+                'd': repr(o),
+            }
+        elif isinstance(o, arrow.Arrow):
+            return {
+                'swhtype': 'arrow',
+                'd': o.isoformat(),
+            }
         try:
             return super().default(o)
         except TypeError as e:
@@ -115,6 +126,10 @@ class SWHJSONDecoder(JSONDecoder):
                     return dateutil.parser.parse(o['d'])
                 elif datatype == 'uuid':
                     return UUID(o['d'])
+                elif datatype == 'timedelta':
+                    return eval(o['d'])
+                elif datatype == 'arrow':
+                    return arrow.get(o['d'])
             return {key: self.decode_data(value) for key, value in o.items()}
         if isinstance(o, list):
             return [self.decode_data(value) for value in o]
@@ -135,6 +150,10 @@ def msgpack_dumps(data):
             return list(obj)
         if isinstance(obj, UUID):
             return {b'__uuid__': True, b's': str(obj)}
+        if isinstance(obj, datetime.timedelta):
+            return {b'__timedelta__': True, b's': repr(obj)}
+        if isinstance(obj, arrow.Arrow):
+            return {b'__arrow__': True, b's': obj.isoformat()}
         return obj
 
     return msgpack.packb(data, use_bin_type=True, default=encode_types)
@@ -147,6 +166,10 @@ def msgpack_loads(data):
             return dateutil.parser.parse(obj[b's'])
         if b'__uuid__' in obj and obj[b'__uuid__']:
             return UUID(obj[b's'])
+        if b'__timedelta__' in obj and obj[b'__timedelta__']:
+            return eval(obj[b's'])
+        if b'__arrow__' in obj and obj[b'__arrow__']:
+            return arrow.get(obj[b's'])
         return obj
 
     return msgpack.unpackb(data, encoding='utf-8', object_hook=decode_types)
