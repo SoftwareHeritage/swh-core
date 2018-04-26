@@ -1,3 +1,10 @@
+swh-core (0.0.39-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.39
+  * package: Add missing runtime dependency
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 26 Apr 2018 15:24:22 +0200
+
 swh-core (0.0.38-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.38
