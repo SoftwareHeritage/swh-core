@@ -19,7 +19,11 @@ def pg_restore(dbname, dumpfile, dumptype='pg_dump'):
         subprocess.check_call(['pg_restore', '--no-owner', '--no-privileges',
                                '--dbname', dbname, dumpfile])
     elif dumptype == 'psql':
-        subprocess.check_call(['psql', '--quiet', '-f', dumpfile, dbname])
+        subprocess.check_call(['psql', '--quiet',
+                                       '--no-psqlrc',
+                                       '-v', 'ON_ERROR_STOP=1',
+                                       '-f', dumpfile,
+                                       dbname])
 
 
 def pg_dump(dbname, dumpfile):
