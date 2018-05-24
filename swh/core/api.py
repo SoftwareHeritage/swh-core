@@ -24,17 +24,20 @@ class SWHRemoteAPI:
 
     """
 
-    def __init__(self, api_exception, url):
+    def __init__(self, api_exception, url, timeout=None):
         super().__init__()
         self.api_exception = api_exception
         base_url = url if url.endswith('/') else url + '/'
         self.url = base_url
         self.session = requests.Session()
+        self.timeout = timeout
 
     def _url(self, endpoint):
         return '%s%s' % (self.url, endpoint)
 
     def raw_post(self, endpoint, data, **opts):
+        if self.timeout and 'timeout' not in opts:
+            opts['timeout'] = self.timeout
         try:
             return self.session.post(
                 self._url(endpoint),
@@ -45,6 +48,8 @@ class SWHRemoteAPI:
             raise self.api_exception(e)
 
     def raw_get(self, endpoint, params=None, **opts):
+        if self.timeout and 'timeout' not in opts:
+            opts['timeout'] = self.timeout
         try:
             return self.session.get(
                 self._url(endpoint),
