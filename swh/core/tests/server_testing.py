@@ -6,6 +6,7 @@
 import abc
 import aiohttp
 import multiprocessing
+import os
 import socket
 import time
 
@@ -117,6 +118,8 @@ class ServerTestFixture(ServerTestFixtureBaseClass):
 
     def define_worker_function(self):
         def worker(app, port):
+            # Make Flask 1.0 stop printing its server banner
+            os.environ['WERKZEUG_RUN_MAIN'] = 'true'
             return app.run(port=port, use_reloader=False)
 
         return worker
