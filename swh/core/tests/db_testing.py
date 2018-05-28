@@ -78,7 +78,7 @@ def db_connect(dbname):
 
 
 def db_close(conn):
-    """rollback current transaction and disconnet from the test DB
+    """rollback current transaction and disconnect from the test DB
 
     context: tearDown
 
