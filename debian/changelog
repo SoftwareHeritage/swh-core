@@ -1,3 +1,10 @@
+swh-core (0.0.42-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.42
+  * Fix missing dependency declaration
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 11 Oct 2018 15:45:25 +0200
+
 swh-core (0.0.41-1~swh1) unstable-swh; urgency=medium
 
   * Add functions to generate HTTP API clients and servers from
