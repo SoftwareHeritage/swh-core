@@ -8,3 +8,7 @@ python-dateutil
 requests
 systemd-python
 vcversioner
+
+[testing]
+nose
+requests-mock

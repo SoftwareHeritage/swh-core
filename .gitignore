@@ -4,6 +4,8 @@
 .coverage
 .eggs/
 __pycache__
+build
 dist
 swh.core.egg-info
 version.txt
+.tox
