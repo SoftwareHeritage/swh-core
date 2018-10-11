@@ -5,8 +5,10 @@ MANIFEST.in
 Makefile
 README.md
 requirements-swh.txt
+requirements-test.txt
 requirements.txt
 setup.py
+tox.ini
 version.txt
 debian/changelog
 debian/compat
@@ -35,8 +37,10 @@ swh/core/logger.py
 swh/core/serializers.py
 swh/core/tarball.py
 swh/core/utils.py
+swh/core/tests/__init__.py
 swh/core/tests/db_testing.py
 swh/core/tests/server_testing.py
+swh/core/tests/test_api.py
 swh/core/tests/test_config.py
 swh/core/tests/test_logger.py
 swh/core/tests/test_serializers.py

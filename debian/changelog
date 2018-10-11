@@ -1,8 +1,16 @@
-swh-core (0.0.40-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.41-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Add functions to generate HTTP API clients and servers from
+    databases.
+  * Summary: This moves the interesting parts of D505 into the core, so
+    other components can use them as well.
+  * Test Plan: `make test`
+  * Reviewers: ardumont, seirl, #reviewers
+  * Reviewed By: ardumont, #reviewers
+  * Subscribers: douardda
+  * Differential Revision: https://forge.softwareheritage.org/D507
 
- -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 24 May 2018 12:10:03 +0200
+ -- Valentin Lorentz <vlorentz@softwareheritage.org>  Thu, 11 Oct 2018 10:57:27 +0200
 
 swh-core (0.0.40-1~swh1) unstable-swh; urgency=medium
 
