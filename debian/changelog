@@ -1,3 +1,10 @@
+swh-core (0.0.43-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.43
+  * Fix missing dependency declaration
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Thu, 11 Oct 2018 15:47:06 +0200
+
 swh-core (0.0.42-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.42
