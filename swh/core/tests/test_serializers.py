@@ -3,16 +3,19 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import arrow
 import datetime
 import json
 import unittest
 from uuid import UUID
 
-from nose.tools import istest
+import arrow
 
-from swh.core.serializers import SWHJSONDecoder, SWHJSONEncoder
-from swh.core.serializers import msgpack_dumps, msgpack_loads
+from swh.core.serializers import (
+    SWHJSONDecoder,
+    SWHJSONEncoder,
+    msgpack_dumps,
+    msgpack_loads
+)
 
 
 class Serializers(unittest.TestCase):
@@ -56,27 +59,22 @@ class Serializers(unittest.TestCase):
         self.generator = (i for i in range(5))
         self.gen_lst = list(range(5))
 
-    @istest
-    def round_trip_json(self):
+    def test_round_trip_json(self):
         data = json.dumps(self.data, cls=SWHJSONEncoder)
         self.assertEqual(self.data, json.loads(data, cls=SWHJSONDecoder))
 
-    @istest
-    def encode_swh_json(self):
+    def test_encode_swh_json(self):
         data = json.dumps(self.data, cls=SWHJSONEncoder)
         self.assertEqual(self.encoded_data, json.loads(data))
 
-    @istest
-    def round_trip_msgpack(self):
+    def test_round_trip_msgpack(self):
         data = msgpack_dumps(self.data)
         self.assertEqual(self.data, msgpack_loads(data))
 
-    @istest
-    def generator_json(self):
+    def test_generator_json(self):
         data = json.dumps(self.generator, cls=SWHJSONEncoder)
         self.assertEqual(self.gen_lst, json.loads(data, cls=SWHJSONDecoder))
 
-    @istest
-    def generator_msgpack(self):
+    def test_generator_msgpack(self):
         data = msgpack_dumps(self.generator)
         self.assertEqual(self.gen_lst, msgpack_loads(data))

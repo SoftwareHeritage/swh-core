@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 import unittest
-from nose.tools import istest
 
 import requests_mock
 from werkzeug.wrappers import BaseResponse
@@ -16,7 +15,6 @@ from swh.core.api import (
 
 
 class ApiTest(unittest.TestCase):
-    @istest
     def test_server(self):
         testcase = self
         nb_endpoint_calls = 0
@@ -46,7 +44,6 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(nb_endpoint_calls, 1)
         self.assertEqual(b''.join(res.response), b'\xa3egg')
 
-    @istest
     def test_client(self):
         class TestStorage:
             @remote_api_endpoint('test_endpoint_url')

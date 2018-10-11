@@ -7,12 +7,10 @@ import logging
 import os
 import unittest
 
-from nose.tools import istest
 from nose.plugins.attrib import attr
 
 from swh.core.logger import PostgresHandler
 from swh.core.tests.db_testing import SingleDbTestFixture
-
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 SQL_DIR = os.path.join(TEST_DIR, '../../../sql')
@@ -34,8 +32,7 @@ class PgLogHandler(SingleDbTestFixture, unittest.TestCase):
         logging.shutdown()
         super().tearDown()
 
-    @istest
-    def log(self):
+    def test_log(self):
         self.logger.info('notice',
                          extra={'swh_type': 'test entry', 'swh_data': 42})
         self.logger.warn('warning')

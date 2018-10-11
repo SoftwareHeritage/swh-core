@@ -3,12 +3,10 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import tempfile
-import unittest
 import os
 import shutil
-
-from nose.tools import istest
+import tempfile
+import unittest
 
 from swh.core import config
 
@@ -100,50 +98,43 @@ li = 1, 2, 3, 4
         os.chmod(cls.perms_broken_file, 0o644)
         shutil.rmtree(cls.tmpdir)
 
-    @istest
-    def read(self):
+    def test_read(self):
         # when
         res = config.read(self.conffile, self.default_conf)
 
         # then
         self.assertEquals(res, self.parsed_conffile)
 
-    @istest
-    def read_empty_file(self):
+    def test_read_empty_file(self):
         # when
         res = config.read(None, self.default_conf)
 
         # then
         self.assertEquals(res, self.parsed_default_conf)
 
-    @istest
-    def support_non_existing_conffile(self):
+    def test_support_non_existing_conffile(self):
         # when
         res = config.read(self.non_existing_conffile, self.default_conf)
 
         # then
         self.assertEquals(res, self.parsed_default_conf)
 
-    @istest
-    def support_empty_conffile(self):
+    def test_support_empty_conffile(self):
         # when
         res = config.read(self.empty_conffile, self.default_conf)
 
         # then
         self.assertEquals(res, self.parsed_default_conf)
 
-    @istest
-    def raise_on_broken_directory_perms(self):
+    def test_raise_on_broken_directory_perms(self):
         with self.assertRaises(PermissionError):
             config.read(self.file_in_broken_dir, self.default_conf)
 
-    @istest
-    def raise_on_broken_file_perms(self):
+    def test_raise_on_broken_file_perms(self):
         with self.assertRaises(PermissionError):
             config.read(self.perms_broken_file, self.default_conf)
 
-    @istest
-    def merge_default_configs(self):
+    def test_merge_default_configs(self):
         # when
         res = config.merge_default_configs(self.default_conf,
                                            self.other_default_conf)
@@ -151,8 +142,7 @@ li = 1, 2, 3, 4
         # then
         self.assertEquals(res, self.full_default_conf)
 
-    @istest
-    def priority_read_nonexist_conf(self):
+    def test_priority_read_nonexist_conf(self):
         # when
         res = config.priority_read([self.non_existing_conffile, self.conffile],
                                    self.default_conf)
@@ -160,8 +150,7 @@ li = 1, 2, 3, 4
         # then
         self.assertEquals(res, self.parsed_conffile)
 
-    @istest
-    def priority_read_conf_nonexist_empty(self):
+    def test_priority_read_conf_nonexist_empty(self):
         # when
         res = config.priority_read([
             self.conffile,
@@ -172,8 +161,7 @@ li = 1, 2, 3, 4
         # then
         self.assertEquals(res, self.parsed_conffile)
 
-    @istest
-    def priority_read_empty_conf_nonexist(self):
+    def test_priority_read_empty_conf_nonexist(self):
         # when
         res = config.priority_read([
             self.empty_conffile,
@@ -184,8 +172,7 @@ li = 1, 2, 3, 4
         # then
         self.assertEquals(res, self.parsed_default_conf)
 
-    @istest
-    def swh_config_paths(self):
+    def test_swh_config_paths(self):
         res = config.swh_config_paths('foo/bar.ini')
 
         self.assertEqual(res, [
@@ -194,8 +181,7 @@ li = 1, 2, 3, 4
             '/etc/softwareheritage/foo/bar.ini',
         ])
 
-    @istest
-    def prepare_folder(self):
+    def test_prepare_folder(self):
         # given
         conf = {'path1': os.path.join(self.tmpdir, 'path1'),
                 'path2': os.path.join(self.tmpdir, 'path2', 'depth1')}
