@@ -5,15 +5,12 @@
 
 import unittest
 
-from nose.tools import istest
-
 from swh.core import utils
 
 
 class UtilsLib(unittest.TestCase):
 
-    @istest
-    def grouper(self):
+    def test_grouper(self):
         # given
         actual_data = utils.grouper((i for i in range(0, 9)), 2)
 
@@ -32,8 +29,7 @@ class UtilsLib(unittest.TestCase):
 
         self.assertEqual(out, [[9, 8, 7, 6], [5, 4, 3, 2], [1]])
 
-    @istest
-    def backslashescape_errors(self):
+    def test_backslashescape_errors(self):
         raw_data_err = b'abcd\x80'
         with self.assertRaises(UnicodeDecodeError):
             raw_data_err.decode('utf-8', 'strict')
@@ -55,8 +51,7 @@ class UtilsLib(unittest.TestCase):
             b'abcdef\\xa3',
         )
 
-    @istest
-    def encode_with_unescape(self):
+    def test_encode_with_unescape(self):
         valid_data = '\\x01020304\\x00'
         valid_data_encoded = b'\x01020304\x00'
 
@@ -65,8 +60,7 @@ class UtilsLib(unittest.TestCase):
             utils.encode_with_unescape(valid_data)
         )
 
-    @istest
-    def encode_with_unescape_invalid_escape(self):
+    def test_encode_with_unescape_invalid_escape(self):
         invalid_data = 'test\\abcd'
 
         with self.assertRaises(ValueError) as exc:
@@ -75,8 +69,7 @@ class UtilsLib(unittest.TestCase):
         self.assertIn('invalid escape', exc.exception.args[0])
         self.assertIn('position 4', exc.exception.args[0])
 
-    @istest
-    def decode_with_escape(self):
+    def test_decode_with_escape(self):
         backslashes = b'foo\\bar\\\\baz'
         backslashes_escaped = 'foo\\\\bar\\\\\\\\baz'
 
@@ -109,8 +102,7 @@ class UtilsLib(unittest.TestCase):
             utils.decode_with_escape(valid_utf8_nul),
         )
 
-    @istest
-    def commonname(self):
+    def test_commonname(self):
         # when
         actual_commonname = utils.commonname('/some/where/to/',
                                              '/some/where/to/go/to')
