@@ -1,3 +1,17 @@
+swh-core (0.0.41-1~swh1) unstable-swh; urgency=medium
+
+  * Add functions to generate HTTP API clients and servers from
+    databases.
+  * Summary: This moves the interesting parts of D505 into the core, so
+    other components can use them as well.
+  * Test Plan: `make test`
+  * Reviewers: ardumont, seirl, #reviewers
+  * Reviewed By: ardumont, #reviewers
+  * Subscribers: douardda
+  * Differential Revision: https://forge.softwareheritage.org/D507
+
+ -- Valentin Lorentz <vlorentz@softwareheritage.org>  Thu, 11 Oct 2018 10:57:27 +0200
+
 swh-core (0.0.40-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.40
