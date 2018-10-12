@@ -190,10 +190,6 @@ class DbTestFixture:
         for name, context in cls._DB_LIST.items():
             context.__exit__()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.test_db = {}
-
     def setUp(self):
         self.test_db = {}
         for name in self._DB_LIST.keys():
