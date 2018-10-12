@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import os
 import psycopg2
 import subprocess
 
@@ -232,7 +233,8 @@ class SingleDbTestFixture(DbTestFixture):
         TEST_DB_NAME: name of the DB used for testing
         TEST_DB_DUMP: DB dump to be restored before running test methods; can
             be set to None if no restore from dump is required
-        TEST_DB_DUMP_TYPE: one of 'pg_dump' (binary dump) or 'psql' (SQL dump)
+        TEST_DB_DUMP_TYPE: one of 'pg_dump' (binary dump) or 'psql' (SQL dump);
+            if unset, will be guessed from the TEST_DB_DUMP file name
 
     The test case class will then have the following attributes, accessible via
     self:
@@ -244,14 +246,18 @@ class SingleDbTestFixture(DbTestFixture):
 
     TEST_DB_NAME = 'softwareheritage-test'
     TEST_DB_DUMP = None
-    TEST_DB_DUMP_TYPE = 'pg_dump'
+    TEST_DB_DUMP_TYPE = None
+    DB_DUMP_TYPES = {'.sql': 'psql', '.dump': 'pg_dump'}
 
     @classmethod
     def setUpClass(cls):
         cls.dbname = cls.TEST_DB_NAME
+        dump_type = (cls.TEST_DB_DUMP_TYPE or
+                     cls.DB_DUMP_TYPES[os.path.splitext(cls.TEST_DB_DUMP)[-1]])
+
         cls.add_db(name=cls.TEST_DB_NAME,
                    dump=cls.TEST_DB_DUMP,
-                   dump_type=cls.TEST_DB_DUMP_TYPE)
+                   dump_type=dump_type)
         super().setUpClass()
 
     def setUp(self):
