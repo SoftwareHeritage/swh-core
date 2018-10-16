@@ -235,9 +235,13 @@ class SingleDbTestFixture(DbTestFixture):
     The class can override the following class attributes:
         TEST_DB_NAME: name of the DB used for testing
         TEST_DB_DUMP: DB dump to be restored before running test methods; can
-            be set to None if no restore from dump is required
-        TEST_DB_DUMP_TYPE: one of 'pg_dump' (binary dump) or 'psql' (SQL dump);
-            if unset, will be guessed from the TEST_DB_DUMP file name
+            be set to None if no restore from dump is required.
+            If the dump file name endswith"
+            - '.sql' it will be loaded via psql,
+            - '.dump' it will be loaded via pg_restore.
+            Other file extensions will be ignored.
+            Can be a string or a list of strings; each path will be expanded
+            using glob pattern matching.
 
     The test case class will then have the following attributes, accessible via
     self:
@@ -249,20 +253,24 @@ class SingleDbTestFixture(DbTestFixture):
 
     TEST_DB_NAME = 'softwareheritage-test'
     TEST_DB_DUMP = None
-    TEST_DB_DUMP_TYPE = None
 
     @classmethod
     def setUpClass(cls):
-        cls.dbname = cls.TEST_DB_NAME
+        cls.dbname = cls.TEST_DB_NAME  # XXX to kill?
 
-        dump_files = sorted(glob.glob(cls.TEST_DB_DUMP),
-                            key=sortkey)
+        dump_files = cls.TEST_DB_DUMP
+        if isinstance(dump_files, str):
+            dump_files = [dump_files]
+        all_dump_files = []
+        for files in dump_files:
+            all_dump_files.extend(
+                sorted(glob.glob(files), key=sortkey))
 
-        dump_files = [(x, DB_DUMP_TYPES[os.path.splitext(x)[1]])
-                      for x in dump_files]
+        all_dump_files = [(x, DB_DUMP_TYPES[os.path.splitext(x)[1]])
+                          for x in all_dump_files]
 
         cls.add_db(name=cls.TEST_DB_NAME,
-                   dumps=dump_files)
+                   dumps=all_dump_files)
         super().setUpClass()
 
     def setUp(self):
