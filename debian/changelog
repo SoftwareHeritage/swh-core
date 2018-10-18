@@ -1,3 +1,12 @@
+swh-core (0.0.44-1~swh1) unstable-swh; urgency=medium
+
+  * Release swh.core v0.0.44
+  * Refactor the database testing fixtures
+  * Stop unsafe serialization/deserialization constructs
+  * Update tests to use nose
+
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 18 Oct 2018 18:20:12 +0200
+
 swh-core (0.0.43-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.43
