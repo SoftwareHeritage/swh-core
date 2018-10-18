@@ -7,20 +7,18 @@ import logging
 import os
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
 from swh.core.logger import PostgresHandler
 from swh.core.tests.db_testing import SingleDbTestFixture
 
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-SQL_DIR = os.path.join(TEST_DIR, '../../../sql')
+from swh.core.tests import SQL_DIR
 
 
-@attr('db')
+@pytest.mark.db
 class PgLogHandler(SingleDbTestFixture, unittest.TestCase):
 
     TEST_DB_DUMP = os.path.join(SQL_DIR, 'log-schema.sql')
-    TEST_DB_DUMP_TYPE = 'psql'
 
     def setUp(self):
         super().setUp()
@@ -35,7 +33,7 @@ class PgLogHandler(SingleDbTestFixture, unittest.TestCase):
     def test_log(self):
         self.logger.info('notice',
                          extra={'swh_type': 'test entry', 'swh_data': 42})
-        self.logger.warn('warning')
+        self.logger.warning('warning')
 
         with self.conn.cursor() as cur:
             cur.execute('SELECT level, message, data, src_module FROM log')
