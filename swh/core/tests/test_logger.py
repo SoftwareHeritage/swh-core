@@ -7,7 +7,7 @@ import logging
 import os
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
 from swh.core.logger import PostgresHandler
 from swh.core.tests.db_testing import SingleDbTestFixture
@@ -15,7 +15,7 @@ from swh.core.tests.db_testing import SingleDbTestFixture
 from swh.core.tests import SQL_DIR
 
 
-@attr('db')
+@pytest.mark.db
 class PgLogHandler(SingleDbTestFixture, unittest.TestCase):
 
     TEST_DB_DUMP = os.path.join(SQL_DIR, 'log-schema.sql')
