@@ -33,7 +33,7 @@ class PgLogHandler(SingleDbTestFixture, unittest.TestCase):
     def test_log(self):
         self.logger.info('notice',
                          extra={'swh_type': 'test entry', 'swh_data': 42})
-        self.logger.warn('warning')
+        self.logger.warning('warning')
 
         with self.conn.cursor() as cur:
             cur.execute('SELECT level, message, data, src_module FROM log')
