@@ -103,28 +103,28 @@ li = 1, 2, 3, 4
         res = config.read(self.conffile, self.default_conf)
 
         # then
-        self.assertEquals(res, self.parsed_conffile)
+        self.assertEqual(res, self.parsed_conffile)
 
     def test_read_empty_file(self):
         # when
         res = config.read(None, self.default_conf)
 
         # then
-        self.assertEquals(res, self.parsed_default_conf)
+        self.assertEqual(res, self.parsed_default_conf)
 
     def test_support_non_existing_conffile(self):
         # when
         res = config.read(self.non_existing_conffile, self.default_conf)
 
         # then
-        self.assertEquals(res, self.parsed_default_conf)
+        self.assertEqual(res, self.parsed_default_conf)
 
     def test_support_empty_conffile(self):
         # when
         res = config.read(self.empty_conffile, self.default_conf)
 
         # then
-        self.assertEquals(res, self.parsed_default_conf)
+        self.assertEqual(res, self.parsed_default_conf)
 
     def test_raise_on_broken_directory_perms(self):
         with self.assertRaises(PermissionError):
@@ -140,7 +140,7 @@ li = 1, 2, 3, 4
                                            self.other_default_conf)
 
         # then
-        self.assertEquals(res, self.full_default_conf)
+        self.assertEqual(res, self.full_default_conf)
 
     def test_priority_read_nonexist_conf(self):
         # when
@@ -148,7 +148,7 @@ li = 1, 2, 3, 4
                                    self.default_conf)
 
         # then
-        self.assertEquals(res, self.parsed_conffile)
+        self.assertEqual(res, self.parsed_conffile)
 
     def test_priority_read_conf_nonexist_empty(self):
         # when
@@ -159,7 +159,7 @@ li = 1, 2, 3, 4
         ], self.default_conf)
 
         # then
-        self.assertEquals(res, self.parsed_conffile)
+        self.assertEqual(res, self.parsed_conffile)
 
     def test_priority_read_empty_conf_nonexist(self):
         # when
@@ -170,7 +170,7 @@ li = 1, 2, 3, 4
         ], self.default_conf)
 
         # then
-        self.assertEquals(res, self.parsed_default_conf)
+        self.assertEqual(res, self.parsed_default_conf)
 
     def test_swh_config_paths(self):
         res = config.swh_config_paths('foo/bar.ini')

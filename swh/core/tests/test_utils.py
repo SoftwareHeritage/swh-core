@@ -34,19 +34,19 @@ class UtilsLib(unittest.TestCase):
         with self.assertRaises(UnicodeDecodeError):
             raw_data_err.decode('utf-8', 'strict')
 
-        self.assertEquals(
+        self.assertEqual(
             raw_data_err.decode('utf-8', 'backslashescape'),
             'abcd\\x80',
         )
 
         raw_data_ok = b'abcd\xc3\xa9'
-        self.assertEquals(
+        self.assertEqual(
             raw_data_ok.decode('utf-8', 'backslashescape'),
             raw_data_ok.decode('utf-8', 'strict'),
         )
 
         unicode_data = 'abcdef\u00a3'
-        self.assertEquals(
+        self.assertEqual(
             unicode_data.encode('ascii', 'backslashescape'),
             b'abcdef\\xa3',
         )
@@ -55,7 +55,7 @@ class UtilsLib(unittest.TestCase):
         valid_data = '\\x01020304\\x00'
         valid_data_encoded = b'\x01020304\x00'
 
-        self.assertEquals(
+        self.assertEqual(
             valid_data_encoded,
             utils.encode_with_unescape(valid_data)
         )
@@ -73,7 +73,7 @@ class UtilsLib(unittest.TestCase):
         backslashes = b'foo\\bar\\\\baz'
         backslashes_escaped = 'foo\\\\bar\\\\\\\\baz'
 
-        self.assertEquals(
+        self.assertEqual(
             backslashes_escaped,
             utils.decode_with_escape(backslashes),
         )
@@ -81,7 +81,7 @@ class UtilsLib(unittest.TestCase):
         valid_utf8 = b'foo\xc3\xa2'
         valid_utf8_escaped = 'foo\u00e2'
 
-        self.assertEquals(
+        self.assertEqual(
             valid_utf8_escaped,
             utils.decode_with_escape(valid_utf8),
         )
@@ -89,7 +89,7 @@ class UtilsLib(unittest.TestCase):
         invalid_utf8 = b'foo\xa2'
         invalid_utf8_escaped = 'foo\\xa2'
 
-        self.assertEquals(
+        self.assertEqual(
             invalid_utf8_escaped,
             utils.decode_with_escape(invalid_utf8),
         )
@@ -97,7 +97,7 @@ class UtilsLib(unittest.TestCase):
         valid_utf8_nul = b'foo\xc3\xa2\x00'
         valid_utf8_nul_escaped = 'foo\u00e2\\x00'
 
-        self.assertEquals(
+        self.assertEqual(
             valid_utf8_nul_escaped,
             utils.decode_with_escape(valid_utf8_nul),
         )
@@ -107,10 +107,10 @@ class UtilsLib(unittest.TestCase):
         actual_commonname = utils.commonname('/some/where/to/',
                                              '/some/where/to/go/to')
         # then
-        self.assertEquals('go/to', actual_commonname)
+        self.assertEqual('go/to', actual_commonname)
 
         # when
         actual_commonname2 = utils.commonname(b'/some/where/to/',
                                               b'/some/where/to/go/to')
         # then
-        self.assertEquals(b'go/to', actual_commonname2)
+        self.assertEqual(b'go/to', actual_commonname2)

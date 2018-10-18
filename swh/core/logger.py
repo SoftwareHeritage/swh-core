@@ -83,7 +83,7 @@ def stringify(value):
 class PostgresHandler(logging.Handler):
     """log handler that store messages in a Postgres DB
 
-    See swh-core/sql/log-schema.sql for the DB schema.
+    See swh-core/swh/core/sql/log-schema.sql for the DB schema.
 
     All logging methods can be used as usual. Additionally, arbitrary metadata
     can be passed to logging methods, requesting that they will be stored in

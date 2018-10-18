@@ -10,5 +10,5 @@ systemd-python
 vcversioner
 
 [testing]
-nose
+pytest
 requests-mock
