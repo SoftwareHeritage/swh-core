@@ -3,8 +3,14 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import os
+import glob
 import psycopg2
 import subprocess
+
+from swh.core.utils import numfile_sortkey as sortkey
+
+DB_DUMP_TYPES = {'.sql': 'psql', '.dump': 'pg_dump'}
 
 
 def pg_restore(dbname, dumpfile, dumptype='pg_dump'):
@@ -39,8 +45,10 @@ def pg_createdb(dbname):
     subprocess.check_call(['createdb', dbname])
 
 
-def db_create(dbname, dump=None, dumptype='pg_dump'):
-    """create the test DB and load the test data dump into it
+def db_create(dbname, dumps=None):
+    """create the test DB and load the test data dumps into it
+
+    dumps is an iterable of couples (dump_file, dump_type).
 
     context: setUpClass
 
@@ -50,8 +58,8 @@ def db_create(dbname, dump=None, dumptype='pg_dump'):
     except subprocess.CalledProcessError:  # try recovering once, in case
         pg_dropdb(dbname)                  # the db already existed
         pg_createdb(dbname)
-    if dump:
-        pg_restore(dbname, dump, dumptype)
+    for dump, dtype in dumps:
+        pg_restore(dbname, dump, dtype)
     return dbname
 
 
@@ -103,16 +111,13 @@ class DbTestConn:
 
 
 class DbTestContext:
-    def __init__(self, name='softwareheritage-test', dump=None,
-                 dump_type='pg_dump'):
+    def __init__(self, name='softwareheritage-test', dumps=None):
         self.dbname = name
-        self.dump = dump
-        self.dump_type = dump_type
+        self.dumps = dumps
 
     def __enter__(self):
         db_create(dbname=self.dbname,
-                  dump=self.dump,
-                  dumptype=self.dump_type)
+                  dumps=self.dumps)
         return self
 
     def __exit__(self, *_):
@@ -173,14 +178,13 @@ class DbTestFixture:
     DB_TEST_FIXTURE_IMPORTED = True
 
     @classmethod
-    def add_db(cls, name='softwareheritage-test', dump=None,
-               dump_type='pg_dump'):
-        cls._DB_DUMP_LIST[name] = (dump, dump_type)
+    def add_db(cls, name='softwareheritage-test', dumps=None):
+        cls._DB_DUMP_LIST[name] = dumps
 
     @classmethod
     def setUpClass(cls):
-        for name, (dump, dump_type) in cls._DB_DUMP_LIST.items():
-            cls._DB_LIST[name] = DbTestContext(name, dump, dump_type)
+        for name, dumps in cls._DB_DUMP_LIST.items():
+            cls._DB_LIST[name] = DbTestContext(name, dumps)
             cls._DB_LIST[name].__enter__()
         super().setUpClass()
 
@@ -189,10 +193,6 @@ class DbTestFixture:
         super().tearDownClass()
         for name, context in cls._DB_LIST.items():
             context.__exit__()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.test_db = {}
 
     def setUp(self):
         self.test_db = {}
@@ -235,8 +235,13 @@ class SingleDbTestFixture(DbTestFixture):
     The class can override the following class attributes:
         TEST_DB_NAME: name of the DB used for testing
         TEST_DB_DUMP: DB dump to be restored before running test methods; can
-            be set to None if no restore from dump is required
-        TEST_DB_DUMP_TYPE: one of 'pg_dump' (binary dump) or 'psql' (SQL dump)
+            be set to None if no restore from dump is required.
+            If the dump file name endswith"
+            - '.sql' it will be loaded via psql,
+            - '.dump' it will be loaded via pg_restore.
+            Other file extensions will be ignored.
+            Can be a string or a list of strings; each path will be expanded
+            using glob pattern matching.
 
     The test case class will then have the following attributes, accessible via
     self:
@@ -248,14 +253,24 @@ class SingleDbTestFixture(DbTestFixture):
 
     TEST_DB_NAME = 'softwareheritage-test'
     TEST_DB_DUMP = None
-    TEST_DB_DUMP_TYPE = 'pg_dump'
 
     @classmethod
     def setUpClass(cls):
-        cls.dbname = cls.TEST_DB_NAME
+        cls.dbname = cls.TEST_DB_NAME  # XXX to kill?
+
+        dump_files = cls.TEST_DB_DUMP
+        if isinstance(dump_files, str):
+            dump_files = [dump_files]
+        all_dump_files = []
+        for files in dump_files:
+            all_dump_files.extend(
+                sorted(glob.glob(files), key=sortkey))
+
+        all_dump_files = [(x, DB_DUMP_TYPES[os.path.splitext(x)[1]])
+                          for x in all_dump_files]
+
         cls.add_db(name=cls.TEST_DB_NAME,
-                   dump=cls.TEST_DB_DUMP,
-                   dump_type=cls.TEST_DB_DUMP_TYPE)
+                   dumps=all_dump_files)
         super().setUpClass()
 
     def setUp(self):

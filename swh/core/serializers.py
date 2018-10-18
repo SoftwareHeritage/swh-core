@@ -79,7 +79,11 @@ class SWHJSONEncoder(JSONEncoder):
         elif isinstance(o, datetime.timedelta):
             return {
                 'swhtype': 'timedelta',
-                'd': repr(o),
+                'd': {
+                    'days': o.days,
+                    'seconds': o.seconds,
+                    'microseconds': o.microseconds,
+                },
             }
         elif isinstance(o, arrow.Arrow):
             return {
@@ -127,7 +131,7 @@ class SWHJSONDecoder(JSONDecoder):
                 elif datatype == 'uuid':
                     return UUID(o['d'])
                 elif datatype == 'timedelta':
-                    return eval(o['d'])
+                    return datetime.timedelta(**o['d'])
                 elif datatype == 'arrow':
                     return arrow.get(o['d'])
             return {key: self.decode_data(value) for key, value in o.items()}
@@ -151,7 +155,14 @@ def msgpack_dumps(data):
         if isinstance(obj, UUID):
             return {b'__uuid__': True, b's': str(obj)}
         if isinstance(obj, datetime.timedelta):
-            return {b'__timedelta__': True, b's': repr(obj)}
+            return {
+                b'__timedelta__': True,
+                b's': {
+                    'days': obj.days,
+                    'seconds': obj.seconds,
+                    'microseconds': obj.microseconds,
+                },
+            }
         if isinstance(obj, arrow.Arrow):
             return {b'__arrow__': True, b's': obj.isoformat()}
         return obj
@@ -167,7 +178,7 @@ def msgpack_loads(data):
         if b'__uuid__' in obj and obj[b'__uuid__']:
             return UUID(obj[b's'])
         if b'__timedelta__' in obj and obj[b'__timedelta__']:
-            return eval(obj[b's'])
+            return datetime.timedelta(**obj[b's'])
         if b'__arrow__' in obj and obj[b'__arrow__']:
             return arrow.get(obj[b's'])
         return obj
