@@ -136,8 +136,8 @@ class DbTestFixture:
     class TestDb(DbTestFixture, unittest.TestCase):
         @classmethod
         def setUpClass(cls):
-            super().setUpClass()
             cls.add_db('db_name', DUMP)
+            super().setUpClass()
 
         def setUp(self):
             db = self.test_db['db_name']

@@ -1,8 +1,10 @@
-swh-core (0.0.44-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.45-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-backports.
+  * Release swh.core v0.0.45
+  * Compatibility with recent msgpack
+  * Debian packaging-related cleanups
 
- -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 18 Oct 2018 18:20:12 +0200
+ -- Nicolas Dandrimont <nicolas@dandrimont.eu>  Thu, 22 Nov 2018 21:09:53 +0100
 
 swh-core (0.0.44-1~swh1) unstable-swh; urgency=medium
 

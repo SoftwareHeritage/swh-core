@@ -183,4 +183,9 @@ def msgpack_loads(data):
             return arrow.get(obj[b's'])
         return obj
 
-    return msgpack.unpackb(data, encoding='utf-8', object_hook=decode_types)
+    try:
+        return msgpack.unpackb(data, raw=False,
+                               object_hook=decode_types)
+    except TypeError:  # msgpack < 0.5.2
+        return msgpack.unpackb(data, encoding='utf-8',
+                               object_hook=decode_types)
