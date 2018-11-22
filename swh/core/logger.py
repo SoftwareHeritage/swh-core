@@ -89,7 +89,7 @@ class PostgresHandler(logging.Handler):
     can be passed to logging methods, requesting that they will be stored in
     the DB as a single JSONB value. To do so, pass a dictionary to the 'extra'
     kwarg of any logging method; all keys in that dictionary that start with
-    EXTRA_LOGDATA_PREFIX (currently: 'swh\_') will be extracted to form the
+    EXTRA_LOGDATA_PREFIX (currently: ``swh_``) will be extracted to form the
     JSONB dictionary. The prefix will be stripped and not included in the DB.
 
     Note: the logger name will be used to fill the 'module' DB column.
