@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2017  The Software Heritage developers
+# Copyright (C) 2015-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -22,6 +22,32 @@ class UtilsLib(unittest.TestCase):
 
         # given
         actual_data = utils.grouper((i for i in range(9, 0, -1)), 4)
+
+        out = []
+        for d in actual_data:
+            out.append(list(d))  # force generator resolution for checks
+
+        self.assertEqual(out, [[9, 8, 7, 6], [5, 4, 3, 2], [1]])
+
+    def test_grouper_with_fillvalue(self):
+        # given
+        actual_data = utils.grouper(((i, i+1) for i in range(0, 9)), 2,
+                                    fillvalue=(None, None))
+
+        out = []
+        for d in actual_data:
+            out.append(list(d))  # force generator resolution for checks
+
+        self.assertEqual(out, [
+            [(0, 1), (1, 2)],
+            [(2, 3), (3, 4)],
+            [(4, 5), (5, 6)],
+            [(6, 7), (7, 8)],
+            [(8, 9)]])
+
+        # given
+        actual_data = utils.grouper((i for i in range(9, 0, -1)), 4,
+                                    fillvalue='a')
 
         out = []
         for d in actual_data:

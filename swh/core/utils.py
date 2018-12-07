@@ -25,21 +25,24 @@ def cwd(path):
         os.chdir(prev_cwd)
 
 
-def grouper(iterable, n):
+def grouper(iterable, n, fillvalue=None):
     """Collect data into fixed-length chunks or blocks.
 
     Args:
-        iterable: an iterable
-        n: size of block
-        fillvalue: value to use for the last block
+        iterable (Iterable): an iterable
+        n (int): size of block to slice the iterable into
+        fillvalue (Optional[Something]): value to use as fill-in
+          values (typically for the last loop, the iterable might be
+          less than n elements). None by default but could be anything
+          relevant for the caller (e.g tuple of (None, None))
 
     Returns:
         fixed-length chunks of blocks as iterables
 
     """
     args = [iter(iterable)] * n
-    for _data in itertools.zip_longest(*args, fillvalue=None):
-        yield (d for d in _data if d is not None)
+    for _data in itertools.zip_longest(*args, fillvalue=fillvalue):
+        yield (d for d in _data if d is not fillvalue)
 
 
 def backslashescape_errors(exception):
