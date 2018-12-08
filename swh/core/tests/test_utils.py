@@ -31,8 +31,7 @@ class UtilsLib(unittest.TestCase):
 
     def test_grouper_with_stop_value(self):
         # given
-        actual_data = utils.grouper(((i, i+1) for i in range(0, 9)), 2,
-                                    stop_value=(None, None))
+        actual_data = utils.grouper(((i, i+1) for i in range(0, 9)), 2)
 
         out = []
         for d in actual_data:
@@ -46,8 +45,7 @@ class UtilsLib(unittest.TestCase):
             [(8, 9)]])
 
         # given
-        actual_data = utils.grouper((i for i in range(9, 0, -1)), 4,
-                                    stop_value='a')
+        actual_data = utils.grouper((i for i in range(9, 0, -1)), 4)
 
         out = []
         for d in actual_data:

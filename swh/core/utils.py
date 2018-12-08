@@ -25,7 +25,7 @@ def cwd(path):
         os.chdir(prev_cwd)
 
 
-def grouper(iterable, n, stop_value=None):
+def grouper(iterable, n):
     """Collect data into fixed-length size iterables. The last block might
        contain less elements as it will hold only the remaining number
        of elements.
@@ -37,10 +37,6 @@ def grouper(iterable, n, stop_value=None):
     Args:
         iterable (Iterable): an iterable
         n (int): size of block to slice the iterable into
-        stop_value (Optional[Something]): value to use as stop value
-          for the last iterable. That iterable might be less than n
-          elements. None by default but could be anything relevant for
-          the caller (e.g tuple of (None, None))
 
     Yields:
         fixed-length blocks as iterables. As mentioned, the last
@@ -48,6 +44,7 @@ def grouper(iterable, n, stop_value=None):
 
     """
     args = [iter(iterable)] * n
+    stop_value = object()
     for _data in itertools.zip_longest(*args, fillvalue=stop_value):
         yield (d for d in _data if d is not stop_value)
 
