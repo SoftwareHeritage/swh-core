@@ -29,10 +29,10 @@ class UtilsLib(unittest.TestCase):
 
         self.assertEqual(out, [[9, 8, 7, 6], [5, 4, 3, 2], [1]])
 
-    def test_grouper_with_fillvalue(self):
+    def test_grouper_with_stop_value(self):
         # given
         actual_data = utils.grouper(((i, i+1) for i in range(0, 9)), 2,
-                                    fillvalue=(None, None))
+                                    stop_value=(None, None))
 
         out = []
         for d in actual_data:
@@ -47,7 +47,7 @@ class UtilsLib(unittest.TestCase):
 
         # given
         actual_data = utils.grouper((i for i in range(9, 0, -1)), 4,
-                                    fillvalue='a')
+                                    stop_value='a')
 
         out = []
         for d in actual_data:
