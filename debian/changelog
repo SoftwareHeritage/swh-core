@@ -1,3 +1,11 @@
+swh-core (0.0.46-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.46
+  * utils.grouper: Improve implementation
+  * Remove now-obsolete information about swh.core.worker
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 08 Jan 2019 14:37:34 +0000
+
 swh-core (0.0.45-1~swh1) unstable-swh; urgency=medium
 
   * Release swh.core v0.0.45
