@@ -1,14 +1,14 @@
 Metadata-Version: 2.1
 Name: swh.core
-Version: 0.0.45
+Version: 0.0.46
 Summary: Software Heritage core utilities
 Home-page: https://forge.softwareheritage.org/diffusion/DCORE/
 Author: Software Heritage developers
 Author-email: swh-devel@inria.fr
 License: UNKNOWN
-Project-URL: Bug Reports, https://forge.softwareheritage.org/maniphest
-Project-URL: Funding, https://www.softwareheritage.org/donate
 Project-URL: Source, https://forge.softwareheritage.org/source/swh-core
+Project-URL: Funding, https://www.softwareheritage.org/donate
+Project-URL: Bug Reports, https://forge.softwareheritage.org/maniphest
 Description: swh-core
         ========
         
@@ -17,37 +17,6 @@ Description: swh-core
         - hash computations
         - serialization
         - logging mechanism
-        
-        Defines also a celery application to run concurrency tasks
-        
-        Celery use
-        ----------
-        
-        ### configuration file
-        
-        worker.ini file which looks like:
-        
-            [main]
-            task_broker = amqp://guest@localhost//
-            task_modules = swh.loader.dir.tasks, swh.loader.tar.tasks, swh.loader.git.tasks
-            task_queues = swh_loader_tar, swh_loader_git, swh_loader_dir
-            task_soft_time_limit = 0
-        
-        This file can be set in the following location:
-        - ~/.swh
-        - ~/.config/swh
-        - /etc/softwareheritage
-        
-        
-        ### run celery worker
-        
-        Sample command:
-        
-            celery worker --app=swh.core.worker \
-                          --pool=prefork \
-                          --autoscale=2,2 \
-                          -Ofair \
-                          --loglevel=info 2>&1 | tee -a swh-core-worker.log
         
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
