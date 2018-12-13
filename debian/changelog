@@ -1,3 +1,10 @@
+swh-core (0.0.47-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.47
+  * swh.core.cli: Fix flag
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 08 Jan 2019 15:16:09 +0000
+
 swh-core (0.0.46-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.46
