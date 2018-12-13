@@ -21,10 +21,11 @@ from swh.core.tests.db_testing import pg_createdb, pg_restore, DB_DUMP_TYPES
 @click.argument('module', nargs=-1, required=True)
 @click.option('--db-name', '-d', help='Database name.',
               default='softwareheritage-dev', show_default=True)
-@click.option('--no-create', '-C',
-              help='Do not attempt to create the database', default=False)
-def db_init(module, db_name=None, no_create=None):
-    """Create and initialise a database for the Software Heritage <module>.
+@click.option('--create/--no-create', '-c',
+              help='Attempt to create the database', default=True)
+def db_init(module, db_name=None, create=True):
+    """Initialise a database for the Software Heritage <module>.  By
+    default, attempts to create the database first.
 
     Example:
 
@@ -58,7 +59,7 @@ def db_init(module, db_name=None, no_create=None):
                 '(no sql/ dir)'.format(modname))
         dump_files.extend(sorted(glob.glob(path.join(sqldir, '*.sql')),
                                  key=sortkey))
-    if not no_create:
+    if create:
         pg_createdb(db_name)
 
     dump_files = [(x, DB_DUMP_TYPES[path.splitext(x)[1]])
