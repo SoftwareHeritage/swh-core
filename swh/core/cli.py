@@ -21,7 +21,7 @@ from swh.core.tests.db_testing import pg_createdb, pg_restore, DB_DUMP_TYPES
 @click.argument('module', nargs=-1, required=True)
 @click.option('--db-name', '-d', help='Database name.',
               default='softwareheritage-dev', show_default=True)
-@click.option('--create/--no-create', '-C', is_flag=True,
+@click.option('--create/--no-create', '-c',
               help='Attempt to create the database', default=True)
 def db_init(module, db_name=None, create=True):
     """Initialise a database for the Software Heritage <module>.  By
