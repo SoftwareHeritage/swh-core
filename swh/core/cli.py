@@ -24,9 +24,7 @@ from swh.core.tests.db_testing import (
 @click.argument('module', nargs=-1, required=True)
 @click.option('--db-name', '-d', help='Database name.',
               default='softwareheritage-dev', show_default=True)
-@click.option('--create/--no-create', '-c',
-              help='Attempt to create the database', default=True)
-def db_init(module, db_name=None, create=True):
+def db_init(module, db_name=None):
     """Initialise a database for the Software Heritage <module>.  By
     default, attempts to create the database first.
 
