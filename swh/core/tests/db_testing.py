@@ -28,14 +28,12 @@ def swh_db_version(dbname_or_service):
     cmd = [
         'psql', '--tuples-only', '--no-psqlrc', '--quiet',
         '-v', 'ON_ERROR_STOP=1', "--command=%s" % query,
-        dbname_or_service,
+        dbname_or_service
     ]
-
-    print('cmd: %s' % cmd)
 
     try:
         r = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
-                           universal_newlines=True, stderr=None)
+                           universal_newlines=True)
         result = int(r.stdout.strip())
     except Exception:  # db not initialized
         result = None
@@ -70,8 +68,15 @@ def pg_dropdb(dbname):
     subprocess.check_call(['dropdb', dbname])
 
 
-def pg_createdb(dbname):
-    subprocess.check_call(['createdb', dbname])
+def pg_createdb(dbname, check=True):
+    """Create a db. If check is True and the db already exists, this will
+       raise an exception (original behavior). If check is False and
+       the db already exists, this will fail silently. If the db does
+       not exist, the db will be created.
+
+    """
+    _run = subprocess.check_call if check else subprocess.call
+    _run(['createdb', dbname])
 
 
 def db_create(dbname, dumps=None):
