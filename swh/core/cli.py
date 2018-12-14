@@ -14,16 +14,17 @@ import click
 from importlib import import_module
 
 from swh.core.utils import numfile_sortkey as sortkey
-from swh.core.tests.db_testing import pg_createdb, pg_restore, DB_DUMP_TYPES
+from swh.core.tests.db_testing import (
+    pg_createdb, pg_restore, DB_DUMP_TYPES,
+    swh_db_version
+)
 
 
 @click.command()
 @click.argument('module', nargs=-1, required=True)
 @click.option('--db-name', '-d', help='Database name.',
               default='softwareheritage-dev', show_default=True)
-@click.option('--create/--no-create', '-c',
-              help='Attempt to create the database', default=True)
-def db_init(module, db_name=None, create=True):
+def db_init(module, db_name=None):
     """Initialise a database for the Software Heritage <module>.  By
     default, attempts to create the database first.
 
@@ -40,7 +41,6 @@ def db_init(module, db_name=None, create=True):
       PGPORT=5434 swh-db-init indexer -d swh-indexer
 
     """
-
     dump_files = []
 
     for modname in module:
@@ -59,13 +59,22 @@ def db_init(module, db_name=None, create=True):
                 '(no sql/ dir)'.format(modname))
         dump_files.extend(sorted(glob.glob(path.join(sqldir, '*.sql')),
                                  key=sortkey))
-    if create:
-        pg_createdb(db_name)
 
-    dump_files = [(x, DB_DUMP_TYPES[path.splitext(x)[1]])
-                  for x in dump_files]
-    for dump, dtype in dump_files:
-        click.secho('Loading {}'.format(dump), fg='yellow')
-        pg_restore(db_name, dump, dtype)
+    # Create the db (or fail silently if already existing)
+    pg_createdb(db_name, check=False)
+    # Try to retrieve the db version if any
+    db_version = swh_db_version(db_name)
+    if not db_version:  # Initialize the db
+        dump_files = [(x, DB_DUMP_TYPES[path.splitext(x)[1]])
+                      for x in dump_files]
+        for dump, dtype in dump_files:
+            click.secho('Loading {}'.format(dump), fg='yellow')
+            pg_restore(db_name, dump, dtype)
 
-    click.secho('DONE database is {}'.format(db_name), fg='green', bold=True)
+        db_version = swh_db_version(db_name)
+
+    # TODO: Ideally migrate the version from db_version to the latest
+    # db version
+
+    click.secho('DONE database is {} version {}'.format(db_name, db_version),
+                fg='green', bold=True)
