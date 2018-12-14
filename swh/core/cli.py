@@ -76,5 +76,8 @@ def db_init(module, db_name=None, create=True):
         if not db_version:
             db_version = swh_db_version(db_name)
 
+    # TODO: Ideally migrate the version from db_version to the latest
+    # db version
+
     click.secho('DONE database is {} version {}'.format(db_name, db_version),
                 fg='green', bold=True)
