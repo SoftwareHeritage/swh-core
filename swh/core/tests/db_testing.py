@@ -75,8 +75,7 @@ def pg_createdb(dbname, check=True):
        not exist, the db will be created.
 
     """
-    _run = subprocess.check_call if check else subprocess.call
-    _run(['createdb', dbname])
+    subprocess.run(['createdb', dbname], check=check)
 
 
 def db_create(dbname, dumps=None):
