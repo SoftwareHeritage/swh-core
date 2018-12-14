@@ -1,4 +1,4 @@
-# Copyright (C) 2015  The Software Heritage developers
+# Copyright (C) 2015-2018  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -11,6 +11,35 @@ import subprocess
 from swh.core.utils import numfile_sortkey as sortkey
 
 DB_DUMP_TYPES = {'.sql': 'psql', '.dump': 'pg_dump'}
+
+
+def swh_db_version(dbname_or_service):
+    """Retrieve the swh version if any. In case of the db not initialized,
+    this returns None. Otherwise, this returns the db's version.
+
+    Args:
+        dbname_or_service (str): The db's name or service
+
+    Returns:
+        Optional[Int]: Either the db's version or None
+
+    """
+    query = 'select version from dbversion order by dbversion desc limit 1'
+    cmd = [
+        'psql', '--tuples-only', '--no-psqlrc', '--quiet',
+        '-v', 'ON_ERROR_STOP=1', "--command=%s" % query,
+        dbname_or_service,
+    ]
+
+    print('cmd: %s' % cmd)
+
+    try:
+        r = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
+                           universal_newlines=True, stderr=None)
+        result = int(r.stdout.strip())
+    except Exception:  # db not initialized
+        result = None
+    return result
 
 
 def pg_restore(dbname, dumpfile, dumptype='pg_dump'):
