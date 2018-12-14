@@ -1,3 +1,10 @@
+swh-core (0.0.48-1~swh1) unstable-swh; urgency=medium
+
+  * v0.0.48
+  * swh.core.cli: Update swh-db-init to make it idemtpotent
+
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 08 Jan 2019 15:33:15 +0000
+
 swh-core (0.0.47-1~swh1) unstable-swh; urgency=medium
 
   * v0.0.47
