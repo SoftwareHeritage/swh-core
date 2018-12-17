@@ -227,12 +227,12 @@ class DbTestFixture:
         for name, context in cls._DB_LIST.items():
             context.__exit__()
 
-    def setUp(self):
+    def setUp(self, *args, **kwargs):
         self.test_db = {}
         for name in self._DB_LIST.keys():
             self.test_db[name] = DbTestConn(name)
             self.test_db[name].__enter__()
-        super().setUp()
+        super().setUp(*args, **kwargs)
 
     def tearDown(self):
         super().tearDown()
@@ -306,8 +306,8 @@ class SingleDbTestFixture(DbTestFixture):
                    dumps=all_dump_files)
         super().setUpClass()
 
-    def setUp(self):
-        super().setUp()
+    def setUp(self, *args, **kwargs):
+        super().setUp(*args, **kwargs)
 
         db = self.test_db[self.TEST_DB_NAME]
         self.conn = db.conn
