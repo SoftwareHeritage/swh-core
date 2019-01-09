@@ -19,6 +19,7 @@ swh/core/cli.py
 swh/core/config.py
 swh/core/logger.py
 swh/core/serializers.py
+swh/core/statsd.py
 swh/core/tarball.py
 swh/core/utils.py
 swh/core/sql/log-schema.sql
@@ -29,4 +30,5 @@ swh/core/tests/test_api.py
 swh/core/tests/test_config.py
 swh/core/tests/test_logger.py
 swh/core/tests/test_serializers.py
+swh/core/tests/test_statsd.py
 swh/core/tests/test_utils.py
