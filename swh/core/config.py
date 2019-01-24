@@ -338,6 +338,8 @@ class SWHConfig:
 
         if config_filename:
             config_filenames = [config_filename]
+        elif 'SWH_CONFIG_FILENAME' in os.environ:
+            config_filenames = [os.environ['SWH_CONFIG_FILENAME']]
         else:
             if not base_filename:
                 base_filename = cls.CONFIG_BASE_FILENAME
