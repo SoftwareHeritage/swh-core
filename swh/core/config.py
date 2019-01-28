@@ -7,6 +7,8 @@ import configparser
 import logging
 import os
 import yaml
+from itertools import chain
+from copy import deepcopy
 
 
 logger = logging.getLogger(__name__)
@@ -176,6 +178,77 @@ def merge_default_configs(base_config, *other_configs):
         full_config.update(config)
 
     return full_config
+
+
+def merge_configs(base, other):
+    """Merge two config dictionaries
+
+    This does merge config dicts recursively, with the rules, for every value
+    of the dicts (with 'val' not being a dict):
+
+    - None + type -> type
+    - type + None -> None
+    - dict + dict -> dict (merged)
+    - val + dict -> TypeError
+    - dict + val -> TypeError
+    - val + val -> val (other)
+
+    so merging
+
+    {
+      'key1': {
+        'skey1': value1,
+        'skey2': {'sskey1': value2},
+      },
+      'key2': value3,
+    }
+
+    with
+
+    {
+      'key1': {
+        'skey1': value4,
+        'skey2': {'sskey2': value5},
+      },
+      'key3': value6,
+    }
+
+    will give:
+
+    {
+      'key1': {
+        'skey1': value4,  # <-- note this
+        'skey2': {
+          'sskey1': value2,
+          'sskey2': value5,
+        },
+      },
+      'key2': value3,
+      'key3': value6,
+    }
+
+    Note that no type checking is done for anything but dicts.
+    """
+    if not isinstance(base, dict) or not isinstance(other, dict):
+        raise TypeError(
+            'Cannot merge a %s with a %s' % (type(base), type(other)))
+
+    output = {}
+    allkeys = set(chain(base.keys(), other.keys()))
+    for k in allkeys:
+        vb = base.get(k)
+        vo = other.get(k)
+
+        if isinstance(vo, dict):
+            output[k] = merge_configs(vb is not None and vb or {}, vo)
+        elif isinstance(vb, dict) and k in other and other[k] is not None:
+            output[k] = merge_configs(vb, vo is not None and vo or {})
+        elif k in other:
+            output[k] = deepcopy(vo)
+        else:
+            output[k] = deepcopy(vb)
+
+    return output
 
 
 def swh_config_paths(base_filename):

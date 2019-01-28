@@ -223,3 +223,90 @@ def test_prepare_folder(tmp_path):
 
     assert os.path.exists(conf['path1']), "path1 should still exist!"
     assert os.path.exists(conf['path2']), "path2 should now exist."
+
+
+def test_merge_config():
+    cfg_a = {
+        'a': 42,
+        'b': [1, 2, 3],
+        'c': None,
+        'd': {'gheez': 27},
+        'e': {
+            'ea': 'Mr. Bungle',
+            'eb': None,
+            'ec': [11, 12, 13],
+            'ed': {'eda': 'Secret Chief 3',
+                   'edb': 'Faith No More'},
+            'ee': 451,
+        },
+        'f': 'Janis',
+    }
+    cfg_b = {
+        'a': 43,
+        'b': [41, 42, 43],
+        'c': 'Tom Waits',
+        'd': None,
+        'e': {
+            'ea': 'Igorrr',
+            'ec': [51, 52],
+            'ed': {'edb': 'Sleepytime Gorilla Museum',
+                   'edc': 'Nils Peter Molvaer'},
+        },
+        'g': 'Hüsker Dü',
+    }
+
+    # merge A, B
+    cfg_m = config.merge_configs(cfg_a, cfg_b)
+    assert cfg_m == {
+        'a': 43,  # b takes precedence
+        'b': [41, 42, 43],  # b takes precedence
+        'c': 'Tom Waits',  # b takes precedence
+        'd': None,  # b['d'] takes precedence (explicit None)
+        'e': {
+            'ea': 'Igorrr',  # a takes precedence
+            'eb': None,  # only in a
+            'ec': [51, 52],  # b takes precedence
+            'ed': {
+                'eda': 'Secret Chief 3',  # only in a
+                'edb': 'Sleepytime Gorilla Museum',  # b takes precedence
+                'edc': 'Nils Peter Molvaer'},  # only defined in b
+            'ee': 451,
+        },
+        'f': 'Janis',  # only defined in a
+        'g': 'Hüsker Dü',  # only defined in b
+    }
+
+    # merge B, A
+    cfg_m = config.merge_configs(cfg_b, cfg_a)
+    assert cfg_m == {
+        'a': 42,  # a takes precedence
+        'b': [1, 2, 3],  # a takes precedence
+        'c': None,  # a takes precedence
+        'd': {'gheez': 27},  # a takes precedence
+        'e': {
+            'ea': 'Mr. Bungle',  # a takes precedence
+            'eb': None,  # only defined in a
+            'ec': [11, 12, 13],  # a takes precedence
+            'ed': {
+                'eda': 'Secret Chief 3',  # only in a
+                'edb': 'Faith No More',  # a takes precedence
+                'edc': 'Nils Peter Molvaer'},  # only in b
+            'ee': 451,
+        },
+        'f': 'Janis',  # only in a
+        'g': 'Hüsker Dü',  # only in b
+    }
+
+
+def test_merge_config_type_error():
+    for v in (1, 'str', None):
+        with pytest.raises(TypeError):
+            config.merge_configs(v, {})
+        with pytest.raises(TypeError):
+            config.merge_configs({}, v)
+
+    for v in (1, 'str'):
+        with pytest.raises(TypeError):
+            config.merge_configs({'a': v}, {'a': {}})
+        with pytest.raises(TypeError):
+            config.merge_configs({'a': {}}, {'a': v})
