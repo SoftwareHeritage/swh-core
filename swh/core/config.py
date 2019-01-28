@@ -9,6 +9,9 @@ import os
 import yaml
 
 
+logger = logging.getLogger(__name__)
+
+
 SWH_CONFIG_DIRECTORIES = [
     '~/.config/swh',
     '~/.swh',
@@ -82,10 +85,9 @@ def read_raw_config(base_config_path):
 
     Can read yml or ini files.
     """
-
     yml_file = base_config_path + '.yml'
     if exists_accessible(yml_file):
-        logging.debug('Using config file %s', yml_file)
+        logger.info('Loading config file %s', yml_file)
         with open(yml_file) as f:
             return yaml.safe_load(f)
 
@@ -94,10 +96,11 @@ def read_raw_config(base_config_path):
         config = configparser.ConfigParser()
         config.read(ini_file)
         if 'main' in config._sections:
-            logging.debug('Using config file %s', ini_file)
+            logger.info('Loading config file %s', ini_file)
             return config._sections['main']
         else:
-            logging.debug('Ignoring config file %s (no [main])', ini_file)
+            logger.warning('Ignoring config file %s (no [main] section)',
+                           ini_file)
 
     return {}
 
