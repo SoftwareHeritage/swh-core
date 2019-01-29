@@ -122,16 +122,19 @@ class BaseDb:
                     self.conn.rollback()
                 raise
 
-    def copy_to(self, items, tblname, columns, cur=None, item_cb=None):
+    def copy_to(self, items, tblname, columns, default_values={},
+                cur=None, item_cb=None):
         """Copy items' entries to table tblname with columns information.
 
         Args:
-            items (dict): dictionary of data to copy over tblname
-            tblname (str): Destination table's name
+            items (dict): dictionary of data to copy over tblname.
+            tblname (str): destination table's name.
             columns ([str]): keys to access data in items and also the
               column names in the destination table.
-            item_cb (fn): optional function to apply to items's entry
-
+            default_values (dict): dictionnary of default values to use when
+              inserting entried int the tblname table.
+            cur: a db cursor; if not given, a new cursor will be created.
+            item_cb (fn): optional function to apply to items's entry.
         """
 
         read_file, write_file = os.pipe()
@@ -150,7 +153,8 @@ class BaseDb:
                 for d in items:
                     if item_cb is not None:
                         item_cb(d)
-                    line = [escape(d.get(k)) for k in columns]
+                    line = [escape(d.get(k) or default_values.get(k))
+                            for k in columns]
                     f.write(','.join(line))
                     f.write('\n')
         finally:
