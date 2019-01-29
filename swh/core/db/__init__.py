@@ -77,18 +77,6 @@ class BaseDb:
     def from_pool(cls, pool):
         return cls(pool.getconn(), pool=pool)
 
-    def _cursor(self, cur_arg):
-        """get a cursor: from cur_arg if given, or a fresh one otherwise
-
-        meant to avoid boilerplate if/then/else in methods that proxy stored
-        procedures
-
-        """
-        if cur_arg is not None:
-            return cur_arg
-        else:
-            return self.conn.cursor()
-
     def __init__(self, conn, pool=None):
         """create a DB proxy
 
@@ -103,6 +91,19 @@ class BaseDb:
     def __del__(self):
         if self.pool:
             self.pool.putconn(self.conn)
+
+    def cursor(self, cur_arg):
+        """get a cursor: from cur_arg if given, or a fresh one otherwise
+
+        meant to avoid boilerplate if/then/else in methods that proxy stored
+        procedures
+
+        """
+        if cur_arg is not None:
+            return cur_arg
+        else:
+            return self.conn.cursor()
+    _cursor = cursor  # for bw compat
 
     @contextmanager
     def transaction(self):
@@ -136,7 +137,7 @@ class BaseDb:
         read_file, write_file = os.pipe()
 
         def writer():
-            cursor = self._cursor(cur)
+            cursor = self.cursor(cur)
             with open(read_file, 'r') as f:
                 cursor.copy_expert('COPY %s (%s) FROM STDIN CSV' % (
                     tblname, ', '.join(columns)), f)
@@ -159,4 +160,4 @@ class BaseDb:
             write_thread.join()
 
     def mktemp(self, tblname, cur=None):
-        self._cursor(cur).execute('SELECT swh_mktemp(%s)', (tblname,))
+        self.cursor(cur).execute('SELECT swh_mktemp(%s)', (tblname,))
