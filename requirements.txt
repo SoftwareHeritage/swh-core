@@ -8,4 +8,4 @@ PyYAML
 requests
 Flask
 systemd-python
-negotiate
+decorator

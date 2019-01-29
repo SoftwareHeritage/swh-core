@@ -12,14 +12,37 @@ import pickle
 import requests
 import datetime
 
-from flask import Flask, Request, Response
+from flask import Flask, Request, Response, request, abort
 from .serializers import (decode_response,
                           encode_data_client as encode_data,
                           msgpack_dumps, msgpack_loads, SWHJSONDecoder)
 
-from negotiate.flask import Formatter
+from .negotiate import (Formatter as FormatterBase,
+                        Negotiator as NegotiatorBase,
+                        negotiate as _negotiate)
+
 
 logger = logging.getLogger(__name__)
+
+
+# support for content negotation
+
+class Negotiator(NegotiatorBase):
+    def best_mimetype(self):
+        return request.accept_mimetypes.best_match(
+            self.accept_mimetypes, 'text/html')
+
+    def _abort(self, status_code, err=None):
+        return abort(status_code, err)
+
+
+def negotiate(formatter_cls, *args, **kwargs):
+    return _negotiate(Negotiator, formatter_cls, *args, **kwargs)
+
+
+class Formatter(FormatterBase):
+    def _make_response(self, body, content_type):
+        return Response(body, content_type=content_type)
 
 
 class SWHJSONEncoder(json.JSONEncoder):
@@ -47,6 +70,8 @@ class MsgpackFormatter(Formatter):
     def render(self, obj):
         return msgpack_dumps(obj)
 
+
+# base API classes
 
 class RemoteException(Exception):
     pass
