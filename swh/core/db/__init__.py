@@ -92,7 +92,7 @@ class BaseDb:
         if self.pool:
             self.pool.putconn(self.conn)
 
-    def cursor(self, cur_arg):
+    def cursor(self, cur_arg=None):
         """get a cursor: from cur_arg if given, or a fresh one otherwise
 
         meant to avoid boilerplate if/then/else in methods that proxy stored
