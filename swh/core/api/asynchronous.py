@@ -22,7 +22,8 @@ def encode_data_server(data, **kwargs):
 def decode_request(request):
     content_type = request.headers.get('Content-Type')
     data = yield from request.read()
-
+    if not data:
+        return {}
     if content_type == 'application/x-msgpack':
         r = msgpack_loads(data)
     elif content_type == 'application/json':
