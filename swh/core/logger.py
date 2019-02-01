@@ -137,10 +137,10 @@ class PostgresHandler(logging.Handler):
             try:
                 json_args = Json(task_args).getquoted()
             except TypeError:
-                    task_args = {
-                        'args': ['<failed to convert arguments to JSON>'],
-                        'kwargs': {},
-                    }
+                task_args = {
+                    'args': ['<failed to convert arguments to JSON>'],
+                    'kwargs': {},
+                }
             else:
                 json_args_length = len(json_args)
                 if json_args_length >= 1000:
