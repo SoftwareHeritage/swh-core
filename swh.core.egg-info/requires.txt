@@ -8,7 +8,9 @@ PyYAML
 requests
 Flask
 systemd-python
+decorator
 
 [testing]
-pytest
+pytest<4
+pytest-postgresql
 requests-mock
