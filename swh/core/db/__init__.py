@@ -153,7 +153,7 @@ class BaseDb:
                 for d in items:
                     if item_cb is not None:
                         item_cb(d)
-                    line = [escape(d.get(k) or default_values.get(k))
+                    line = [escape(d.get(k, default_values.get(k)))
                             for k in columns]
                     f.write(','.join(line))
                     f.write('\n')
