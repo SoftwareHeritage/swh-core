@@ -44,34 +44,6 @@ def jsonize(value):
     return value
 
 
-def entry_to_bytes(entry):
-    """Convert an entry coming from the database to bytes"""
-    if isinstance(entry, memoryview):
-        return entry.tobytes()
-    if isinstance(entry, list):
-        return [entry_to_bytes(value) for value in entry]
-    return entry
-
-
-def line_to_bytes(line):
-    """Convert a line coming from the database to bytes"""
-    if not line:
-        return line
-    if isinstance(line, dict):
-        return {k: entry_to_bytes(v) for k, v in line.items()}
-    return line.__class__(entry_to_bytes(entry) for entry in line)
-
-
-def cursor_to_bytes(cursor):
-    """Yield all the data from a cursor as bytes"""
-    yield from (line_to_bytes(line) for line in cursor)
-
-
-def execute_values_to_bytes(*args, **kwargs):
-    for line in execute_values_generator(*args, **kwargs):
-        yield line_to_bytes(line)
-
-
 def _paginate(seq, page_size):
     """Consume an iterable and return it in chunks.
     Every chunk is at most `page_size`. Never return an empty chunk.

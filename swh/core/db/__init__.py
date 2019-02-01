@@ -52,12 +52,35 @@ def escape(data):
         return str(data)
 
 
+def typecast_bytea(value, cur):
+    if value is not None:
+        data = psycopg2.BINARY(value, cur)
+        return data.tobytes()
+
+
 class BaseDb:
     """Base class for swh.*.*Db.
 
     cf. swh.storage.db.Db, swh.archiver.db.ArchiverDb
 
     """
+
+    @classmethod
+    def adapt_conn(cls, conn):
+        """Makes psycopg2 use 'bytes' to decode bytea instead of
+        'memoryview', for this connection."""
+        cur = conn.cursor()
+        cur.execute("SELECT null::bytea, null::bytea[]")
+        bytea_oid = cur.description[0][1]
+        bytea_array_oid = cur.description[1][1]
+
+        t_bytes = psycopg2.extensions.new_type(
+            (bytea_oid,), "bytea", typecast_bytea)
+        psycopg2.extensions.register_type(t_bytes, conn)
+
+        t_bytes_array = psycopg2.extensions.new_array_type(
+            (bytea_array_oid,), "bytea[]", t_bytes)
+        psycopg2.extensions.register_type(t_bytes_array, conn)
 
     @classmethod
     def connect(cls, *args, **kwargs):
@@ -71,11 +94,14 @@ class BaseDb:
 
         """
         conn = psycopg2.connect(*args, **kwargs)
+        cls.adapt_conn(conn)
         return cls(conn)
 
     @classmethod
     def from_pool(cls, pool):
-        return cls(pool.getconn(), pool=pool)
+        conn = pool.getconn()
+        cls.adapt_conn(conn)
+        return cls(conn, pool=pool)
 
     def __init__(self, conn, pool=None):
         """create a DB proxy
