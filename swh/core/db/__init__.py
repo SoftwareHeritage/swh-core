@@ -122,8 +122,8 @@ class BaseDb:
                     self.conn.rollback()
                 raise
 
-    def copy_to(self, items, tblname, columns, default_values={},
-                cur=None, item_cb=None):
+    def copy_to(self, items, tblname, columns,
+                cur=None, item_cb=None, default_values={}):
         """Copy items' entries to table tblname with columns information.
 
         Args:
