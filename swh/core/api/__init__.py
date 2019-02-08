@@ -10,12 +10,68 @@ import json
 import logging
 import pickle
 import requests
+import datetime
 
-from flask import Flask, Request, Response
+from flask import Flask, Request, Response, request, abort
 from .serializers import (decode_response,
                           encode_data_client as encode_data,
                           msgpack_dumps, msgpack_loads, SWHJSONDecoder)
 
+from .negotiate import (Formatter as FormatterBase,
+                        Negotiator as NegotiatorBase,
+                        negotiate as _negotiate)
+
+
+logger = logging.getLogger(__name__)
+
+
+# support for content negotation
+
+class Negotiator(NegotiatorBase):
+    def best_mimetype(self):
+        return request.accept_mimetypes.best_match(
+            self.accept_mimetypes, 'text/html')
+
+    def _abort(self, status_code, err=None):
+        return abort(status_code, err)
+
+
+def negotiate(formatter_cls, *args, **kwargs):
+    return _negotiate(Negotiator, formatter_cls, *args, **kwargs)
+
+
+class Formatter(FormatterBase):
+    def _make_response(self, body, content_type):
+        return Response(body, content_type=content_type)
+
+
+class SWHJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return obj.isoformat()
+        if isinstance(obj, datetime.timedelta):
+            return str(obj)
+        # Let the base class default method raise the TypeError
+        return super().default(obj)
+
+
+class JSONFormatter(Formatter):
+    format = 'json'
+    mimetypes = ['application/json']
+
+    def render(self, obj):
+        return json.dumps(obj, cls=SWHJSONEncoder)
+
+
+class MsgpackFormatter(Formatter):
+    format = 'msgpack'
+    mimetypes = ['application/x-msgpack']
+
+    def render(self, obj):
+        return msgpack_dumps(obj)
+
+
+# base API classes
 
 class RemoteException(Exception):
     pass
@@ -124,21 +180,28 @@ class SWHRemoteAPI(metaclass=MetaSWHRemoteAPI):
         data = encode_data(data)
         response = self.raw_post(
             endpoint, data, params=params,
-            headers={'content-type': 'application/x-msgpack'})
+            headers={'content-type': 'application/x-msgpack',
+                     'accept': 'application/x-msgpack'})
         return self._decode_response(response)
 
     def get(self, endpoint, params=None):
-        response = self.raw_get(endpoint, params=params)
+        response = self.raw_get(
+            endpoint, params=params,
+            headers={'accept': 'application/x-msgpack'})
         return self._decode_response(response)
 
     def post_stream(self, endpoint, data, params=None):
         if not isinstance(data, collections.Iterable):
             raise ValueError("`data` must be Iterable")
-        response = self.raw_post(endpoint, data, params=params)
+        response = self.raw_post(
+            endpoint, data, params=params,
+            headers={'accept': 'application/x-msgpack'})
+
         return self._decode_response(response)
 
     def get_stream(self, endpoint, params=None, chunk_size=4096):
-        response = self.raw_get(endpoint, params=params, stream=True)
+        response = self.raw_get(endpoint, params=params, stream=True,
+                                headers={'accept': 'application/x-msgpack'})
         return response.iter_content(chunk_size)
 
     def _decode_response(self, response):
@@ -171,16 +234,25 @@ class BytesRequest(Request):
     encoding_errors = 'surrogateescape'
 
 
-def encode_data_server(data):
+ENCODERS = {
+    'application/x-msgpack': msgpack_dumps,
+    'application/json': json.dumps,
+}
+
+
+def encode_data_server(data, content_type='application/x-msgpack'):
+    encoded_data = ENCODERS[content_type](data)
     return Response(
-        msgpack_dumps(data),
-        mimetype='application/x-msgpack',
-    )
+            encoded_data,
+            mimetype=content_type,
+        )
 
 
 def decode_request(request):
     content_type = request.mimetype
     data = request.get_data()
+    if not data:
+        return {}
 
     if content_type == 'application/x-msgpack':
         r = msgpack_loads(data)

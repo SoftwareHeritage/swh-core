@@ -10,7 +10,7 @@ from uuid import UUID
 
 import arrow
 
-from swh.core.serializers import (
+from swh.core.api.serializers import (
     SWHJSONDecoder,
     SWHJSONEncoder,
     msgpack_dumps,
