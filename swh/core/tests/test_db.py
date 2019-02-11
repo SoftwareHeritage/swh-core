@@ -11,7 +11,9 @@ from hypothesis import strategies, given
 import pytest
 
 from swh.core.db import BaseDb
-from swh.core.tests.db_testing import SingleDbTestFixture
+from swh.core.tests.db_testing import (
+    SingleDbTestFixture, db_create, db_destroy, db_close,
+)
 
 
 INIT_SQL = '''
@@ -36,6 +38,22 @@ db_rows = strategies.lists(strategies.tuples(
     ),
     strategies.binary(),
 ))
+
+
+@pytest.mark.db
+def test_connect():
+    db_name = db_create('test-db2', dumps=[])
+    try:
+        db = BaseDb.connect('dbname=%s' % db_name)
+        with db.cursor() as cur:
+            cur.execute(INIT_SQL)
+            cur.execute("insert into test_table values (1, %s, %s);",
+                        ('foo', b'bar'))
+            cur.execute("select * from test_table;")
+            assert list(cur) == [(1, 'foo', b'bar')]
+    finally:
+        db_close(db.conn)
+        db_destroy(db_name)
 
 
 @pytest.mark.db
