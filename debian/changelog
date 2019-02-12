@@ -1,8 +1,17 @@
-swh-core (0.0.53-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.54-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-swh
+  * New upstream release 0.0.54
+  * Upstream changes:     - Add missing build dependencies
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 08 Feb 2019 09:00:19 +0000
+ -- Antoine R. Dumont (@ardumont) <antoine.romain.dumont@gmail.com>  Tue, 12 Feb 2019 16:25:34 +0000
+
+swh-core (0.0.54-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.54     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2019-02-11 16:47:18 +0100)
+  * Upstream changes:     - Add test for BaseDb.connect.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 12 Feb 2019 12:37:43 +0000
 
 swh-core (0.0.53-1~swh1) unstable-swh; urgency=medium
 
