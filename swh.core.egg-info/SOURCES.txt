@@ -33,6 +33,7 @@ swh/core/tests/db_testing.py
 swh/core/tests/server_testing.py
 swh/core/tests/test_api.py
 swh/core/tests/test_config.py
+swh/core/tests/test_db.py
 swh/core/tests/test_logger.py
 swh/core/tests/test_serializers.py
 swh/core/tests/test_statsd.py

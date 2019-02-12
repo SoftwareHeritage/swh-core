@@ -94,13 +94,11 @@ class BaseDb:
 
         """
         conn = psycopg2.connect(*args, **kwargs)
-        cls.adapt_conn(conn)
         return cls(conn)
 
     @classmethod
     def from_pool(cls, pool):
         conn = pool.getconn()
-        cls.adapt_conn(conn)
         return cls(conn, pool=pool)
 
     def __init__(self, conn, pool=None):
@@ -111,6 +109,7 @@ class BaseDb:
             pool: psycopg2 pool of connections
 
         """
+        self.adapt_conn(conn)
         self.conn = conn
         self.pool = pool
 
@@ -153,7 +152,7 @@ class BaseDb:
         """Copy items' entries to table tblname with columns information.
 
         Args:
-            items (dict): dictionary of data to copy over tblname.
+            items (List[dict]): dictionaries of data to copy over tblname.
             tblname (str): destination table's name.
             columns ([str]): keys to access data in items and also the
               column names in the destination table.

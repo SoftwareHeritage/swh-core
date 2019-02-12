@@ -319,8 +319,8 @@ class Statsd(object):
         You can also use this as a context manager.
 
         >>> with Statsd() as batch:
-        >>>     batch.gauge('users.online', 123)
-        >>>     batch.gauge('active.connections', 1001)
+        ...     batch.gauge('users.online', 123)
+        ...     batch.gauge('active.connections', 1001)
         """
         self.max_buffer_size = max_buffer_size
         self.buffer = []
