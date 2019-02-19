@@ -1,3 +1,12 @@
+swh-core (0.0.55-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.55     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-02-19 12:28:26
+    +0100)
+  * Upstream changes:     - v0.0.55     - Fix runtime dependencies
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 19 Feb 2019 11:32:28 +0000
+
 swh-core (0.0.54-1~swh2) unstable-swh; urgency=medium
 
   * New upstream release 0.0.54
