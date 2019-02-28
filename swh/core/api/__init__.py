@@ -17,9 +17,9 @@ from .serializers import (decode_response,
                           encode_data_client as encode_data,
                           msgpack_dumps, msgpack_loads, SWHJSONDecoder)
 
-from .negotiate import (Formatter as FormatterBase,
-                        Negotiator as NegotiatorBase,
-                        negotiate as _negotiate)
+from .negotiation import (Formatter as FormatterBase,
+                          Negotiator as NegotiatorBase,
+                          negotiate as _negotiate)
 
 
 logger = logging.getLogger(__name__)
