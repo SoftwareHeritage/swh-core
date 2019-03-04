@@ -227,6 +227,9 @@ class SWHRemoteAPI(metaclass=MetaSWHRemoteAPI):
             )
         return decode_response(response)
 
+    def __repr__(self):
+        return '<{} url={}>'.format(self.__class__.__name__, self.url)
+
 
 class BytesRequest(Request):
     """Request with proper escaping of arbitrary byte sequences."""
