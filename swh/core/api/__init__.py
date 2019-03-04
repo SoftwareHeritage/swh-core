@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class Negotiator(NegotiatorBase):
     def best_mimetype(self):
         return request.accept_mimetypes.best_match(
-            self.accept_mimetypes, 'text/html')
+            self.accept_mimetypes, 'application/json')
 
     def _abort(self, status_code, err=None):
         return abort(status_code, err)
