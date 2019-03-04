@@ -141,8 +141,8 @@ class SWHRemoteAPI(metaclass=MetaSWHRemoteAPI):
     This backend class will never be instantiated, it only serves as
     a template."""
 
-    def __init__(self, api_exception, url, timeout=None, chunk_size=4096):
-        super().__init__()
+    def __init__(self, api_exception, url,
+                 timeout=None, chunk_size=4096, **kwargs):
         self.api_exception = api_exception
         base_url = url if url.endswith('/') else url + '/'
         self.url = base_url
