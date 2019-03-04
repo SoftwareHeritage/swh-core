@@ -1,5 +1,4 @@
 import aiohttp.web
-import asyncio
 import json
 import logging
 import multidict
@@ -18,10 +17,9 @@ def encode_data_server(data, **kwargs):
     )
 
 
-@asyncio.coroutine
-def decode_request(request):
+async def decode_request(request):
     content_type = request.headers.get('Content-Type')
-    data = yield from request.read()
+    data = await request.read()
     if not data:
         return {}
     if content_type == 'application/x-msgpack':
@@ -34,12 +32,10 @@ def decode_request(request):
     return r
 
 
-@asyncio.coroutine
-def error_middleware(app, handler):
-    @asyncio.coroutine
-    def middleware_handler(request):
+async def error_middleware(app, handler):
+    async def middleware_handler(request):
         try:
-            return (yield from handler(request))
+            return (await handler(request))
         except Exception as e:
             if isinstance(e, aiohttp.web.HTTPException):
                 raise
