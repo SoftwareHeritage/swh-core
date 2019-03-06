@@ -84,6 +84,13 @@ def remote_api_endpoint(path):
     return dec
 
 
+class APIError(Exception):
+    """API Error"""
+    def __str__(self):
+        return ('An unexpected error occurred in the backend: {}'
+                .format(self.args))
+
+
 class MetaSWHRemoteAPI(type):
     """Metaclass for SWHRemoteAPI, which adds a method for each endpoint
     of the database it is designed to access.
@@ -141,9 +148,14 @@ class SWHRemoteAPI(metaclass=MetaSWHRemoteAPI):
     This backend class will never be instantiated, it only serves as
     a template."""
 
-    def __init__(self, api_exception, url,
+    api_exception = APIError
+    """The exception class to raise in case of communication error with
+    the server."""
+
+    def __init__(self, url, api_exception=None,
                  timeout=None, chunk_size=4096, **kwargs):
-        self.api_exception = api_exception
+        if api_exception:
+            self.api_exception = api_exception
         base_url = url if url.endswith('/') else url + '/'
         self.url = base_url
         self.session = requests.Session()
