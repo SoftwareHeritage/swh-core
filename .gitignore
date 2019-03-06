@@ -9,3 +9,4 @@ dist
 swh.core.egg-info
 version.txt
 .tox
+.hypothesis
