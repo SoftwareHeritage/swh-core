@@ -1,3 +1,11 @@
+swh-core (0.0.56-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.56     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2019-03-19 10:17:06 +0100)
+  * Upstream changes:     - v0.0.56
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 19 Mar 2019 09:27:18 +0000
+
 swh-core (0.0.55-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.55     - (tagged by Antoine R. Dumont
