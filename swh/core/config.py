@@ -193,39 +193,40 @@ def merge_configs(base, other):
     - dict + val -> TypeError
     - val + val -> val (other)
 
-    so merging
+    for instance:
 
-    {
-      'key1': {
-        'skey1': value1,
-        'skey2': {'sskey1': value2},
-      },
-      'key2': value3,
-    }
+    >>> d1 = {
+    ...   'key1': {
+    ...     'skey1': 'value1',
+    ...     'skey2': {'sskey1': 'value2'},
+    ...   },
+    ...   'key2': 'value3',
+    ... }
 
     with
 
-    {
-      'key1': {
-        'skey1': value4,
-        'skey2': {'sskey2': value5},
-      },
-      'key3': value6,
-    }
+    >>> d2 = {
+    ...   'key1': {
+    ...     'skey1': 'value4',
+    ...     'skey2': {'sskey2': 'value5'},
+    ...   },
+    ...   'key3': 'value6',
+    ... }
 
     will give:
 
-    {
-      'key1': {
-        'skey1': value4,  # <-- note this
-        'skey2': {
-          'sskey1': value2,
-          'sskey2': value5,
-        },
-      },
-      'key2': value3,
-      'key3': value6,
-    }
+    >>> d3 = {
+    ...   'key1': {
+    ...     'skey1': 'value4',  # <-- note this
+    ...     'skey2': {
+    ...       'sskey1': 'value2',
+    ...       'sskey2': 'value5',
+    ...     },
+    ...   },
+    ...   'key2': 'value3',
+    ...   'key3': 'value6',
+    ... }
+    >>> assert merge_configs(d1, d2) == d3
 
     Note that no type checking is done for anything but dicts.
     """
