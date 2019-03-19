@@ -74,7 +74,7 @@ class ApiTest(unittest.TestCase):
                 super().__init__(*args, **kwargs)
                 self.session.mount('mock', adapter)
 
-        c = Testclient('foo', 'mock://example.com/')
+        c = Testclient(url='mock://example.com/')
         res = c.test_endpoint('spam')
 
         self.assertEqual(nb_http_calls, 1)
