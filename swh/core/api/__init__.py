@@ -197,8 +197,7 @@ class SWHRemoteAPI(metaclass=MetaSWHRemoteAPI):
         else:
             return self._decode_response(response)
 
-    def post_stream(self, endpoint, data, **opts):
-        return self.post(endpoint, data, stream=True, **opts)
+    post_stream = post
 
     def get(self, endpoint, **opts):
         chunk_size = opts.pop('chunk_size', self.chunk_size)
