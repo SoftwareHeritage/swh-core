@@ -246,6 +246,31 @@ class TestStatsd(unittest.TestCase):
         self.assertEqual('timed.test', name)
         self.assert_almost_equal(500, float(value), 100)
 
+    def test_timed_exception(self):
+        """
+        Exception bubble out of the decorator and is reported
+        to statsd as a dedicated counter.
+        """
+        @self.statsd.timed('timed.test')
+        def func(a, b, c=1, d=1):
+            """docstring"""
+            time.sleep(0.5)
+            return (a / b, c, d)
+
+        self.assertEqual('func', func.__name__)
+        self.assertEqual('docstring', func.__doc__)
+
+        with self.assertRaises(ZeroDivisionError):
+            func(1, 0)
+
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        self.assertEqual('c', type_)
+        self.assertEqual('timed.test_error_count', name)
+        self.assertEqual(int(value), 1)
+
     def test_timed_no_metric(self, ):
         """
         Test using a decorator without providing a metric.
@@ -320,13 +345,14 @@ class TestStatsd(unittest.TestCase):
 
     def test_timed_context_exception(self):
         """
-        Exception bubbles out of the `timed` context manager.
+        Exception bubbles out of the `timed` context manager and is
+        reported to statsd as a dedicated counter.
         """
         class ContextException(Exception):
             pass
 
         def func(self):
-            with self.statsd.timed('timed_context.test.exception'):
+            with self.statsd.timed('timed_context.test'):
                 time.sleep(0.5)
                 raise ContextException()
 
@@ -338,9 +364,9 @@ class TestStatsd(unittest.TestCase):
         name_value, type_ = packet.split('|')
         name, value = name_value.split(':')
 
-        self.assertEqual('ms', type_)
-        self.assertEqual('timed_context.test.exception', name)
-        self.assert_almost_equal(500, float(value), 100)
+        self.assertEqual('c', type_)
+        self.assertEqual('timed_context.test_error_count', name)
+        self.assertEqual(int(value), 1)
 
     def test_timed_context_no_metric_name_exception(self):
         """Test that an exception occurs if using a context manager without a
