@@ -73,12 +73,14 @@ class TimedContextManagerDecorator(object):
     Attributes:
       elapsed (float): the elapsed time at the point of completion
     """
-    def __init__(self, statsd, metric=None, tags=None, sample_rate=1):
+    def __init__(self, statsd, metric=None, error_metric=None,
+                 tags=None, sample_rate=1):
         self.statsd = statsd
         self.metric = metric
+        self.error_metric = error_metric
         self.tags = tags
         self.sample_rate = sample_rate
-        self.elapsed = None
+        self.elapsed = None  # this is for testing purpose
 
     def __call__(self, func):
         """
@@ -96,9 +98,11 @@ class TimedContextManagerDecorator(object):
                 start = monotonic()
                 try:
                     result = await func(*args, **kwargs)
-                    return result
-                finally:
-                    self._send(start)
+                except:  # noqa
+                    self._send_error()
+                    raise
+                self._send(start)
+                return result
             return wrapped_co
 
         # Others
@@ -106,9 +110,12 @@ class TimedContextManagerDecorator(object):
         def wrapped(*args, **kwargs):
             start = monotonic()
             try:
-                return func(*args, **kwargs)
-            finally:
-                self._send(start)
+                result = func(*args, **kwargs)
+            except:  # noqa
+                self._send_error()
+                raise
+            self._send(start)
+            return result
         return wrapped
 
     def __enter__(self):
@@ -118,13 +125,22 @@ class TimedContextManagerDecorator(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        # Report the elapsed time of the context manager.
-        self._send(self._start)
+        # Report the elapsed time of the context manager if no error.
+        if type is None:
+            self._send(self._start)
+        else:
+            self._send_error()
 
     def _send(self, start):
         elapsed = (monotonic() - start) * 1000
-        self.statsd.timing(self.metric, elapsed, self.tags, self.sample_rate)
+        self.statsd.timing(self.metric, elapsed,
+                           tags=self.tags, sample_rate=self.sample_rate)
         self.elapsed = elapsed
+
+    def _send_error(self):
+        if self.error_metric is None:
+            self.error_metric = self.metric + '_error_count'
+        self.statsd.increment(self.error_metric, tags=self.tags)
 
     def start(self):
         """Start the timer"""
@@ -192,7 +208,6 @@ class Statsd(object):
                     UserWarning,
                 )
                 continue
-            print(tag)
             k, v = tag.split(':', 1)
             self.constant_tags[k] = v
 
@@ -262,7 +277,7 @@ class Statsd(object):
         """
         self._report(metric, 'ms', value, tags, sample_rate)
 
-    def timed(self, metric=None, tags=None, sample_rate=1):
+    def timed(self, metric=None, error_metric=None, tags=None, sample_rate=1):
         """
         A decorator or context manager that will measure the distribution of a
         function's/context's run time. Optionally specify a list of tags or a
@@ -288,7 +303,10 @@ class Statsd(object):
             finally:
                 statsd.timing('user.query.time', time.monotonic() - start)
         """
-        return TimedContextManagerDecorator(self, metric, tags, sample_rate)
+        return TimedContextManagerDecorator(
+            statsd=self, metric=metric,
+            error_metric=error_metric,
+            tags=tags, sample_rate=sample_rate)
 
     def set(self, metric, value, tags=None, sample_rate=1):
         """
@@ -369,7 +387,6 @@ class Statsd(object):
                 for (k, v) in sorted(tags.items())
             )) if tags else "",
         )
-
         # Send it
         self._send(payload)
 
