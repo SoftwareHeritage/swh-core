@@ -1,3 +1,13 @@
+swh-core (0.0.57-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.57     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-03-28 15:51:27 +0100)
+  * Upstream changes:     - Release swh.core v0.0.57     - Move to
+    native async primitives     - Fix statsd.timed exceptional behavior
+    bug/misfeature     - Fix SWHRemoteAPI post_stream method
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 28 Mar 2019 14:55:58 +0000
+
 swh-core (0.0.56-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.56     - (tagged by David Douard
