@@ -1,3 +1,11 @@
+swh-core (0.0.58-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.58     - (tagged by Antoine Lambert
+    <antoine.lambert@inria.fr> on 2019-04-02 17:19:05 +0200)
+  * Upstream changes:     - version 0.0.58
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 02 Apr 2019 15:24:34 +0000
+
 swh-core (0.0.57-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.57     - (tagged by Nicolas Dandrimont
