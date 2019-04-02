@@ -1,6 +1,6 @@
 arrow
 aiohttp
-msgpack-python > 0.5
+msgpack > 0.5
 psycopg2
 python-dateutil
 vcversioner
