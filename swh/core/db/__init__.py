@@ -113,7 +113,7 @@ class BaseDb:
         self.conn = conn
         self.pool = pool
 
-    def __del__(self):
+    def put_conn(self):
         if self.pool:
             self.pool.putconn(self.conn)
 
@@ -182,6 +182,7 @@ class BaseDb:
                             for k in columns]
                     f.write(','.join(line))
                     f.write('\n')
+
         finally:
             # No problem bubbling up exceptions, but we still need to make sure
             # we finish copying, even though we're probably going to cancel the
