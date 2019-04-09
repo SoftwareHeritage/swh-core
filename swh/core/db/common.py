@@ -43,9 +43,12 @@ def db_transaction(**client_options):
                 return ret
             else:
                 db = self.get_db()
-                with db.transaction() as cur:
-                    apply_options(cur, __client_options)
-                    return meth(self, *args, db=db, cur=cur, **kwargs)
+                try:
+                    with db.transaction() as cur:
+                        apply_options(cur, __client_options)
+                        return meth(self, *args, db=db, cur=cur, **kwargs)
+                finally:
+                    self.put_db(db)
         return _meth
 
     return decorator
@@ -73,8 +76,12 @@ def db_transaction_generator(**client_options):
                 apply_options(cur, old_options)
             else:
                 db = self.get_db()
-                with db.transaction() as cur:
-                    apply_options(cur, __client_options)
-                    yield from meth(self, *args, db=db, cur=cur, **kwargs)
+                try:
+                    with db.transaction() as cur:
+                        apply_options(cur, __client_options)
+                        yield from meth(self, *args, db=db, cur=cur, **kwargs)
+                finally:
+                    self.put_db(db)
+
         return _meth
     return decorator
