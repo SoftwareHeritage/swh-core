@@ -4,20 +4,14 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import logging
 import warnings
 warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
 
-from os import path
-import glob
-
 import click
-from importlib import import_module
 
-from swh.core.utils import numfile_sortkey as sortkey
-from swh.core.tests.db_testing import (
-    pg_createdb, pg_restore, DB_DUMP_TYPES,
-    swh_db_version
-)
+
+logger = logging.getLogger(__name__)
 
 
 @click.command()
@@ -30,7 +24,7 @@ def db_init(module, db_name=None):
 
     Example:
 
-      swh-db-init storage -d swh-test
+      swh db-init -d swh-test storage
 
     If you want to specify non-default postgresql connection parameters,
     please provide them using standard environment variables.
@@ -38,9 +32,21 @@ def db_init(module, db_name=None):
 
     Example:
 
-      PGPORT=5434 swh-db-init indexer -d swh-indexer
+      PGPORT=5434 swh db-init indexer
 
     """
+    # put import statements here so we can keep startup time of the main swh
+    # command as short as possible
+    from os import path
+    import glob
+    from importlib import import_module
+    from swh.core.utils import numfile_sortkey as sortkey
+    from swh.core.tests.db_testing import (
+        pg_createdb, pg_restore, DB_DUMP_TYPES,
+        swh_db_version
+    )
+
+    logger.debug('db_init %s dn_name=%s', module, db_name)
     dump_files = []
 
     for modname in module:

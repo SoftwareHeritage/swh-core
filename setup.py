@@ -51,9 +51,13 @@ setup(
     extras_require={'testing': parse_requirements('test')},
     vcversioner={},
     include_package_data=True,
-    entry_points={
-        'console_scripts': ['swh-db-init=swh.core.cli:db_init'],
-        },
+    entry_points='''
+        [console_scripts]
+        swh=swh.core.cli:main
+        swh-db-init=swh.core.cli.db:db_init
+        [swh.cli.subcommands]
+        db-init=swh.core.cli.db:db_init
+    ''',
     classifiers=[
         "Programming Language :: Python :: 3",
         "Intended Audience :: Developers",
