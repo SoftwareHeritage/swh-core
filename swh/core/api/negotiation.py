@@ -24,9 +24,9 @@
 #
 
 from collections import defaultdict
-from decorator import decorator
-
 from inspect import getcallargs
+
+from decorator import decorator
 
 
 class FormatterNotFound(Exception):
