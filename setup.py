@@ -17,22 +17,23 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 
-def parse_requirements(name=None):
-    if name:
-        reqf = 'requirements-%s.txt' % name
-    else:
-        reqf = 'requirements.txt'
-
+def parse_requirements(*names):
     requirements = []
-    if not os.path.exists(reqf):
-        return requirements
+    for name in names:
+        if name:
+            reqf = 'requirements-%s.txt' % name
+        else:
+            reqf = 'requirements.txt'
 
-    with open(reqf) as f:
-        for line in f.readlines():
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            requirements.append(line)
+        if not os.path.exists(reqf):
+            return requirements
+
+        with open(reqf) as f:
+            for line in f.readlines():
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                requirements.append(line)
     return requirements
 
 
@@ -46,9 +47,13 @@ setup(
     url='https://forge.softwareheritage.org/diffusion/DCORE/',
     packages=find_packages(),
     scripts=[],
-    install_requires=parse_requirements() + parse_requirements('swh'),
+    install_requires=parse_requirements(None, 'swh'),
     setup_requires=['vcversioner'],
-    extras_require={'testing': parse_requirements('test')},
+    extras_require={
+        'testing': parse_requirements('test', 'db', 'http'),
+        'db': parse_requirements('db'),
+        'http': parse_requirements('http'),
+    },
     vcversioner={},
     include_package_data=True,
     entry_points='''
