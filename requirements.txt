@@ -1,11 +1,13 @@
+PyYAML
+systemd-python
+
+# these deps below are now handled in dedicated 'extras' and should be removed
+# from this main requirement file ASAP
 arrow
 aiohttp
 msgpack > 0.5
 psycopg2
 python-dateutil
-vcversioner
-PyYAML
 requests
 Flask
-systemd-python
 decorator

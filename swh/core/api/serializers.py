@@ -3,13 +3,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import arrow
 import base64
 import datetime
 from json import JSONDecoder, JSONEncoder
 import types
 from uuid import UUID
 
+import arrow
 import dateutil.parser
 import msgpack
 
