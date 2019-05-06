@@ -5,8 +5,9 @@
 
 import os
 import glob
-import psycopg2
 import subprocess
+
+import psycopg2
 
 from swh.core.utils import numfile_sortkey as sortkey
 

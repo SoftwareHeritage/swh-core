@@ -1,3 +1,7 @@
-[console_scripts]
-swh-db-init = swh.core.cli:db_init
 
+        [console_scripts]
+        swh=swh.core.cli:main
+        swh-db-init=swh.core.cli.db:db_init
+        [swh.cli.subcommands]
+        db-init=swh.core.cli.db:db_init
+    

@@ -4,13 +4,13 @@
 # See top-level LICENSE file for more information
 
 import abc
-import aiohttp
 import multiprocessing
 import os
 import socket
 import time
-
 from urllib.request import urlopen
+
+import aiohttp
 
 
 class ServerTestFixtureBaseClass(metaclass=abc.ABCMeta):
