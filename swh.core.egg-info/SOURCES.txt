@@ -14,7 +14,6 @@ swh.core.egg-info/requires.txt
 swh.core.egg-info/top_level.txt
 swh/core/__init__.py
 swh/core/api_async.py
-swh/core/cli.py
 swh/core/config.py
 swh/core/logger.py
 swh/core/statsd.py
@@ -24,6 +23,8 @@ swh/core/api/__init__.py
 swh/core/api/asynchronous.py
 swh/core/api/negotiation.py
 swh/core/api/serializers.py
+swh/core/cli/__init__.py
+swh/core/cli/db.py
 swh/core/db/__init__.py
 swh/core/db/common.py
 swh/core/db/db_utils.py
@@ -35,7 +36,6 @@ swh/core/tests/server_testing.py
 swh/core/tests/test_api.py
 swh/core/tests/test_config.py
 swh/core/tests/test_db.py
-swh/core/tests/test_logger.py
 swh/core/tests/test_serializers.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_utils.py

@@ -1,10 +1,11 @@
-import aiohttp.web
 import json
 import logging
-import multidict
 import pickle
 import sys
 import traceback
+
+import aiohttp.web
+import multidict
 
 from .serializers import msgpack_dumps, msgpack_loads, SWHJSONDecoder
 
