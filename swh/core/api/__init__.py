@@ -25,7 +25,7 @@ from .negotiation import (Formatter as FormatterBase,
 logger = logging.getLogger(__name__)
 
 
-# support for content negotation
+# support for content negotiation
 
 class Negotiator(NegotiatorBase):
     def best_mimetype(self):
