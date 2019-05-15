@@ -7,23 +7,25 @@ import click
 import logging
 import pkg_resources
 
-logger = logging.getLogger(__name__)
-
+LOG_LEVEL_NAMES = ['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+logger = logging.getLogger(__name__)
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option('--log-level', '-l', default='INFO',
-              type=click.Choice(logging._nameToLevel.keys()),
+              type=click.Choice(LOG_LEVEL_NAMES),
               help="Log level (default to INFO)")
 @click.pass_context
 def swh(ctx, log_level):
-    """Software Heritage Tool
+    """Command line interface for Software Heritage
     """
+    log_level = logging.getLevelName(log_level)
     logger.setLevel(log_level)
     ctx.ensure_object(dict)
-    ctx.obj['log_level'] = logging._nameToLevel[log_level]
+    ctx.obj['log_level'] = log_level
 
 
 def main():
