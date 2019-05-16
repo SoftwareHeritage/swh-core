@@ -1,3 +1,4 @@
+Click
 pytest < 4
 pytest-postgresql
 requests-mock

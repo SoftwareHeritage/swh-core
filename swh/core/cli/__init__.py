@@ -14,7 +14,25 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 logger = logging.getLogger(__name__)
 
 
-@click.group(context_settings=CONTEXT_SETTINGS)
+class AliasedGroup(click.Group):
+    'A simple Group that supports command aliases'
+
+    @property
+    def aliases(self):
+        if not hasattr(self, '_aliases'):
+            self._aliases = {}
+        return self._aliases
+
+    def get_command(self, ctx, cmd_name):
+        return super().get_command(ctx, self.aliases.get(cmd_name, cmd_name))
+
+    def add_alias(self, name, alias):
+        if not isinstance(name, str):
+            name = name.name
+        self.aliases[alias] = name
+
+
+@click.group(context_settings=CONTEXT_SETTINGS, cls=AliasedGroup)
 @click.option('--log-level', '-l', default='INFO',
               type=click.Choice(LOG_LEVEL_NAMES),
               help="Log level (default to INFO)")
