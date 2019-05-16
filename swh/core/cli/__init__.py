@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
               help="Log level (default to INFO)")
 @click.pass_context
 def swh(ctx, log_level):
-    """Command line interface for Software Heritage
+    """Command line interface for Software Heritage.
     """
     log_level = logging.getLevelName(log_level)
-    logger.setLevel(log_level)
+    logging.root.setLevel(log_level)
     ctx.ensure_object(dict)
     ctx.obj['log_level'] = log_level
 
