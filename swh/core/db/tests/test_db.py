@@ -11,7 +11,7 @@ from hypothesis import strategies, given
 import pytest
 
 from swh.core.db import BaseDb
-from swh.core.tests.db_testing import (
+from .db_testing import (
     SingleDbTestFixture, db_create, db_destroy, db_close,
 )
 

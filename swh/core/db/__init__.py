@@ -156,7 +156,7 @@ class BaseDb:
             tblname (str): destination table's name.
             columns ([str]): keys to access data in items and also the
               column names in the destination table.
-            default_values (dict): dictionnary of default values to use when
+            default_values (dict): dictionary of default values to use when
               inserting entried int the tblname table.
             cur: a db cursor; if not given, a new cursor will be created.
             item_cb (fn): optional function to apply to items's entry.
