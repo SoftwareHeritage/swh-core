@@ -10,11 +10,12 @@ warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
 
 import click
 
+from swh.core.cli import CONTEXT_SETTINGS
 
 logger = logging.getLogger(__name__)
 
 
-@click.command()
+@click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('module', nargs=-1, required=True)
 @click.option('--db-name', '-d', help='Database name.',
               default='softwareheritage-dev', show_default=True)
