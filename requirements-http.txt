@@ -1,0 +1,8 @@
+# requirements for swh.core.api
+aiohttp
+arrow
+decorator
+Flask
+msgpack > 0.5
+python-dateutil
+requests

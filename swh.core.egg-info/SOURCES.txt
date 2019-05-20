@@ -1,6 +1,8 @@
 MANIFEST.in
 Makefile
 README.md
+requirements-db.txt
+requirements-http.txt
 requirements-swh.txt
 requirements.txt
 setup.py
