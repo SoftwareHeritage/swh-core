@@ -1,8 +1,10 @@
-swh-core (0.0.61-1~swh1~bpo9+1) stretch-swh; urgency=medium
+swh-core (0.0.62-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for stretch-swh
+  * New upstream release 0.0.62     - (tagged by Antoine Lambert
+    <antoine.lambert@inria.fr> on 2019-05-20 14:56:05 +0200)
+  * Upstream changes:     - version 0.0.62
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 17 May 2019 08:39:29 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 20 May 2019 13:01:38 +0000
 
 swh-core (0.0.61-1~swh1) unstable-swh; urgency=medium
 
