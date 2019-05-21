@@ -42,7 +42,7 @@ def db_init(module, db_name=None):
     import glob
     from importlib import import_module
     from swh.core.utils import numfile_sortkey as sortkey
-    from swh.core.tests.db_testing import (
+    from swh.core.db.tests.db_testing import (
         pg_createdb, pg_restore, DB_DUMP_TYPES,
         swh_db_version
     )
