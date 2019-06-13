@@ -19,9 +19,12 @@ logger = logging.getLogger(__name__)
 @click.argument('module', nargs=-1, required=True)
 @click.option('--db-name', '-d', help='Database name.',
               default='softwareheritage-dev', show_default=True)
-def db_init(module, db_name=None):
+@click.option('--create-db/--no-create-db', '-C',
+              help='Attempt to create the database.',
+              default=False)
+def db_init(module, db_name, create_db):
     """Initialise a database for the Software Heritage <module>.  By
-    default, attempts to create the database first.
+    default, does not attempt to create the database.
 
     Example:
 
@@ -67,8 +70,9 @@ def db_init(module, db_name=None):
         dump_files.extend(sorted(glob.glob(path.join(sqldir, '*.sql')),
                                  key=sortkey))
 
-    # Create the db (or fail silently if already existing)
-    pg_createdb(db_name, check=False)
+    if create_db:
+        # Create the db (or fail silently if already existing)
+        pg_createdb(db_name, check=False)
     # Try to retrieve the db version if any
     db_version = swh_db_version(db_name)
     if not db_version:  # Initialize the db
