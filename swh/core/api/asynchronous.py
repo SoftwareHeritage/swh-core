@@ -27,7 +27,7 @@ async def decode_request(request):
     if content_type == 'application/x-msgpack':
         r = msgpack_loads(data)
     elif content_type == 'application/json':
-        r = json.loads(data, cls=SWHJSONDecoder)
+        r = json.loads(data.decode(), cls=SWHJSONDecoder)
     else:
         raise ValueError('Wrong content type `%s` for API request'
                          % content_type)
