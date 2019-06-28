@@ -159,6 +159,12 @@ class SWHRemoteAPI(metaclass=MetaSWHRemoteAPI):
         base_url = url if url.endswith('/') else url + '/'
         self.url = base_url
         self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(
+            max_retries=kwargs.get('max_retries', 3),
+            pool_connections=kwargs.get('pool_connections', 20),
+            pool_maxsize=kwargs.get('pool_maxsize', 100))
+        self.session.mount(self.url, adapter)
+
         self.timeout = timeout
         self.chunk_size = chunk_size
 

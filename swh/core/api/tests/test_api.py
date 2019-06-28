@@ -72,7 +72,10 @@ class ApiTest(unittest.TestCase):
 
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
-                self.session.mount('mock', adapter)
+                # we need to mount the mock adapter on the base url to override
+                # SWHRemoteAPI's mechanism that also mounts an HTTPAdapter
+                # (for configuration purpose)
+                self.session.mount('mock://example.com/', adapter)
 
         c = Testclient(url='mock://example.com/')
         res = c.test_endpoint('spam')
