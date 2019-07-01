@@ -5,6 +5,7 @@ import sys
 import traceback
 
 import aiohttp.web
+from deprecated import deprecated
 import multidict
 
 from .serializers import msgpack_dumps, msgpack_loads, SWHJSONDecoder
@@ -48,7 +49,12 @@ async def error_middleware(app, handler):
     return middleware_handler
 
 
-class SWHRemoteAPI(aiohttp.web.Application):
+class RPCServerApp(aiohttp.web.Application):
     def __init__(self, *args, middlewares=(), **kwargs):
         middlewares = (error_middleware,) + middlewares
         super().__init__(*args, middlewares=middlewares, **kwargs)
+
+
+SWHRemoteAPI = deprecated(
+    version='0.0.64',
+    reason='Use the RPCServerApp instead')(RPCServerApp)
