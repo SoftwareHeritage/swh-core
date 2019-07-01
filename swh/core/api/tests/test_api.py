@@ -11,7 +11,7 @@ from werkzeug.test import Client as WerkzeugTestClient
 
 from swh.core.api import (
         error_handler, encode_data_server,
-        remote_api_endpoint, SWHRemoteAPI, SWHServerAPIApp)
+        remote_api_endpoint, RPCClient, RPCServerApp)
 
 
 class ApiTest(unittest.TestCase):
@@ -28,9 +28,9 @@ class ApiTest(unittest.TestCase):
                 testcase.assertEqual(test_data, 'spam')
                 return 'egg'
 
-        app = SWHServerAPIApp('testapp',
-                              backend_class=TestStorage,
-                              backend_factory=lambda: TestStorage())
+        app = RPCServerApp('testapp',
+                           backend_class=TestStorage,
+                           backend_factory=lambda: TestStorage())
 
         @app.errorhandler(Exception)
         def my_error_handler(exception):
@@ -67,13 +67,13 @@ class ApiTest(unittest.TestCase):
                              'mock://example.com/test_endpoint_url',
                              content=callback)
 
-        class Testclient(SWHRemoteAPI):
+        class Testclient(RPCClient):
             backend_class = TestStorage
 
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 # we need to mount the mock adapter on the base url to override
-                # SWHRemoteAPI's mechanism that also mounts an HTTPAdapter
+                # RPCClient's mechanism that also mounts an HTTPAdapter
                 # (for configuration purpose)
                 self.session.mount('mock://example.com/', adapter)
 
