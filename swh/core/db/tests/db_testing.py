@@ -45,7 +45,7 @@ def pg_restore(dbname, dumpfile, dumptype='pg_dump'):
     """
     Args:
         dbname: name of the DB to restore into
-        dumpfile: path fo the dump file
+        dumpfile: path of the dump file
         dumptype: one of 'pg_dump' (for binary dumps), 'psql' (for SQL dumps)
     """
     assert dumptype in ['pg_dump', 'psql']

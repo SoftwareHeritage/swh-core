@@ -175,7 +175,7 @@ class TestStatsd(unittest.TestCase):
         self.statsd.gauge('gauge', 123.4)
         self.assertEqual('foo.gauge:123.4|g', self.recv())
 
-    # Test Client level contant tags
+    # Test Client level constant tags
     def test_gauge_constant_tags(self):
         self.statsd.constant_tags = {
             'bar': 'baz',
