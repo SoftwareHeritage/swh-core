@@ -23,7 +23,7 @@ To set up your development environment:
 
 This will install every Python package needed to run this package's tests.
 
-Unit tests can be executed using [pytest](https://docs.pytest.org).
+Unit tests can be executed using [pytest][2] or [tox][3].
 
 ```
 (swh) user@host:~/swh-environment/swh-core$ pytest
@@ -46,8 +46,21 @@ swh/core/tests/test_utils.py .......                                      [100%]
 ===================== 89 passed, 9 warnings in 6.94 seconds =====================
 ```
 
+Note: this git repository uses [pre-commit][4] hooks to ensure better and more
+consistent code. It should already be installed in your virtualenv (if not,
+just type `pip install pre-commit`). Make sure to activate it in your local
+copy of the git repository:
+
+```
+(swh) user@host:~/swh-environment/swh-core$ pre-commit install
+pre-commit installed at .git/hooks/pre-commit
+```
+
 Please read the [developer setup manual][5] for more information on how to hack
 on Software Heritage.
 
-[2]: https://docs.softwareheritage.org/devel/developer-setup.html
 [1]: https://virtualenv.pypa.io
+[2]: https://docs.pytest.org
+[3]: https://tox.readthedocs.io
+[4]: https://pre-commit.com
+[5]: https://docs.softwareheritage.org/devel/developer-setup.html

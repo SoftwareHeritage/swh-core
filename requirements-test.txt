@@ -3,3 +3,4 @@ pytest < 4
 pytest-postgresql
 requests-mock
 hypothesis >= 3.11.0
+pre-commit
