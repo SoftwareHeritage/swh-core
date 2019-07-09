@@ -61,6 +61,7 @@ setup(
         swh=swh.core.cli:main
         swh-db-init=swh.core.cli.db:db_init
         [swh.cli.subcommands]
+        db=swh.core.cli.db:db
         db-init=swh.core.cli.db:db_init
     ''',
     classifiers=[
