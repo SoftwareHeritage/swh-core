@@ -1,3 +1,9 @@
+swh-core (0.0.63-1~swh1~bpo10+1) buster-swh; urgency=medium
+
+  * Rebuild for buster-swh.
+
+ -- Nicolas Dandrimont <olasd@debian.org>  Thu, 11 Jul 2019 13:21:00 +0200
+
 swh-core (0.0.63-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.63     - (tagged by Antoine Lambert
