@@ -1,3 +1,9 @@
+swh-core (0.0.63-1~swh1~bpo10+3) buster-swh; urgency=medium
+
+  * No changes rebuild
+
+ -- Nicolas Dandrimont <olasd@debian.org>  Thu, 11 Jul 2019 13:36:26 +0200
+
 swh-core (0.0.63-1~swh1~bpo10+2) buster-swh; urgency=medium
 
   * No changes rebuild.
