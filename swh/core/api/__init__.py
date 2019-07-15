@@ -12,6 +12,7 @@ import pickle
 import requests
 import datetime
 
+from deprecated import deprecated
 from flask import Flask, Request, Response, request, abort
 from .serializers import (decode_response,
                           encode_data_client as encode_data,
@@ -91,8 +92,8 @@ class APIError(Exception):
                 .format(self.args))
 
 
-class MetaSWHRemoteAPI(type):
-    """Metaclass for SWHRemoteAPI, which adds a method for each endpoint
+class MetaRPCClient(type):
+    """Metaclass for RPCClient, which adds a method for each endpoint
     of the database it is designed to access.
 
     See for example :class:`swh.indexer.storage.api.client.RemoteStorage`"""
@@ -134,8 +135,8 @@ class MetaSWHRemoteAPI(type):
         attributes[meth_name] = meth_
 
 
-class SWHRemoteAPI(metaclass=MetaSWHRemoteAPI):
-    """Proxy to an internal SWH API
+class RPCClient(metaclass=MetaRPCClient):
+    """Proxy to an internal SWH RPC
 
     """
 
@@ -159,6 +160,12 @@ class SWHRemoteAPI(metaclass=MetaSWHRemoteAPI):
         base_url = url if url.endswith('/') else url + '/'
         self.url = base_url
         self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(
+            max_retries=kwargs.get('max_retries', 3),
+            pool_connections=kwargs.get('pool_connections', 20),
+            pool_maxsize=kwargs.get('pool_maxsize', 100))
+        self.session.mount(self.url, adapter)
+
         self.timeout = timeout
         self.chunk_size = chunk_size
 
@@ -287,7 +294,7 @@ def error_handler(exception, encoder):
     return response
 
 
-class SWHServerAPIApp(Flask):
+class RPCServerApp(Flask):
     """For each endpoint of the given `backend_class`, tells app.route to call
     a function that decodes the request and sends it to the backend object
     provided by the factory.
@@ -320,3 +327,21 @@ class SWHServerAPIApp(Flask):
             # Call the actual code
             obj_meth = getattr(backend_factory(), meth_name)
             return encode_data_server(obj_meth(**decode_request(request)))
+
+
+@deprecated(version='0.0.64',
+            reason='Use the RPCServerApp instead')
+class SWHServerAPIApp(RPCServerApp):
+    pass
+
+
+@deprecated(version='0.0.64',
+            reason='Use the MetaRPCClient instead')
+class MetaSWHRemoteAPI(MetaRPCClient):
+    pass
+
+
+@deprecated(version='0.0.64',
+            reason='Use the RPCClient instead')
+class SWHRemoteAPI(RPCClient):
+    pass
