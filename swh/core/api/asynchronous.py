@@ -55,6 +55,7 @@ class RPCServerApp(aiohttp.web.Application):
         super().__init__(*args, middlewares=middlewares, **kwargs)
 
 
-SWHRemoteAPI = deprecated(
-    version='0.0.64',
-    reason='Use the RPCServerApp instead')(RPCServerApp)
+@deprecated(version='0.0.64',
+            reason='Use the RPCServerApp instead')
+class SWHRemoteAPI(RPCServerApp):
+    pass

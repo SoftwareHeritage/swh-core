@@ -329,14 +329,19 @@ class RPCServerApp(Flask):
             return encode_data_server(obj_meth(**decode_request(request)))
 
 
-SWHServerAPIApp = deprecated(
-    version='0.0.64',
-    reason='Use the RPCServerApp instead')(RPCServerApp)
+@deprecated(version='0.0.64',
+            reason='Use the RPCServerApp instead')
+class SWHServerAPIApp(RPCServerApp):
+    pass
 
-MetaSWHRemoteAPI = deprecated(
-    version='0.0.64',
-    reason='Use the MetaRPCClient instead')(MetaRPCClient)
 
-SWHRemoteAPI = deprecated(
-    version='0.0.64',
-    reason='Use the RPCClient instead')(RPCClient)
+@deprecated(version='0.0.64',
+            reason='Use the MetaRPCClient instead')
+class MetaSWHRemoteAPI(MetaRPCClient):
+    pass
+
+
+@deprecated(version='0.0.64',
+            reason='Use the RPCClient instead')
+class SWHRemoteAPI(RPCClient):
+    pass
