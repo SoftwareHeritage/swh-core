@@ -5,6 +5,7 @@ import sys
 import traceback
 
 import aiohttp.web
+from deprecated import deprecated
 import multidict
 
 from .serializers import msgpack_dumps, msgpack_loads, SWHJSONDecoder
@@ -26,7 +27,7 @@ async def decode_request(request):
     if content_type == 'application/x-msgpack':
         r = msgpack_loads(data)
     elif content_type == 'application/json':
-        r = json.loads(data, cls=SWHJSONDecoder)
+        r = json.loads(data.decode(), cls=SWHJSONDecoder)
     else:
         raise ValueError('Wrong content type `%s` for API request'
                          % content_type)
@@ -48,7 +49,13 @@ async def error_middleware(app, handler):
     return middleware_handler
 
 
-class SWHRemoteAPI(aiohttp.web.Application):
+class RPCServerApp(aiohttp.web.Application):
     def __init__(self, *args, middlewares=(), **kwargs):
         middlewares = (error_middleware,) + middlewares
         super().__init__(*args, middlewares=middlewares, **kwargs)
+
+
+@deprecated(version='0.0.64',
+            reason='Use the RPCServerApp instead')
+class SWHRemoteAPI(RPCServerApp):
+    pass

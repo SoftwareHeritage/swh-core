@@ -82,6 +82,40 @@ def _uncompress_zip(tarpath, dirpath):
         z.extractall(path=dirpath)
 
 
+def _safemembers(tarpath, members, basepath):
+    """Given a list of archive members, yield the members (directory,
+    file, hard-link) that stays in bounds with basepath.  Note
+    that symbolic link are authorized to point outside the
+    basepath though.
+
+    Args:
+        tarpath: Name of the tarball
+        members: Archive members for such tarball
+        basepath: the basepath sandbox
+
+    Yields:
+        Safe TarInfo member
+
+    Raises:
+        ValueError when a member would be extracted outside basepath
+
+    """
+    errormsg = 'Archive {} blocked. Illegal path to %s %s'.format(tarpath)
+
+    for finfo in members:
+        if finfo.isdir() and _badpath(finfo.name, basepath):
+            raise ValueError(errormsg % ('directory', finfo.name))
+        elif finfo.isfile() and _badpath(finfo.name, basepath):
+            raise ValueError(errormsg % ('file', finfo.name))
+        elif finfo.islnk() and _badlink(finfo, basepath):
+            raise ValueError(errormsg % ('hard-link', finfo.linkname))
+        # Authorize symlinks to point outside basepath
+        # elif finfo.issym() and _badlink(finfo, basepath):
+        #     raise ValueError(errormsg % ('symlink', finfo.linkname))
+        else:
+            yield finfo
+
+
 def _uncompress_tar(tarpath, dirpath):
     """Uncompress tarpath if the tarpath is safe.
     Safe means, no file will be uncompressed outside of dirpath.
@@ -94,43 +128,10 @@ def _uncompress_tar(tarpath, dirpath):
         ValueError when a member would be extracted outside dirpath.
 
     """
-    def safemembers(tarpath, members, basepath):
-        """Given a list of archive members, yield the members (directory,
-        file, hard-link) that stays in bounds with basepath.  Note
-        that symbolic link are authorized to point outside the
-        basepath though.
-
-        Args:
-            tarpath: Name of the tarball
-            members: Archive members for such tarball
-            basepath: the basepath sandbox
-
-        Yields:
-            Safe TarInfo member
-
-        Raises:
-            ValueError when a member would be extracted outside basepath
-
-        """
-        errormsg = 'Archive {} blocked. Illegal path to %s %s'.format(tarpath)
-
-        for finfo in members:
-            if finfo.isdir() and _badpath(finfo.name, basepath):
-                raise ValueError(errormsg % ('directory', finfo.name))
-            elif finfo.isfile() and _badpath(finfo.name, basepath):
-                raise ValueError(errormsg % ('file', finfo.name))
-            elif finfo.islnk() and _badlink(finfo, basepath):
-                raise ValueError(errormsg % ('hard-link', finfo.linkname))
-            # Authorize symlinks to point outside basepath
-            # elif finfo.issym() and _badlink(finfo, basepath):
-            #     raise ValueError(errormsg % ('symlink', finfo.linkname))
-            else:
-                yield finfo
-
     with tarfile.open(tarpath) as t:
         members = t.getmembers()
         t.extractall(path=dirpath,
-                     members=safemembers(tarpath, members, dirpath))
+                     members=_safemembers(tarpath, members, dirpath))
 
 
 def uncompress(tarpath, dest):
