@@ -10,8 +10,9 @@ import msgpack
 
 import pytest
 
-from swh.core.api.asynchronous import RPCServerApp
-from swh.core.api.asynchronous import encode_data_server, decode_request
+from swh.core.api.asynchronous import RPCServerApp, Response
+from swh.core.api.asynchronous import encode_msgpack, decode_request
+
 from swh.core.api.serializers import msgpack_dumps, SWHJSONEncoder
 
 
@@ -19,7 +20,7 @@ pytest_plugins = ['aiohttp.pytest_plugin', 'pytester']
 
 
 async def root(request):
-    return encode_data_server('toor')
+    return Response('toor')
 
 STRUCT = {'txt': 'something stupid',
           # 'date': datetime.date(2019, 6, 9),  # not supported
@@ -35,12 +36,25 @@ STRUCT = {'txt': 'something stupid',
 
 
 async def struct(request):
-    return encode_data_server(STRUCT)
+    return Response(STRUCT)
 
 
 async def echo(request):
     data = await decode_request(request)
-    return encode_data_server(data)
+    return Response(data)
+
+
+async def echo_no_nego(request):
+    # let the content negotiation handle the serialization for us...
+    data = await decode_request(request)
+    ret = encode_msgpack(data)
+    return ret
+
+
+def check_mimetype(src, dst):
+    src = src.split(';')[0].strip()
+    dst = dst.split(';')[0].strip()
+    assert src == dst
 
 
 @pytest.fixture
@@ -49,6 +63,7 @@ def app():
     app.router.add_route('GET', '/', root)
     app.router.add_route('GET', '/struct', struct)
     app.router.add_route('POST', '/echo', echo)
+    app.router.add_route('POST', '/echo-no-nego', echo_no_nego)
     return app
 
 
@@ -58,10 +73,19 @@ async def test_get_simple(app,  aiohttp_client) -> None:
     cli = await aiohttp_client(app)
     resp = await cli.get('/')
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'application/x-msgpack'
+    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
     data = await resp.read()
     value = msgpack.unpackb(data, raw=False)
     assert value == 'toor'
+
+
+async def test_get_simple_nego(app,  aiohttp_client) -> None:
+    cli = await aiohttp_client(app)
+    for ctype in ('x-msgpack', 'json'):
+        resp = await cli.get('/', headers={'Accept': 'application/%s' % ctype})
+        assert resp.status == 200
+        check_mimetype(resp.headers['Content-Type'], 'application/%s' % ctype)
+        assert (await decode_request(resp)) == 'toor'
 
 
 async def test_get_struct(app,  aiohttp_client) -> None:
@@ -69,8 +93,19 @@ async def test_get_struct(app,  aiohttp_client) -> None:
     cli = await aiohttp_client(app)
     resp = await cli.get('/struct')
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'application/x-msgpack'
+    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
     assert (await decode_request(resp)) == STRUCT
+
+
+async def test_get_struct_nego(app,  aiohttp_client) -> None:
+    """Test returned structured from a simple GET data is OK"""
+    cli = await aiohttp_client(app)
+    for ctype in ('x-msgpack', 'json'):
+        resp = await cli.get('/struct',
+                             headers={'Accept': 'application/%s' % ctype})
+        assert resp.status == 200
+        check_mimetype(resp.headers['Content-Type'], 'application/%s' % ctype)
+        assert (await decode_request(resp)) == STRUCT
 
 
 async def test_post_struct_msgpack(app,  aiohttp_client) -> None:
@@ -82,7 +117,7 @@ async def test_post_struct_msgpack(app,  aiohttp_client) -> None:
         headers={'Content-Type': 'application/x-msgpack'},
         data=msgpack_dumps({'toto': 42}))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'application/x-msgpack'
+    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
     assert (await decode_request(resp)) == {'toto': 42}
     # complex struct
     resp = await cli.post(
@@ -90,7 +125,7 @@ async def test_post_struct_msgpack(app,  aiohttp_client) -> None:
         headers={'Content-Type': 'application/x-msgpack'},
         data=msgpack_dumps(STRUCT))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'application/x-msgpack'
+    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
     assert (await decode_request(resp)) == STRUCT
 
 
@@ -103,7 +138,7 @@ async def test_post_struct_json(app,  aiohttp_client) -> None:
         headers={'Content-Type': 'application/json'},
         data=json.dumps({'toto': 42}, cls=SWHJSONEncoder))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'application/x-msgpack'
+    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
     assert (await decode_request(resp)) == {'toto': 42}
 
     resp = await cli.post(
@@ -111,5 +146,42 @@ async def test_post_struct_json(app,  aiohttp_client) -> None:
         headers={'Content-Type': 'application/json'},
         data=json.dumps(STRUCT, cls=SWHJSONEncoder))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'application/x-msgpack'
+    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
+    # assert resp.headers['Content-Type'] == 'application/x-msgpack'
     assert (await decode_request(resp)) == STRUCT
+
+
+async def test_post_struct_nego(app,  aiohttp_client) -> None:
+    """Test that json encoded posted struct data is returned as is
+
+    using content negotiation (accept json or msgpack).
+    """
+    cli = await aiohttp_client(app)
+
+    for ctype in ('x-msgpack', 'json'):
+        resp = await cli.post(
+            '/echo',
+            headers={'Content-Type': 'application/json',
+                     'Accept': 'application/%s' % ctype},
+            data=json.dumps(STRUCT, cls=SWHJSONEncoder))
+        assert resp.status == 200
+        check_mimetype(resp.headers['Content-Type'], 'application/%s' % ctype)
+        assert (await decode_request(resp)) == STRUCT
+
+
+async def test_post_struct_no_nego(app,  aiohttp_client) -> None:
+    """Test that json encoded posted struct data is returned as msgpack
+
+    when using non-negotiation-compatible handlers.
+    """
+    cli = await aiohttp_client(app)
+
+    for ctype in ('x-msgpack', 'json'):
+        resp = await cli.post(
+            '/echo-no-nego',
+            headers={'Content-Type': 'application/json',
+                     'Accept': 'application/%s' % ctype},
+            data=json.dumps(STRUCT, cls=SWHJSONEncoder))
+        assert resp.status == 200
+        check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
+        assert (await decode_request(resp)) == STRUCT
