@@ -23,11 +23,11 @@ def test_swh_help():
     runner = CliRunner()
     result = runner.invoke(swhmain, ['-h'])
     assert result.exit_code == 0
-    assert result.output == help_msg
+    assert result.output.startswith(help_msg)
 
     result = runner.invoke(swhmain, ['--help'])
     assert result.exit_code == 0
-    assert result.output == help_msg
+    assert result.output.startswith(help_msg)
 
 
 def test_command():
