@@ -28,6 +28,7 @@ swh/core/api/serializers.py
 swh/core/api/tests/__init__.py
 swh/core/api/tests/server_testing.py
 swh/core/api/tests/test_api.py
+swh/core/api/tests/test_async.py
 swh/core/api/tests/test_serializers.py
 swh/core/cli/__init__.py
 swh/core/cli/db.py
@@ -37,6 +38,7 @@ swh/core/db/db_utils.py
 swh/core/db/tests/__init__.py
 swh/core/db/tests/conftest.py
 swh/core/db/tests/db_testing.py
+swh/core/db/tests/test_cli.py
 swh/core/db/tests/test_db.py
 swh/core/sql/log-schema.sql
 swh/core/tests/__init__.py

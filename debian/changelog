@@ -1,20 +1,26 @@
-swh-core (0.0.63-1~swh1~bpo10+3) buster-swh; urgency=medium
+swh-core (0.0.65-1~swh2) unstable-swh; urgency=medium
 
-  * No changes rebuild
+  * debian/control: add missing dependencies.
 
- -- Nicolas Dandrimont <olasd@debian.org>  Thu, 11 Jul 2019 13:36:26 +0200
+ -- David Douard <david.douard@sdfa3.org>  Tue, 16 Jul 2019 14:46:43 +0200
 
-swh-core (0.0.63-1~swh1~bpo10+2) buster-swh; urgency=medium
+swh-core (0.0.65-1~swh1) unstable-swh; urgency=medium
 
-  * No changes rebuild.
+  * New upstream release 0.0.65     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2019-07-15 16:49:47 +0200)
+  * Upstream changes:     - v0.0.65     - needed to fix my mess with
+    0.0.64 tag, since the wrong 0.0.64 version has     - already been
+    pushed to pypi.
 
- -- Nicolas Dandrimont <olasd@debian.org>  Thu, 11 Jul 2019 13:33:13 +0200
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 15 Jul 2019 14:53:29 +0000
 
-swh-core (0.0.63-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.64-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh.
+  * New upstream release 0.0.64     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2019-07-15 16:33:32 +0200)
+  * Upstream changes:     - v0.0.64
 
- -- Nicolas Dandrimont <olasd@debian.org>  Thu, 11 Jul 2019 13:21:00 +0200
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 15 Jul 2019 14:37:04 +0000
 
 swh-core (0.0.63-1~swh1) unstable-swh; urgency=medium
 
