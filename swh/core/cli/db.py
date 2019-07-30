@@ -6,7 +6,7 @@
 
 import glob
 import logging
-from os import path
+from os import path, environ
 import subprocess
 import warnings
 
@@ -29,6 +29,8 @@ def db(ctx, config_file):
     """Software Heritage database generic tools.
     """
     ctx.ensure_object(dict)
+    if config_file is None:
+        config_file = environ.get('SWH_CONFIG_FILENAME')
     cfg = config_read(config_file)
     ctx.obj["config"] = cfg
 
