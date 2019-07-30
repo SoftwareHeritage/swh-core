@@ -78,7 +78,7 @@ def init(ctx):
             if sqlfiles:
                 conninfo = cfg["args"]["db"]
                 for sqlfile in sqlfiles:
-                    subprocess.call_call(
+                    subprocess.check_call(
                         [
                             "psql",
                             "--quiet",
