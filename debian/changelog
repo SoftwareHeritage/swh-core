@@ -1,3 +1,9 @@
+swh-core (0.0.66-1~swh1~bpo9+1) stretch-swh; urgency=medium
+
+  * Rebuild for stretch-swh
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 30 Jul 2019 12:00:05 +0000
+
 swh-core (0.0.66-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.66     - (tagged by David Douard
