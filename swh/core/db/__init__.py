@@ -7,6 +7,7 @@ import binascii
 import datetime
 import enum
 import json
+import logging
 import os
 import threading
 
@@ -14,6 +15,9 @@ from contextlib import contextmanager
 
 import psycopg2
 import psycopg2.extras
+
+
+logger = logging.getLogger(__name__)
 
 
 psycopg2.extras.register_uuid()
@@ -178,8 +182,18 @@ class BaseDb:
                 for d in items:
                     if item_cb is not None:
                         item_cb(d)
-                    line = [escape(d.get(k, default_values.get(k)))
-                            for k in columns]
+                    line = []
+                    for k in columns:
+                        try:
+                            value = d.get(k, default_values.get(k))
+                            line.append(escape(value))
+                        except Exception as e:
+                            logger.error(
+                                'Could not escape value `%r` for column `%s`:'
+                                'Received exception: `%s`',
+                                value, k, e
+                            )
+                            raise e from None
                     f.write(','.join(line))
                     f.write('\n')
 
