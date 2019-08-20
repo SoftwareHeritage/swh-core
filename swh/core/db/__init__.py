@@ -9,6 +9,7 @@ import enum
 import json
 import logging
 import os
+import sys
 import threading
 
 from contextlib import contextmanager
@@ -167,12 +168,18 @@ class BaseDb:
         """
 
         read_file, write_file = os.pipe()
+        exc_info = None
 
         def writer():
+            nonlocal exc_info
             cursor = self.cursor(cur)
             with open(read_file, 'r') as f:
-                cursor.copy_expert('COPY %s (%s) FROM STDIN CSV' % (
-                    tblname, ', '.join(columns)), f)
+                try:
+                    cursor.copy_expert('COPY %s (%s) FROM STDIN CSV' % (
+                        tblname, ', '.join(columns)), f)
+                except Exception:
+                    # Tell the main thread about the exception
+                    exc_info = sys.exc_info()
 
         write_thread = threading.Thread(target=writer)
         write_thread.start()
@@ -202,6 +209,9 @@ class BaseDb:
             # we finish copying, even though we're probably going to cancel the
             # transaction.
             write_thread.join()
+            if exc_info:
+                # postgresql returned an error, let's raise it.
+                raise exc_info[1].with_traceback(exc_info[2])
 
     def mktemp(self, tblname, cur=None):
         self.cursor(cur).execute('SELECT swh_mktemp(%s)', (tblname,))
