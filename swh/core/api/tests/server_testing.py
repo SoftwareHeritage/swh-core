@@ -6,11 +6,11 @@
 import abc
 import multiprocessing
 import os
-import socket
 import time
 from urllib.request import urlopen
 
 import aiohttp
+import aiohttp.test_utils
 
 
 class ServerTestFixtureBaseClass(metaclass=abc.ABCMeta):
@@ -63,12 +63,7 @@ class ServerTestFixtureBaseClass(metaclass=abc.ABCMeta):
         self.process = None
 
         self.process_config()
-
-        # Get an available port number
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('127.0.0.1', 0))
-        self.port = sock.getsockname()[1]
-        sock.close()
+        self.port = aiohttp.test_utils.unused_port()
 
         worker_fn = self.define_worker_function()
 
