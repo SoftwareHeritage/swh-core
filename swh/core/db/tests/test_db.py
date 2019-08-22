@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 from hypothesis import strategies, given
+import psycopg2
 import pytest
 
 from swh.core.db import BaseDb
@@ -100,3 +101,10 @@ class TestDb(SingleDbTestFixture, unittest.TestCase):
         cur = self.db.cursor()
         cur.execute('select * from test_table;')
         self.assertCountEqual(list(cur), data)
+
+    def test_copy_to_thread_exception(self):
+        data = [(2**65, 'foo', b'bar')]
+
+        items = [dict(zip(['i', 'txt', 'bytes'], item)) for item in data]
+        with self.assertRaises(psycopg2.errors.NumericValueOutOfRange):
+            self.db.copy_to(items, 'test_table', ['i', 'txt', 'bytes'])
