@@ -10,6 +10,8 @@ import yaml
 from itertools import chain
 from copy import deepcopy
 
+from typing import Any, Dict, Optional, Tuple
+
 
 logger = logging.getLogger(__name__)
 
@@ -311,8 +313,8 @@ class SWHConfig:
 
     """
 
-    DEFAULT_CONFIG = {}
-    CONFIG_BASE_FILENAME = ''
+    DEFAULT_CONFIG = {}  # type: Dict[str, Tuple[str, Any]]
+    CONFIG_BASE_FILENAME = ''  # type: Optional[str]
 
     @classmethod
     def parse_config_file(cls, base_filename=None, config_filename=None,

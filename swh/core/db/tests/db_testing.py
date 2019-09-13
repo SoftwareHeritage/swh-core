@@ -9,9 +9,12 @@ import subprocess
 
 import psycopg2
 
+from typing import Dict, Iterable, Optional, Tuple, Union
+
 from swh.core.utils import numfile_sortkey as sortkey
 
-DB_DUMP_TYPES = {'.sql': 'psql', '.dump': 'pg_dump'}
+
+DB_DUMP_TYPES = {'.sql': 'psql', '.dump': 'pg_dump'}  # type: Dict[str, str]
 
 
 def swh_db_version(dbname_or_service):
@@ -207,8 +210,8 @@ class DbTestFixture:
 
     """
 
-    _DB_DUMP_LIST = {}
-    _DB_LIST = {}
+    _DB_DUMP_LIST = {}  # type: Dict[str, Iterable[Tuple[str, str]]]
+    _DB_LIST = {}  # type: Dict[str, DbTestContext]
     DB_TEST_FIXTURE_IMPORTED = True
 
     @classmethod
@@ -286,7 +289,7 @@ class SingleDbTestFixture(DbTestFixture):
     """
 
     TEST_DB_NAME = 'softwareheritage-test'
-    TEST_DB_DUMP = None
+    TEST_DB_DUMP = None  # type: Optional[Union[str, Iterable[str]]]
 
     @classmethod
     def setUpClass(cls):

@@ -11,3 +11,4 @@ swh.core.egg-info
 version.txt
 .tox
 .hypothesis
+.mypy_cache/
