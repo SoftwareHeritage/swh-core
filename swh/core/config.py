@@ -326,15 +326,15 @@ class SWHConfig:
         lookup completely).
 
         Args:
-            - base_filename (str) overrides the default
-                cls.CONFIG_BASE_FILENAME
-            - config_filename (str) sets the file to parse instead of
-                the defaults set from cls.CONFIG_BASE_FILENAME
-            - additional_configs (list of default configuration dicts)
-                allows to override or extend the configuration set in
-                cls.DEFAULT_CONFIG.
+            - base_filename (str): overrides the default
+              cls.CONFIG_BASE_FILENAME
+            - config_filename (str): sets the file to parse instead of
+              the defaults set from cls.CONFIG_BASE_FILENAME
+            - additional_configs: (list of default configuration dicts)
+              allows to override or extend the configuration set in
+              cls.DEFAULT_CONFIG.
             - global_config (bool): Load the global configuration (default:
-                True)
+              True)
         """
 
         if config_filename:
