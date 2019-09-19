@@ -293,7 +293,9 @@ class SingleDbTestFixture(DbTestFixture):
         cls.dbname = cls.TEST_DB_NAME  # XXX to kill?
 
         dump_files = cls.TEST_DB_DUMP
-        if isinstance(dump_files, str):
+        if dump_files is None:
+            dump_files = []
+        elif isinstance(dump_files, str):
             dump_files = [dump_files]
         all_dump_files = []
         for files in dump_files:
