@@ -1,3 +1,11 @@
+swh-core (0.0.69-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.69     - (tagged by Stefano Zacchiroli
+    <zack@upsilon.cc> on 2019-09-20 15:50:52 +0200)
+  * Upstream changes:     - v0.0.69     - MANIFEST.in: ship py.typed
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 20 Sep 2019 13:54:15 +0000
+
 swh-core (0.0.68-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.68     - (tagged by Stefano Zacchiroli
