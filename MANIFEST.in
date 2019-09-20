@@ -5,3 +5,4 @@ include requirements-http.txt
 include requirements-db.txt
 include version.txt
 recursive-include swh/core/sql *.sql
+recursive-include swh py.typed

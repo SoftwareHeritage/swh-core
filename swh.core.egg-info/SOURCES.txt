@@ -18,6 +18,7 @@ swh/core/__init__.py
 swh/core/api_async.py
 swh/core/config.py
 swh/core/logger.py
+swh/core/py.typed
 swh/core/statsd.py
 swh/core/tarball.py
 swh/core/utils.py
