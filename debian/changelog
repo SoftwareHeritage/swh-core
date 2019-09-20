@@ -1,3 +1,18 @@
+swh-core (0.0.68-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.68     - (tagged by Stefano Zacchiroli
+    <zack@upsilon.cc> on 2019-09-20 15:05:29 +0200)
+  * Upstream changes:     - v0.0.68     - * mypy: ignore django-stubs,
+    needed only by hypothesis     - * mypy: use conffile to ignore
+    requests_mock     - * typing: minimal changes to make a no-op mypy
+    run pass     - * db_testing.py: do not explode when TEST_DB_DUMP =
+    None     - * swh.core.config.parse_config_file: fix sphinx markup in
+    docstring     - * statsd: protect access to the statsd's socket     -
+    * tests: add tests for swh.logger and swh.tarball modules     - *
+    Remove fallback when aiohttp_utils is not installed.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 20 Sep 2019 13:09:50 +0000
+
 swh-core (0.0.67-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.67     - (tagged by Valentin Lorentz
