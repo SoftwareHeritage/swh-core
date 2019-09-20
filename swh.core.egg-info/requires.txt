@@ -17,11 +17,12 @@ requests
 
 [testing]
 Click
-pytest<4
+pytest
 pytest-postgresql
 requests-mock
 hypothesis>=3.11.0
 pre-commit
+pytz
 psycopg2
 aiohttp
 aiohttp_utils>=3.1.1
