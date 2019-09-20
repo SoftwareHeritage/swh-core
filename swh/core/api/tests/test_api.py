@@ -5,7 +5,7 @@
 
 import unittest
 
-import requests_mock  # type: ignore
+import requests_mock
 from werkzeug.wrappers import BaseResponse
 from werkzeug.test import Client as WerkzeugTestClient
 
