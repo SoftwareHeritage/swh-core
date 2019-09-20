@@ -44,5 +44,7 @@ swh/core/sql/log-schema.sql
 swh/core/tests/__init__.py
 swh/core/tests/test_cli.py
 swh/core/tests/test_config.py
+swh/core/tests/test_logger.py
 swh/core/tests/test_statsd.py
+swh/core/tests/test_tarball.py
 swh/core/tests/test_utils.py

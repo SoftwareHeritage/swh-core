@@ -12,11 +12,7 @@ from deprecated import deprecated
 from .serializers import msgpack_dumps, msgpack_loads
 from .serializers import SWHJSONDecoder, SWHJSONEncoder
 
-try:
-    from aiohttp_utils import negotiation, Response
-except ImportError:
-    from aiohttp import Response
-    negotiation = None
+from aiohttp_utils import negotiation, Response
 
 
 def encode_msgpack(data, **kwargs):
@@ -28,10 +24,7 @@ def encode_msgpack(data, **kwargs):
     )
 
 
-if negotiation is None:
-    encode_data_server = encode_msgpack
-else:
-    encode_data_server = Response
+encode_data_server = Response
 
 
 def render_msgpack(request, data):
@@ -75,17 +68,16 @@ async def error_middleware(app, handler):
 class RPCServerApp(aiohttp.web.Application):
     def __init__(self, *args, middlewares=(), **kwargs):
         middlewares = (error_middleware,) + middlewares
-        if negotiation:
-            # renderers are sorted in order of increasing desirability (!)
-            # see mimeparse.best_match() docstring.
-            renderers = OrderedDict([
-                ('application/json', render_json),
-                ('application/x-msgpack', render_msgpack),
-            ])
-            nego_middleware = negotiation.negotiation_middleware(
-                renderers=renderers,
-                force_rendering=True)
-            middlewares = (nego_middleware,) + middlewares
+        # renderers are sorted in order of increasing desirability (!)
+        # see mimeparse.best_match() docstring.
+        renderers = OrderedDict([
+            ('application/json', render_json),
+            ('application/x-msgpack', render_msgpack),
+        ])
+        nego_middleware = negotiation.negotiation_middleware(
+            renderers=renderers,
+            force_rendering=True)
+        middlewares = (nego_middleware,) + middlewares
 
         super().__init__(*args, middlewares=middlewares, **kwargs)
 
