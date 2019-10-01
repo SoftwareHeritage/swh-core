@@ -4,9 +4,8 @@
 # See top-level LICENSE file for more information
 
 import datetime
-import json
-
 import msgpack
+import json
 
 import pytest
 

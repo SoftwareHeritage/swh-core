@@ -10,6 +10,8 @@ import yaml
 from itertools import chain
 from copy import deepcopy
 
+from typing import Any, Dict, Optional, Tuple
+
 
 logger = logging.getLogger(__name__)
 
@@ -311,8 +313,8 @@ class SWHConfig:
 
     """
 
-    DEFAULT_CONFIG = {}
-    CONFIG_BASE_FILENAME = ''
+    DEFAULT_CONFIG = {}  # type: Dict[str, Tuple[str, Any]]
+    CONFIG_BASE_FILENAME = ''  # type: Optional[str]
 
     @classmethod
     def parse_config_file(cls, base_filename=None, config_filename=None,
@@ -326,15 +328,15 @@ class SWHConfig:
         lookup completely).
 
         Args:
-            - base_filename (str) overrides the default
-                cls.CONFIG_BASE_FILENAME
-            - config_filename (str) sets the file to parse instead of
-                the defaults set from cls.CONFIG_BASE_FILENAME
-            - additional_configs (list of default configuration dicts)
-                allows to override or extend the configuration set in
-                cls.DEFAULT_CONFIG.
+            - base_filename (str): overrides the default
+              cls.CONFIG_BASE_FILENAME
+            - config_filename (str): sets the file to parse instead of
+              the defaults set from cls.CONFIG_BASE_FILENAME
+            - additional_configs: (list of default configuration dicts)
+              allows to override or extend the configuration set in
+              cls.DEFAULT_CONFIG.
             - global_config (bool): Load the global configuration (default:
-                True)
+              True)
         """
 
         if config_filename:

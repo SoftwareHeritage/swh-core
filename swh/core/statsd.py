@@ -59,6 +59,7 @@ import itertools
 import logging
 import os
 import socket
+import threading
 import warnings
 
 
@@ -190,7 +191,8 @@ class Statsd(object):
         self.port = int(port)
 
         # Socket
-        self.socket = None
+        self._socket = None
+        self.lock = threading.Lock()
         self.max_buffer_size = max_buffer_size
         self._send = self._send_to_server
         self.encoding = 'utf-8'
@@ -316,19 +318,21 @@ class Statsd(object):
         """
         self._report(metric, 's', value, tags, sample_rate)
 
-    def get_socket(self):
+    @property
+    def socket(self):
         """
         Return a connected socket.
 
         Note: connect the socket before assigning it to the class instance to
         avoid bad thread race conditions.
         """
-        if not self.socket:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.connect((self.host, self.port))
-            self.socket = sock
+        with self.lock:
+            if not self._socket:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.connect((self.host, self.port))
+                self._socket = sock
 
-        return self.socket
+            return self._socket
 
     def open_buffer(self, max_buffer_size=50):
         """
@@ -358,9 +362,10 @@ class Statsd(object):
         """
         Closes connected socket if connected.
         """
-        if self.socket:
-            self.socket.close()
-            self.socket = None
+        with self.lock:
+            if self._socket:
+                self._socket.close()
+                self._socket = None
 
     def _report(self, metric, metric_type, value, tags, sample_rate):
         """
@@ -393,7 +398,7 @@ class Statsd(object):
     def _send_to_server(self, packet):
         try:
             # If set, use socket directly
-            (self.socket or self.get_socket()).send(packet.encode('utf-8'))
+            self.socket.send(packet.encode('utf-8'))
         except socket.timeout:
             return
         except socket.error:

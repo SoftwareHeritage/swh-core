@@ -105,7 +105,7 @@ class TestStatsd(unittest.TestCase):
         """
         #
         self.statsd = Statsd()
-        self.statsd.socket = FakeSocket()
+        self.statsd._socket = FakeSocket()
 
     def recv(self):
         return self.statsd.socket.recv()
@@ -212,12 +212,12 @@ class TestStatsd(unittest.TestCase):
         )
 
     def test_socket_error(self):
-        self.statsd.socket = BrokenSocket()
+        self.statsd._socket = BrokenSocket()
         self.statsd.gauge('no error', 1)
         assert True, 'success'
 
     def test_socket_timeout(self):
-        self.statsd.socket = SlowSocket()
+        self.statsd._socket = SlowSocket()
         self.statsd.gauge('no error', 1)
         assert True, 'success'
 
@@ -409,7 +409,7 @@ class TestStatsd(unittest.TestCase):
     def test_context_manager(self):
         fake_socket = FakeSocket()
         with Statsd() as statsd:
-            statsd.socket = fake_socket
+            statsd._socket = fake_socket
             statsd.gauge('page.views', 123)
             statsd.timing('timer', 123)
 
@@ -418,7 +418,7 @@ class TestStatsd(unittest.TestCase):
     def test_batched_buffer_autoflush(self):
         fake_socket = FakeSocket()
         with Statsd() as statsd:
-            statsd.socket = fake_socket
+            statsd._socket = fake_socket
             for i in range(51):
                 statsd.increment('mycounter')
             self.assertEqual(
@@ -434,28 +434,28 @@ class TestStatsd(unittest.TestCase):
 
     def test_instantiating_does_not_connect(self):
         local_statsd = Statsd()
-        self.assertEqual(None, local_statsd.socket)
+        self.assertEqual(None, local_statsd._socket)
 
     def test_accessing_socket_opens_socket(self):
         local_statsd = Statsd()
         try:
-            self.assertIsNotNone(local_statsd.get_socket())
+            self.assertIsNotNone(local_statsd.socket)
         finally:
-            local_statsd.socket.close()
+            local_statsd.close_socket()
 
     def test_accessing_socket_multiple_times_returns_same_socket(self):
         local_statsd = Statsd()
         fresh_socket = FakeSocket()
-        local_statsd.socket = fresh_socket
-        self.assertEqual(fresh_socket, local_statsd.get_socket())
-        self.assertNotEqual(FakeSocket(), local_statsd.get_socket())
+        local_statsd._socket = fresh_socket
+        self.assertEqual(fresh_socket, local_statsd.socket)
+        self.assertNotEqual(FakeSocket(), local_statsd.socket)
 
     def test_tags_from_environment(self):
         with preserve_envvars('STATSD_TAGS'):
             os.environ['STATSD_TAGS'] = 'country:china,age:45'
             statsd = Statsd()
 
-        statsd.socket = FakeSocket()
+        statsd._socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         self.assertEqual('gt:123.4|g|#age:45,country:china',
                          statsd.socket.recv())
@@ -464,7 +464,7 @@ class TestStatsd(unittest.TestCase):
         with preserve_envvars('STATSD_TAGS'):
             os.environ['STATSD_TAGS'] = 'country:china,age:45'
             statsd = Statsd(constant_tags={'country': 'canada'})
-        statsd.socket = FakeSocket()
+        statsd._socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         self.assertEqual('gt:123.4|g|#age:45,country:canada',
                          statsd.socket.recv())
@@ -538,7 +538,7 @@ class TestStatsd(unittest.TestCase):
 
     def test_namespace_added(self):
         local_statsd = Statsd(namespace='test-namespace')
-        local_statsd.socket = FakeSocket()
+        local_statsd._socket = FakeSocket()
 
         local_statsd.gauge('gauge', 123.4)
         assert local_statsd.socket.recv() == 'test-namespace.gauge:123.4|g'

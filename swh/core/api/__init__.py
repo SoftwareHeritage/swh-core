@@ -12,6 +12,8 @@ import pickle
 import requests
 import datetime
 
+from typing import ClassVar, Optional, Type
+
 from deprecated import deprecated
 from flask import Flask, Request, Response, request, abort
 from .serializers import (decode_response,
@@ -140,7 +142,7 @@ class RPCClient(metaclass=MetaRPCClient):
 
     """
 
-    backend_class = None
+    backend_class = None  # type: ClassVar[Optional[type]]
     """For each method of `backend_class` decorated with
     :func:`remote_api_endpoint`, a method with the same prototype and
     docstring will be added to this class. Calls to this new method will
@@ -149,7 +151,7 @@ class RPCClient(metaclass=MetaRPCClient):
     This backend class will never be instantiated, it only serves as
     a template."""
 
-    api_exception = APIError
+    api_exception = APIError  # type: ClassVar[Type[Exception]]
     """The exception class to raise in case of communication error with
     the server."""
 

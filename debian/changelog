@@ -1,8 +1,40 @@
-swh-core (0.0.67-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.70-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Add new dependency on python3-tz
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 22 Aug 2019 12:03:44 +0000
+ -- Nicolas Dandrimont <olasd@debian.org>  Tue, 01 Oct 2019 15:07:09 +0200
+
+swh-core (0.0.70-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.70     - (tagged by Stefano Zacchiroli
+    <zack@upsilon.cc> on 2019-09-27 10:16:41 +0200)
+  * Upstream changes:     - v0.0.70     - init.py: switch to documented
+    way of extending path
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 27 Sep 2019 08:21:29 +0000
+
+swh-core (0.0.69-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.69     - (tagged by Stefano Zacchiroli
+    <zack@upsilon.cc> on 2019-09-20 15:50:52 +0200)
+  * Upstream changes:     - v0.0.69     - MANIFEST.in: ship py.typed
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 20 Sep 2019 13:54:15 +0000
+
+swh-core (0.0.68-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.68     - (tagged by Stefano Zacchiroli
+    <zack@upsilon.cc> on 2019-09-20 15:05:29 +0200)
+  * Upstream changes:     - v0.0.68     - * mypy: ignore django-stubs,
+    needed only by hypothesis     - * mypy: use conffile to ignore
+    requests_mock     - * typing: minimal changes to make a no-op mypy
+    run pass     - * db_testing.py: do not explode when TEST_DB_DUMP =
+    None     - * swh.core.config.parse_config_file: fix sphinx markup in
+    docstring     - * statsd: protect access to the statsd's socket     -
+    * tests: add tests for swh.logger and swh.tarball modules     - *
+    Remove fallback when aiohttp_utils is not installed.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 20 Sep 2019 13:09:50 +0000
 
 swh-core (0.0.67-1~swh1) unstable-swh; urgency=medium
 

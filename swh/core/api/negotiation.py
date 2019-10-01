@@ -24,9 +24,10 @@
 #
 
 from collections import defaultdict
+from decorator import decorator
 from inspect import getcallargs
 
-from decorator import decorator
+from typing import Any, List, Optional
 
 
 class FormatterNotFound(Exception):
@@ -34,8 +35,8 @@ class FormatterNotFound(Exception):
 
 
 class Formatter:
-    format = None
-    mimetypes = []
+    format = None  # type: Optional[str]
+    mimetypes = []  # type: List[Any]
 
     def __init__(self, request_mimetype=None):
         if request_mimetype is None or request_mimetype not in self.mimetypes:
