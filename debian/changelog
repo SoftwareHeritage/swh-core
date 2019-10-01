@@ -1,3 +1,9 @@
+swh-core (0.0.70-1~swh2) unstable-swh; urgency=medium
+
+  * Add new dependency on python3-tz
+
+ -- Nicolas Dandrimont <olasd@debian.org>  Tue, 01 Oct 2019 15:07:09 +0200
+
 swh-core (0.0.70-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.70     - (tagged by Stefano Zacchiroli
