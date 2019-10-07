@@ -63,6 +63,8 @@ setup(
         [swh.cli.subcommands]
         db=swh.core.cli.db:db
         db-init=swh.core.cli.db:db_init
+        # [pytest11]
+        # pytest_swh_core = swh.core.pytest_plugin
     ''',
     classifiers=[
         "Programming Language :: Python :: 3",
