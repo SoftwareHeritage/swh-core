@@ -7,7 +7,7 @@ import requests
 
 from os import path
 
-from swh.core.pytest_plugin import local_get_factory
+from pytest_swh_core import local_get_factory
 
 
 def test_get_response_cb_with_visits_nominal(local_get_visits):
