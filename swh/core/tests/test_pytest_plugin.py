@@ -56,6 +56,17 @@ def test_get_response_cb_no_visit(requests_mock_datadir):
     assert response.json() == {'hello': 'you'}
 
 
+def test_get_response_cb_query_params(requests_mock_datadir):
+    response = requests.get('https://example.com/file.json?toto=42')
+    assert not response.ok
+    assert response.status_code == 404
+
+    response = requests.get(
+        'https://example.com/file.json?name=doe&firstname=jane')
+    assert response.ok
+    assert response.json() == {'hello': 'jane doe'}
+
+
 requests_mock_datadir_ignore = requests_mock_datadir_factory(
     ignore_urls=['https://example.com/file.json'],
     has_multi_visit=False,
