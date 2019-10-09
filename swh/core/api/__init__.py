@@ -3,7 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import collections
+from collections import abc
 import functools
 import inspect
 import json
@@ -190,7 +190,7 @@ class RPCClient(metaclass=MetaRPCClient):
             raise self.api_exception(e)
 
     def post(self, endpoint, data, **opts):
-        if isinstance(data, (collections.Iterator, collections.Generator)):
+        if isinstance(data, (abc.Iterator, abc.Generator)):
             data = (encode_data(x) for x in data)
         else:
             data = encode_data(data)
