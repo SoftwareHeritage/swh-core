@@ -1,3 +1,12 @@
+swh-core (0.0.72-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.72     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-10-09 10:59:28
+    +0200)
+  * Upstream changes:     - v0.0.72     - Fix tox.ini's py3 environment
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 09 Oct 2019 09:02:51 +0000
+
 swh-core (0.0.70-1~swh2) unstable-swh; urgency=medium
 
   * Add new dependency on python3-tz
