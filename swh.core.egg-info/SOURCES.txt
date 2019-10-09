@@ -19,6 +19,7 @@ swh/core/api_async.py
 swh/core/config.py
 swh/core/logger.py
 swh/core/py.typed
+swh/core/pytest_plugin.py
 swh/core/statsd.py
 swh/core/tarball.py
 swh/core/utils.py
@@ -46,6 +47,14 @@ swh/core/tests/__init__.py
 swh/core/tests/test_cli.py
 swh/core/tests/test_config.py
 swh/core/tests/test_logger.py
+swh/core/tests/test_pytest_plugin.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_tarball.py
 swh/core/tests/test_utils.py
+swh/core/tests/data/example.com/file.json
+swh/core/tests/data/example.com/file.json_visit1
+swh/core/tests/data/example.com/other.json
+swh/core/tests/fixture/__init__.py
+swh/core/tests/fixture/conftest.py
+swh/core/tests/fixture/test_pytest_plugin.py
+swh/core/tests/fixture/data/example.com/file.json
