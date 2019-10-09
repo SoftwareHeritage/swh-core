@@ -37,9 +37,11 @@ class ApiTest(unittest.TestCase):
             return error_handler(exception, encode_data_server)
 
         client = WerkzeugTestClient(app, BaseResponse)
-        res = client.post('/test_endpoint_url',
-                          headers={'Content-Type': 'application/x-msgpack'},
-                          data=b'\x81\xa9test_data\xa4spam')
+        res = client.post(
+            '/test_endpoint_url',
+            headers=[('Content-Type', 'application/x-msgpack'),
+                     ('Accept', 'application/x-msgpack')],
+            data=b'\x81\xa9test_data\xa4spam')
 
         self.assertEqual(nb_endpoint_calls, 1)
         self.assertEqual(b''.join(res.response), b'\xa3egg')

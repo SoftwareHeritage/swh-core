@@ -327,11 +327,14 @@ class RPCServerApp(Flask):
         from flask import request
 
         @self.route('/'+meth._endpoint_path, methods=['POST'])
+        @negotiate(MsgpackFormatter)
+        @negotiate(JSONFormatter)
         @functools.wraps(meth)  # Copy signature and doc
         def _f():
             # Call the actual code
             obj_meth = getattr(backend_factory(), meth_name)
-            return encode_data_server(obj_meth(**decode_request(request)))
+            kw = decode_request(request)
+            return obj_meth(**kw)
 
 
 @deprecated(version='0.0.64',
