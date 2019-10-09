@@ -45,11 +45,11 @@ def get_response_cb(request, context, datadir,
 
     then a call requests.get like:
 
-        requests.get('https://nowhere.com/path/to/resource')
+        requests.get('https://nowhere.com/path/to/resource?a=b&c=d')
 
     will look the content of the response in:
 
-        datadir/nowhere.com/path_to_resource
+        datadir/nowhere.com/path_to_resource,a=b,c=d
 
     Args:
         request (requests.Request): Object requests
@@ -77,6 +77,9 @@ def get_response_cb(request, context, datadir,
     if filename.endswith('/'):
         filename = filename[:-1]
     filename = filename.replace('/', '_')
+    if url.query:
+        filename += ',' + url.query.replace('&', ',')
+
     filepath = path.join(datadir, dirname, filename)
     if visits is not None:
         visit = visits.get(url, 0)
