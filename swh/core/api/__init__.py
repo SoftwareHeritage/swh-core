@@ -301,21 +301,24 @@ class RPCServerApp(Flask):
     a function that decodes the request and sends it to the backend object
     provided by the factory.
 
-    :param Any backend_class: The class of the backend, which will be
-                              analyzed to look for API endpoints.
-    :param Callable[[], backend_class] backend_factory: A function with no
-                                                        argument that returns
-                                                        an instance of
-                                                        `backend_class`."""
+    :param Any backend_class:
+        The class of the backend, which will be analyzed to look
+        for API endpoints.
+    :param Optional[Callable[[], backend_class]] backend_factory:
+        A function with no argument that returns an instance of
+        `backend_class`. If unset, defaults to calling `backend_class`
+        constructor directly.
+    """
     request_class = BytesRequest
 
     def __init__(self, *args, backend_class=None, backend_factory=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.backend_class = backend_class
         if backend_class is not None:
             if backend_factory is None:
-                raise TypeError('Missing argument backend_factory')
+                backend_factory = backend_class
             for (meth_name, meth) in backend_class.__dict__.items():
                 if hasattr(meth, '_endpoint_path'):
                     self.__add_endpoint(meth_name, meth, backend_factory)
