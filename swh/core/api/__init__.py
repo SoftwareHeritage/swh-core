@@ -14,7 +14,6 @@ import datetime
 
 from typing import ClassVar, Optional, Type
 
-from deprecated import deprecated
 from flask import Flask, Request, Response, request, abort
 from .serializers import (decode_response,
                           encode_data_client as encode_data,
@@ -335,21 +334,3 @@ class RPCServerApp(Flask):
             obj_meth = getattr(backend_factory(), meth_name)
             kw = decode_request(request)
             return obj_meth(**kw)
-
-
-@deprecated(version='0.0.64',
-            reason='Use the RPCServerApp instead')
-class SWHServerAPIApp(RPCServerApp):
-    pass
-
-
-@deprecated(version='0.0.64',
-            reason='Use the MetaRPCClient instead')
-class MetaSWHRemoteAPI(MetaRPCClient):
-    pass
-
-
-@deprecated(version='0.0.64',
-            reason='Use the RPCClient instead')
-class SWHRemoteAPI(RPCClient):
-    pass
