@@ -100,7 +100,7 @@ def get_response_cb(request, context, datadir,
 def datadir(request):
     """By default, returns the test directory's data directory.
 
-    This can be overriden on a per arborescence basis. Add an override
+    This can be overridden on a per arborescence basis. Add an override
     definition in the local conftest, for example:
 
         import pytest
@@ -176,3 +176,32 @@ requests_mock_datadir = requests_mock_datadir_factory([])
 # etc...
 requests_mock_datadir_visits = requests_mock_datadir_factory(
     has_multi_visit=True)
+
+
+@pytest.yield_fixture
+def flask_app_client(app):
+    with app.test_client() as client:
+        yield client
+
+
+# stolen from pytest-flask, required to have url_for() working within tests
+# using flask_app_client fixture.
+@pytest.fixture(autouse=True)
+def _push_request_context(request):
+    """During tests execution request context has been pushed, e.g. `url_for`,
+    `session`, etc. can be used in tests as is::
+
+        def test_app(app, client):
+            assert client.get(url_for('myview')).status_code == 200
+
+    """
+    if 'app' not in request.fixturenames:
+        return
+    app = request.getfixturevalue('app')
+    ctx = app.test_request_context()
+    ctx.push()
+
+    def teardown():
+        ctx.pop()
+
+    request.addfinalizer(teardown)
