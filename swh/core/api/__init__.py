@@ -278,7 +278,9 @@ def decode_request(request):
     if content_type == 'application/x-msgpack':
         r = msgpack_loads(data)
     elif content_type == 'application/json':
-        r = json.loads(data, cls=SWHJSONDecoder)
+        # XXX this .decode() is needed for py35.
+        # Should not be needed any more with py37
+        r = json.loads(data.decode('utf-8'), cls=SWHJSONDecoder)
     else:
         raise ValueError('Wrong content type `%s` for API request'
                          % content_type)
