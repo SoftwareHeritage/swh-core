@@ -6,11 +6,16 @@
 import logging
 import re
 import pytest
+import requests
 
 from functools import partial
 from os import path
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
+
+from requests.adapters import BaseAdapter
+from requests.structures import CaseInsensitiveDict
+from requests.utils import get_encoding_from_headers
 
 
 logger = logging.getLogger(__name__)
@@ -100,7 +105,7 @@ def get_response_cb(request, context, datadir,
 def datadir(request):
     """By default, returns the test directory's data directory.
 
-    This can be overriden on a per arborescence basis. Add an override
+    This can be overridden on a per arborescence basis. Add an override
     definition in the local conftest, for example:
 
         import pytest
@@ -176,3 +181,114 @@ requests_mock_datadir = requests_mock_datadir_factory([])
 # etc...
 requests_mock_datadir_visits = requests_mock_datadir_factory(
     has_multi_visit=True)
+
+
+@pytest.fixture
+def swh_rpc_client(swh_rpc_client_class, swh_rpc_adapter):
+    """This fixture generates an RPCClient instance that uses the class generated
+    by the rpc_client_class fixture as backend.
+
+    Since it uses the swh_rpc_adapter, HTTP queries will be intercepted and
+    routed directly to the current Flask app (as provided by the `app`
+    fixture).
+
+    So this stack of fixtures allows to test the RPCClient -> RPCServerApp
+    communication path using a real RPCClient instance and a real Flask
+    (RPCServerApp) app instance.
+
+    To use this fixture:
+
+    - ensure an `app` fixture exists and generate a Flask application,
+    - implement an `swh_rpc_client_class` fixtures that returns the
+      RPCClient-based class to use as client side for the tests,
+    - implement your tests using this `swh_rpc_client` fixture.
+
+    See swh/core/api/tests/test_rpc_client_server.py for an example of usage.
+    """
+    url = 'mock://example.com'
+    cli = swh_rpc_client_class(url=url)
+    # we need to clear the list of existing adapters here so we ensure we
+    # have one and only one adapter which is then used for all the requests.
+    cli.session.adapters.clear()
+    cli.session.mount('mock://', swh_rpc_adapter)
+    return cli
+
+
+@pytest.yield_fixture
+def swh_rpc_adapter(app):
+    """Fixture that generates a requests.Adapter instance that
+    can be used to test client/servers code based on swh.core.api classes.
+
+    See swh/core/api/tests/test_rpc_client_server.py for an example of usage.
+
+    """
+    with app.test_client() as client:
+        yield RPCTestAdapter(client)
+
+
+class RPCTestAdapter(BaseAdapter):
+    def __init__(self, client):
+        self._client = client
+
+    def build_response(self, req, resp):
+        response = requests.Response()
+
+        # Fallback to None if there's no status_code, for whatever reason.
+        response.status_code = resp.status_code
+
+        # Make headers case-insensitive.
+        response.headers = CaseInsensitiveDict(getattr(resp, 'headers', {}))
+
+        # Set encoding.
+        response.encoding = get_encoding_from_headers(response.headers)
+        response.raw = resp
+        response.reason = response.raw.status
+
+        if isinstance(req.url, bytes):
+            response.url = req.url.decode('utf-8')
+        else:
+            response.url = req.url
+
+        # Give the Response some context.
+        response.request = req
+        response.connection = self
+        response._content = resp.data
+
+        return response
+
+    def send(self, request, **kw):
+        resp = self._client.open(
+            request.url, method=request.method,
+            headers=request.headers.items(),
+            data=request.body,
+            )
+        return self.build_response(request, resp)
+
+
+@pytest.yield_fixture
+def flask_app_client(app):
+    with app.test_client() as client:
+        yield client
+
+
+# stolen from pytest-flask, required to have url_for() working within tests
+# using flask_app_client fixture.
+@pytest.fixture(autouse=True)
+def _push_request_context(request):
+    """During tests execution request context has been pushed, e.g. `url_for`,
+    `session`, etc. can be used in tests as is::
+
+        def test_app(app, client):
+            assert client.get(url_for('myview')).status_code == 200
+
+    """
+    if 'app' not in request.fixturenames:
+        return
+    app = request.getfixturevalue('app')
+    ctx = app.test_request_context()
+    ctx.push()
+
+    def teardown():
+        ctx.pop()
+
+    request.addfinalizer(teardown)
