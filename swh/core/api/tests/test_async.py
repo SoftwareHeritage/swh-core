@@ -57,7 +57,7 @@ def check_mimetype(src, dst):
 
 
 @pytest.fixture
-def app():
+def async_app():
     app = RPCServerApp()
     app.router.add_route('GET', '/', root)
     app.router.add_route('GET', '/struct', struct)
@@ -66,10 +66,10 @@ def app():
     return app
 
 
-async def test_get_simple(app,  aiohttp_client) -> None:
-    assert app is not None
+async def test_get_simple(async_app, aiohttp_client) -> None:
+    assert async_app is not None
 
-    cli = await aiohttp_client(app)
+    cli = await aiohttp_client(async_app)
     resp = await cli.get('/')
     assert resp.status == 200
     check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
@@ -78,8 +78,8 @@ async def test_get_simple(app,  aiohttp_client) -> None:
     assert value == 'toor'
 
 
-async def test_get_simple_nego(app,  aiohttp_client) -> None:
-    cli = await aiohttp_client(app)
+async def test_get_simple_nego(async_app, aiohttp_client) -> None:
+    cli = await aiohttp_client(async_app)
     for ctype in ('x-msgpack', 'json'):
         resp = await cli.get('/', headers={'Accept': 'application/%s' % ctype})
         assert resp.status == 200
@@ -87,18 +87,18 @@ async def test_get_simple_nego(app,  aiohttp_client) -> None:
         assert (await decode_request(resp)) == 'toor'
 
 
-async def test_get_struct(app,  aiohttp_client) -> None:
+async def test_get_struct(async_app, aiohttp_client) -> None:
     """Test returned structured from a simple GET data is OK"""
-    cli = await aiohttp_client(app)
+    cli = await aiohttp_client(async_app)
     resp = await cli.get('/struct')
     assert resp.status == 200
     check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
     assert (await decode_request(resp)) == STRUCT
 
 
-async def test_get_struct_nego(app,  aiohttp_client) -> None:
+async def test_get_struct_nego(async_app, aiohttp_client) -> None:
     """Test returned structured from a simple GET data is OK"""
-    cli = await aiohttp_client(app)
+    cli = await aiohttp_client(async_app)
     for ctype in ('x-msgpack', 'json'):
         resp = await cli.get('/struct',
                              headers={'Accept': 'application/%s' % ctype})
@@ -107,9 +107,9 @@ async def test_get_struct_nego(app,  aiohttp_client) -> None:
         assert (await decode_request(resp)) == STRUCT
 
 
-async def test_post_struct_msgpack(app,  aiohttp_client) -> None:
+async def test_post_struct_msgpack(async_app, aiohttp_client) -> None:
     """Test that msgpack encoded posted struct data is returned as is"""
-    cli = await aiohttp_client(app)
+    cli = await aiohttp_client(async_app)
     # simple struct
     resp = await cli.post(
         '/echo',
@@ -128,9 +128,9 @@ async def test_post_struct_msgpack(app,  aiohttp_client) -> None:
     assert (await decode_request(resp)) == STRUCT
 
 
-async def test_post_struct_json(app,  aiohttp_client) -> None:
+async def test_post_struct_json(async_app, aiohttp_client) -> None:
     """Test that json encoded posted struct data is returned as is"""
-    cli = await aiohttp_client(app)
+    cli = await aiohttp_client(async_app)
 
     resp = await cli.post(
         '/echo',
@@ -150,12 +150,12 @@ async def test_post_struct_json(app,  aiohttp_client) -> None:
     assert (await decode_request(resp)) == STRUCT
 
 
-async def test_post_struct_nego(app,  aiohttp_client) -> None:
+async def test_post_struct_nego(async_app, aiohttp_client) -> None:
     """Test that json encoded posted struct data is returned as is
 
     using content negotiation (accept json or msgpack).
     """
-    cli = await aiohttp_client(app)
+    cli = await aiohttp_client(async_app)
 
     for ctype in ('x-msgpack', 'json'):
         resp = await cli.post(
@@ -168,12 +168,12 @@ async def test_post_struct_nego(app,  aiohttp_client) -> None:
         assert (await decode_request(resp)) == STRUCT
 
 
-async def test_post_struct_no_nego(app,  aiohttp_client) -> None:
+async def test_post_struct_no_nego(async_app, aiohttp_client) -> None:
     """Test that json encoded posted struct data is returned as msgpack
 
     when using non-negotiation-compatible handlers.
     """
-    cli = await aiohttp_client(app)
+    cli = await aiohttp_client(async_app)
 
     for ctype in ('x-msgpack', 'json'):
         resp = await cli.post(

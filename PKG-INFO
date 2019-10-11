@@ -1,14 +1,14 @@
 Metadata-Version: 2.1
 Name: swh.core
-Version: 0.0.73
+Version: 0.0.74
 Summary: Software Heritage core utilities
 Home-page: https://forge.softwareheritage.org/diffusion/DCORE/
 Author: Software Heritage developers
 Author-email: swh-devel@inria.fr
 License: UNKNOWN
-Project-URL: Funding, https://www.softwareheritage.org/donate
-Project-URL: Source, https://forge.softwareheritage.org/source/swh-core
 Project-URL: Bug Reports, https://forge.softwareheritage.org/maniphest
+Project-URL: Source, https://forge.softwareheritage.org/source/swh-core
+Project-URL: Funding, https://www.softwareheritage.org/donate
 Description: swh-core
         ========
         
@@ -83,6 +83,6 @@ Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
 Classifier: Operating System :: OS Independent
 Classifier: Development Status :: 5 - Production/Stable
 Description-Content-Type: text/markdown
+Provides-Extra: db
 Provides-Extra: http
 Provides-Extra: testing
-Provides-Extra: db
