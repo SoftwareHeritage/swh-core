@@ -15,6 +15,10 @@ def test_get_response_cb_with_visits_nominal(requests_mock_datadir_visits):
     assert response.ok
     assert response.json() == {'hello': 'you'}
 
+    response = requests.get('http://example.com/something.json')
+    assert response.ok
+    assert response.json() == "something"
+
     response = requests.get('https://example.com/file.json')
     assert response.ok
     assert response.json() == {'hello': 'world'}

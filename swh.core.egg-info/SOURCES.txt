@@ -53,11 +53,12 @@ swh/core/tests/test_pytest_plugin.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_tarball.py
 swh/core/tests/test_utils.py
-swh/core/tests/data/example.com/file.json
-swh/core/tests/data/example.com/file.json,name=doe,firstname=jane
-swh/core/tests/data/example.com/file.json_visit1
-swh/core/tests/data/example.com/other.json
+swh/core/tests/data/http_example.com/something.json
+swh/core/tests/data/https_example.com/file.json
+swh/core/tests/data/https_example.com/file.json,name=doe,firstname=jane
+swh/core/tests/data/https_example.com/file.json_visit1
+swh/core/tests/data/https_example.com/other.json
 swh/core/tests/fixture/__init__.py
 swh/core/tests/fixture/conftest.py
 swh/core/tests/fixture/test_pytest_plugin.py
-swh/core/tests/fixture/data/example.com/file.json
+swh/core/tests/fixture/data/https_example.com/file.json
