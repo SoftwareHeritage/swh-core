@@ -44,9 +44,9 @@ def get_response_cb(request, context, datadir,
 
     Eg. if you use the requests_mock fixture in your test file as:
 
-        requests_mock.get('https://nowhere.com', body=get_response_cb)
+        requests_mock.get('https?://nowhere.com', body=get_response_cb)
         # or even
-        requests_mock.get(re.compile('https://'), body=get_response_cb)
+        requests_mock.get(re.compile('https?://'), body=get_response_cb)
 
     then a call requests.get like:
 
@@ -54,7 +54,15 @@ def get_response_cb(request, context, datadir,
 
     will look the content of the response in:
 
-        datadir/nowhere.com/path_to_resource,a=b,c=d
+        datadir/https_nowhere.com/path_to_resource,a=b,c=d
+
+    or a call requests.get like:
+
+        requests.get('http://nowhere.com/path/to/resource?a=b&c=d')
+
+    will look the content of the response in:
+
+        datadir/http_nowhere.com/path_to_resource,a=b,c=d
 
     Args:
         request (requests.Request): Object requests
@@ -76,7 +84,9 @@ def get_response_cb(request, context, datadir,
         context.status_code = 404
         return None
     url = urlparse(request.url)
-    dirname = url.hostname  # pypi.org | files.pythonhosted.org
+    # http://pypi.org ~> http_pypi.org
+    # https://files.pythonhosted.org ~> https_files.pythonhosted.org
+    dirname = '%s_%s' % (url.scheme, url.hostname)
     # url.path: pypi/<project>/json -> local file: pypi_<project>_json
     filename = url.path[1:]
     if filename.endswith('/'):
@@ -159,10 +169,10 @@ def requests_mock_datadir_factory(ignore_urls: List[str] = [],
             cb = partial(get_response_cb,
                          ignore_urls=ignore_urls,
                          datadir=datadir)
-            requests_mock.get(re.compile('https://'), body=cb)
+            requests_mock.get(re.compile('https?://'), body=cb)
         else:
             visits = {}
-            requests_mock.get(re.compile('https://'), body=partial(
+            requests_mock.get(re.compile('https?://'), body=partial(
                 get_response_cb, ignore_urls=ignore_urls, visits=visits,
                 datadir=datadir)
             )
