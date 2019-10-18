@@ -3,7 +3,9 @@ Makefile
 README.md
 requirements-db.txt
 requirements-http.txt
+requirements-logging.txt
 requirements-swh.txt
+requirements-test.txt
 requirements.txt
 setup.py
 version.txt
