@@ -1,3 +1,12 @@
+swh-core (0.0.76-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.76     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-10-18 10:16:20 +0200)
+  * Upstream changes:     - Release swh.core v0.0.76     - Make the
+    systemd dependency optional
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 18 Oct 2019 08:25:15 +0000
+
 swh-core (0.0.75-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.75     - (tagged by Antoine R. Dumont
