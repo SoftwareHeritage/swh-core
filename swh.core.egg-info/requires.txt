@@ -1,6 +1,6 @@
+Click
 Deprecated
 PyYAML
-systemd-python
 
 [db]
 psycopg2
@@ -15,8 +15,10 @@ msgpack>0.5
 python-dateutil
 requests
 
+[logging]
+systemd-python
+
 [testing]
-Click
 pytest
 pytest-postgresql
 requests-mock
@@ -32,3 +34,4 @@ Flask
 msgpack>0.5
 python-dateutil
 requests
+systemd-python

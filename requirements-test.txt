@@ -1,0 +1,6 @@
+pytest
+pytest-postgresql
+requests-mock
+hypothesis >= 3.11.0
+pre-commit
+pytz
