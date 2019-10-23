@@ -46,11 +46,13 @@ setup(
     author_email='swh-devel@inria.fr',
     url='https://forge.softwareheritage.org/diffusion/DCORE/',
     packages=find_packages(),
+    py_modules=['pytest_swh_core'],
     scripts=[],
     install_requires=parse_requirements(None, 'swh'),
     setup_requires=['vcversioner'],
     extras_require={
-        'testing': parse_requirements('test', 'db', 'http'),
+        'testing': parse_requirements('test', 'db', 'http', 'logging'),
+        'logging': parse_requirements('logging'),
         'db': parse_requirements('db'),
         'http': parse_requirements('http'),
     },
@@ -63,6 +65,8 @@ setup(
         [swh.cli.subcommands]
         db=swh.core.cli.db:db
         db-init=swh.core.cli.db:db_init
+        [pytest11]
+        pytest_swh_core = swh.core.pytest_plugin
     ''',
     classifiers=[
         "Programming Language :: Python :: 3",

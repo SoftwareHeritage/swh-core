@@ -1,8 +1,54 @@
-swh-core (0.0.70-1~swh2~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.76-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Force using the swh.core pytest plugin
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 01 Oct 2019 13:15:18 +0000
+ -- Nicolas Dandrimont <olasd@debian.org>  Wed, 23 Oct 2019 14:50:04 +0200
+
+swh-core (0.0.76-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.76     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-10-18 10:16:20 +0200)
+  * Upstream changes:     - Release swh.core v0.0.76     - Make the
+    systemd dependency optional
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 18 Oct 2019 08:25:15 +0000
+
+swh-core (0.0.75-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.75     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-10-14 17:51:58
+    +0200)
+  * Upstream changes:     - v0.0.75     - pytest_plugin: Add support for
+    http requests
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 14 Oct 2019 15:57:05 +0000
+
+swh-core (0.0.74-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.74     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2019-10-11 15:30:51 +0200)
+  * Upstream changes:     - v0.0.74
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 11 Oct 2019 13:35:17 +0000
+
+swh-core (0.0.73-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.73     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-10-09 14:16:04
+    +0200)
+  * Upstream changes:     - v0.0.73     - Improve pytest-plugin fixture
+    to ease testing with pagination
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 09 Oct 2019 12:20:36 +0000
+
+swh-core (0.0.72-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.72     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-10-09 10:59:28
+    +0200)
+  * Upstream changes:     - v0.0.72     - Fix tox.ini's py3 environment
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 09 Oct 2019 09:02:51 +0000
 
 swh-core (0.0.70-1~swh2) unstable-swh; urgency=medium
 

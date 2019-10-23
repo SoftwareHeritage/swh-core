@@ -3,7 +3,9 @@ Makefile
 README.md
 requirements-db.txt
 requirements-http.txt
+requirements-logging.txt
 requirements-swh.txt
+requirements-test.txt
 requirements.txt
 setup.py
 version.txt
@@ -19,6 +21,7 @@ swh/core/api_async.py
 swh/core/config.py
 swh/core/logger.py
 swh/core/py.typed
+swh/core/pytest_plugin.py
 swh/core/statsd.py
 swh/core/tarball.py
 swh/core/utils.py
@@ -28,8 +31,10 @@ swh/core/api/negotiation.py
 swh/core/api/serializers.py
 swh/core/api/tests/__init__.py
 swh/core/api/tests/server_testing.py
-swh/core/api/tests/test_api.py
 swh/core/api/tests/test_async.py
+swh/core/api/tests/test_rpc_client.py
+swh/core/api/tests/test_rpc_client_server.py
+swh/core/api/tests/test_rpc_server.py
 swh/core/api/tests/test_serializers.py
 swh/core/cli/__init__.py
 swh/core/cli/db.py
@@ -46,6 +51,16 @@ swh/core/tests/__init__.py
 swh/core/tests/test_cli.py
 swh/core/tests/test_config.py
 swh/core/tests/test_logger.py
+swh/core/tests/test_pytest_plugin.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_tarball.py
 swh/core/tests/test_utils.py
+swh/core/tests/data/http_example.com/something.json
+swh/core/tests/data/https_example.com/file.json
+swh/core/tests/data/https_example.com/file.json,name=doe,firstname=jane
+swh/core/tests/data/https_example.com/file.json_visit1
+swh/core/tests/data/https_example.com/other.json
+swh/core/tests/fixture/__init__.py
+swh/core/tests/fixture/conftest.py
+swh/core/tests/fixture/test_pytest_plugin.py
+swh/core/tests/fixture/data/https_example.com/file.json

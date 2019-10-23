@@ -3,7 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import collections
+from collections import abc
 import functools
 import inspect
 import json
@@ -14,7 +14,6 @@ import datetime
 
 from typing import ClassVar, Optional, Type
 
-from deprecated import deprecated
 from flask import Flask, Request, Response, request, abort
 from .serializers import (decode_response,
                           encode_data_client as encode_data,
@@ -190,7 +189,7 @@ class RPCClient(metaclass=MetaRPCClient):
             raise self.api_exception(e)
 
     def post(self, endpoint, data, **opts):
-        if isinstance(data, (collections.Iterator, collections.Generator)):
+        if isinstance(data, (abc.Iterator, abc.Generator)):
             data = (encode_data(x) for x in data)
         else:
             data = encode_data(data)
@@ -279,7 +278,9 @@ def decode_request(request):
     if content_type == 'application/x-msgpack':
         r = msgpack_loads(data)
     elif content_type == 'application/json':
-        r = json.loads(data, cls=SWHJSONDecoder)
+        # XXX this .decode() is needed for py35.
+        # Should not be needed any more with py37
+        r = json.loads(data.decode('utf-8'), cls=SWHJSONDecoder)
     else:
         raise ValueError('Wrong content type `%s` for API request'
                          % content_type)
@@ -301,21 +302,24 @@ class RPCServerApp(Flask):
     a function that decodes the request and sends it to the backend object
     provided by the factory.
 
-    :param Any backend_class: The class of the backend, which will be
-                              analyzed to look for API endpoints.
-    :param Callable[[], backend_class] backend_factory: A function with no
-                                                        argument that returns
-                                                        an instance of
-                                                        `backend_class`."""
+    :param Any backend_class:
+        The class of the backend, which will be analyzed to look
+        for API endpoints.
+    :param Optional[Callable[[], backend_class]] backend_factory:
+        A function with no argument that returns an instance of
+        `backend_class`. If unset, defaults to calling `backend_class`
+        constructor directly.
+    """
     request_class = BytesRequest
 
     def __init__(self, *args, backend_class=None, backend_factory=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.backend_class = backend_class
         if backend_class is not None:
             if backend_factory is None:
-                raise TypeError('Missing argument backend_factory')
+                backend_factory = backend_class
             for (meth_name, meth) in backend_class.__dict__.items():
                 if hasattr(meth, '_endpoint_path'):
                     self.__add_endpoint(meth_name, meth, backend_factory)
@@ -324,26 +328,11 @@ class RPCServerApp(Flask):
         from flask import request
 
         @self.route('/'+meth._endpoint_path, methods=['POST'])
+        @negotiate(MsgpackFormatter)
+        @negotiate(JSONFormatter)
         @functools.wraps(meth)  # Copy signature and doc
         def _f():
             # Call the actual code
             obj_meth = getattr(backend_factory(), meth_name)
-            return encode_data_server(obj_meth(**decode_request(request)))
-
-
-@deprecated(version='0.0.64',
-            reason='Use the RPCServerApp instead')
-class SWHServerAPIApp(RPCServerApp):
-    pass
-
-
-@deprecated(version='0.0.64',
-            reason='Use the MetaRPCClient instead')
-class MetaSWHRemoteAPI(MetaRPCClient):
-    pass
-
-
-@deprecated(version='0.0.64',
-            reason='Use the RPCClient instead')
-class SWHRemoteAPI(RPCClient):
-    pass
+            kw = decode_request(request)
+            return obj_meth(**kw)

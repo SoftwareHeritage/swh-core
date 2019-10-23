@@ -1,1 +1,2 @@
+pytest_swh_core
 swh
