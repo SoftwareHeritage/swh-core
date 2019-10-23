@@ -1,3 +1,9 @@
+swh-core (0.0.76-1~swh2) unstable-swh; urgency=medium
+
+  * Force using the swh.core pytest plugin
+
+ -- Nicolas Dandrimont <olasd@debian.org>  Wed, 23 Oct 2019 14:50:04 +0200
+
 swh-core (0.0.76-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.76     - (tagged by Nicolas Dandrimont
