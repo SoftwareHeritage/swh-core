@@ -50,8 +50,12 @@ def main():
     logging.basicConfig()
     # load plugins that define cli sub commands
     for entry_point in pkg_resources.iter_entry_points('swh.cli.subcommands'):
-        cmd = entry_point.load()
-        swh.add_command(cmd, name=entry_point.name)
+        try:
+            cmd = entry_point.load()
+            swh.add_command(cmd, name=entry_point.name)
+        except Exception as e:
+            logger.warning('Could not load subcommand %s: %s',
+                           entry_point.name, str(e))
 
     return swh(auto_envvar_prefix='SWH')
 
