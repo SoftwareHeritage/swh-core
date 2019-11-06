@@ -1,3 +1,14 @@
+swh-core (0.0.77-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.77     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-11-06 14:10:58
+    +0100)
+  * Upstream changes:     - v0.0.77     - pytest_plugin: Decode url to
+    resolve filename     - api/serializers: Force json module use to
+    decode requests text response
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 06 Nov 2019 13:15:03 +0000
+
 swh-core (0.0.76-1~swh2) unstable-swh; urgency=medium
 
   * Force using the swh.core pytest plugin
