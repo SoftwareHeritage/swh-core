@@ -9,12 +9,15 @@ import unittest
 from uuid import UUID
 
 import arrow
+import requests
+import requests_mock
 
 from swh.core.api.serializers import (
     SWHJSONDecoder,
     SWHJSONEncoder,
     msgpack_dumps,
-    msgpack_loads
+    msgpack_loads,
+    decode_response
 )
 
 
@@ -79,3 +82,11 @@ class Serializers(unittest.TestCase):
     def test_generator_msgpack(self):
         data = msgpack_dumps(self.generator)
         self.assertEqual(self.gen_lst, msgpack_loads(data))
+
+    @requests_mock.Mocker()
+    def test_decode_response_json(self, mock_requests):
+        mock_requests.get('https://example.org/test/data',
+                          json=self.encoded_data,
+                          headers={'content-type': 'application/json'})
+        response = requests.get('https://example.org/test/data')
+        assert decode_response(response) == self.data

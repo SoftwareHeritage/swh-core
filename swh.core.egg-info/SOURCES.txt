@@ -60,6 +60,8 @@ swh/core/tests/data/https_example.com/file.json
 swh/core/tests/data/https_example.com/file.json,name=doe,firstname=jane
 swh/core/tests/data/https_example.com/file.json_visit1
 swh/core/tests/data/https_example.com/other.json
+swh/core/tests/data/https_forge.s.o/api_diffusion,attachments[uris]=1
+swh/core/tests/data/https_www.reference.com/web,q=What+Is+an+Example+of+a+URL?,qo=contentPageRelatedSearch,o=600605,l=dir,sga=1
 swh/core/tests/fixture/__init__.py
 swh/core/tests/fixture/conftest.py
 swh/core/tests/fixture/test_pytest_plugin.py
