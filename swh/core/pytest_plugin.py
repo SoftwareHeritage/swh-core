@@ -11,7 +11,7 @@ import requests
 from functools import partial
 from os import path
 from typing import Dict, List, Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 from requests.adapters import BaseAdapter
 from requests.structures import CaseInsensitiveDict
@@ -26,10 +26,12 @@ logger = logging.getLogger(__name__)
 MAX_VISIT_FILES = 10
 
 
-def get_response_cb(request, context, datadir,
-                    ignore_urls: List[str] = [],
-                    visits: Optional[Dict] = None):
-    """Mount point callback to fetch on disk the request's content.
+def get_response_cb(
+        request: requests.Request, context, datadir,
+        ignore_urls: List[str] = [],
+        visits: Optional[Dict] = None):
+    """Mount point callback to fetch on disk the request's content. The request
+    urls provided are url decoded first to resolve the associated file on disk.
 
     This is meant to be used as 'body' argument of the requests_mock.get()
     method.
@@ -65,9 +67,10 @@ def get_response_cb(request, context, datadir,
         datadir/http_nowhere.com/path_to_resource,a=b,c=d
 
     Args:
-        request (requests.Request): Object requests
+        request: Object requests
         context (requests.Context): Object holding response metadata
             information (status_code, headers, etc...)
+        datadir: Data files path
         ignore_urls: urls whose status response should be 404 even if the local
             file exists
         visits: Dict of url, number of visits. If None, disable multi visit
@@ -80,10 +83,11 @@ def get_response_cb(request, context, datadir,
     logger.debug('get_response_cb(%s, %s)', request, context)
     logger.debug('url: %s', request.url)
     logger.debug('ignore_urls: %s', ignore_urls)
-    if request.url in ignore_urls:
+    unquoted_url = unquote(request.url)
+    if unquoted_url in ignore_urls:
         context.status_code = 404
         return None
-    url = urlparse(request.url)
+    url = urlparse(unquoted_url)
     # http://pypi.org ~> http_pypi.org
     # https://files.pythonhosted.org ~> https_files.pythonhosted.org
     dirname = '%s_%s' % (url.scheme, url.hostname)

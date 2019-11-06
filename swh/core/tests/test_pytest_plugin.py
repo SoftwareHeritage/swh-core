@@ -6,8 +6,23 @@
 import requests
 
 from os import path
+from urllib.parse import unquote
 
 from swh.core.pytest_plugin import requests_mock_datadir_factory
+
+
+def test_get_response_cb_with_encoded_url(requests_mock_datadir):
+    # The following urls (quoted, unquoted) will be resolved as the same file
+    for encoded_url, expected_response in [
+            ('https://forge.s.o/api/diffusion?attachments%5Buris%5D=1',
+             "something"),
+            ('https://www.reference.com/web?q=What+Is+an+Example+of+a+URL?&qo=contentPageRelatedSearch&o=600605&l=dir&sga=1',  # noqa
+             "something else"),
+    ]:
+        for url in [encoded_url, unquote(encoded_url)]:
+            response = requests.get(url)
+            assert response.ok
+            assert response.json() == expected_response
 
 
 def test_get_response_cb_with_visits_nominal(requests_mock_datadir_visits):
