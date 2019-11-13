@@ -201,6 +201,7 @@ class RPCClient(metaclass=MetaRPCClient):
             **opts)
         if opts.get('stream') or \
            response.headers.get('transfer-encoding') == 'chunked':
+            self.check_status(response)
             return response.iter_content(chunk_size)
         else:
             return self._decode_response(response)
@@ -215,6 +216,7 @@ class RPCClient(metaclass=MetaRPCClient):
             **opts)
         if opts.get('stream') or \
            response.headers.get('transfer-encoding') == 'chunked':
+            self.check_status(response)
             return response.iter_content(chunk_size)
         else:
             return self._decode_response(response)
@@ -222,28 +224,43 @@ class RPCClient(metaclass=MetaRPCClient):
     def get_stream(self, endpoint, **opts):
         return self.get(endpoint, stream=True, **opts)
 
+    def check_status(self, response) -> None:
+        """check response HTTP status code and raise an exception if it denotes an
+        error; do nothing otherwise
+
+        """
+        # XXX: unpickling below breaks language-independence and should be
+        # replaced by proper language-independent [de]serialization
+        status_code = response.status_code
+        status_class = response.status_code // 100
+        if status_class == 4:
+            if status_code == 404:
+                raise RemoteException('404 not found')
+            else:
+                data = decode_response(response)
+                try:
+                    raise pickle.loads(data)
+                except (TypeError, pickle.UnpicklingError):
+                    raise RemoteException(data)
+        elif status_class == 5:
+            data = decode_response(response)
+            try:
+                if 'exception_pickled' in data:
+                    raise pickle.loads(data['exception_pickled'])
+                else:
+                    raise RemoteException(data['exception'])
+            except (TypeError, pickle.UnpicklingError):
+                raise RemoteException(data)
+        elif status_class != 2:
+            raise RemoteException(
+                f'API HTTP error: {status_code} {response.content}')
+
     def _decode_response(self, response):
         if response.status_code == 404:
             return None
-        if response.status_code == 500:
-            data = decode_response(response)
-            if 'exception_pickled' in data:
-                raise pickle.loads(data['exception_pickled'])
-            else:
-                raise RemoteException(data['exception'])
-
-        # XXX: this breaks language-independence and should be
-        # replaced by proper unserialization
-        if response.status_code == 400:
-            raise pickle.loads(decode_response(response))
-        elif response.status_code != 200:
-            raise RemoteException(
-                "Unexpected status code for API request: %s (%s)" % (
-                    response.status_code,
-                    response.content,
-                )
-            )
-        return decode_response(response)
+        else:
+            self.check_status(response)
+            return decode_response(response)
 
     def __repr__(self):
         return '<{} url={}>'.format(self.__class__.__name__, self.url)
