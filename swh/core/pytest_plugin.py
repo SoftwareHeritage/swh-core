@@ -228,7 +228,7 @@ def swh_rpc_client(swh_rpc_client_class, swh_rpc_adapter):
     return cli
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def swh_rpc_adapter(app):
     """Fixture that generates a requests.Adapter instance that
     can be used to test client/servers code based on swh.core.api classes.
@@ -279,7 +279,7 @@ class RPCTestAdapter(BaseAdapter):
         return self.build_response(request, resp)
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def flask_app_client(app):
     with app.test_client() as client:
         yield client
