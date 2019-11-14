@@ -35,7 +35,7 @@ class AliasedGroup(click.Group):
 @click.group(context_settings=CONTEXT_SETTINGS, cls=AliasedGroup)
 @click.option('--log-level', '-l', default='INFO',
               type=click.Choice(LOG_LEVEL_NAMES),
-              help="Log level (default to INFO)")
+              help="Log level (defaults to INFO).")
 @click.pass_context
 def swh(ctx, log_level):
     """Command line interface for Software Heritage.

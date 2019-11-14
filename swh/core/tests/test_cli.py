@@ -14,7 +14,7 @@ help_msg = '''Usage: swh [OPTIONS] COMMAND [ARGS]...
 
 Options:
   -l, --log-level [NOTSET|DEBUG|INFO|WARNING|ERROR|CRITICAL]
-                                  Log level (default to INFO)
+                                  Log level (defaults to INFO).
   -h, --help                      Show this message and exit.
 '''
 
