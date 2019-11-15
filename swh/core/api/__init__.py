@@ -12,7 +12,7 @@ import pickle
 import requests
 import datetime
 
-from typing import ClassVar, Optional, Type
+from typing import Any, ClassVar, Optional, Type
 
 from flask import Flask, Request, Response, request, abort
 from .serializers import (decode_response,
@@ -76,7 +76,20 @@ class MsgpackFormatter(Formatter):
 # base API classes
 
 class RemoteException(Exception):
-    pass
+    """raised when remote returned an out-of-band failure notification, e.g., as a
+    HTTP status code or serialized exception
+
+    Attributes:
+        response: HTTP response corresponding to the failure
+
+    """
+    def __init__(self, payload: Optional[Any] = None,
+                 response: Optional[requests.Response] = None):
+        if payload is not None:
+            super().__init__(payload)
+        else:
+            super().__init__()
+        self.response = response
 
 
 def remote_api_endpoint(path):
@@ -235,7 +248,7 @@ class RPCClient(metaclass=MetaRPCClient):
         status_class = response.status_code // 100
 
         if status_code == 404:
-            raise RemoteException('404 not found')
+            raise RemoteException(payload='404 not found', response=response)
 
         try:
             if status_class == 4:
@@ -247,14 +260,16 @@ class RPCClient(metaclass=MetaRPCClient):
                 if 'exception_pickled' in data:
                     raise pickle.loads(data['exception_pickled'])
                 else:
-                    raise RemoteException(data['exception'])
+                    raise RemoteException(payload=data['exception'],
+                                          response=response)
 
         except (TypeError, pickle.UnpicklingError):
-            raise RemoteException(data)
+            raise RemoteException(payload=data, response=response)
 
         if status_class != 2:
             raise RemoteException(
-                f'API HTTP error: {status_code} {response.content}')
+                payload=f'API HTTP error: {status_code} {response.content}',
+                response=response)
 
     def _decode_response(self, response):
         if response.status_code == 404:
