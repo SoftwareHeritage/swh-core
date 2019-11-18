@@ -29,6 +29,8 @@ def decode_response(response):
         r = msgpack_loads(response.content)
     elif content_type.startswith('application/json'):
         r = json.loads(response.text, cls=SWHJSONDecoder)
+    elif content_type.startswith('text/'):
+        r = response.text
     else:
         raise ValueError('Wrong content type `%s` for API response'
                          % content_type)

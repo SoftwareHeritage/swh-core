@@ -69,6 +69,16 @@ def test_flatten_dict():
     ]
 
 
+def test_flatten_dict_binary_keys():
+    d = {b"a": "a"}
+    str_d = str(d)
+    assert list(logger.flatten(d)) == [("", str_d)]
+    assert list(logger.flatten({"a": d})) == [("a", str_d)]
+    assert list(logger.flatten({"a": [d, d]})) == [
+        ("a_0", str_d), ("a_1", str_d)
+    ]
+
+
 def test_stringify():
     assert logger.stringify(None) == 'None'
     assert logger.stringify(123) == '123'

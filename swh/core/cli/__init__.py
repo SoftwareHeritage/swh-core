@@ -3,9 +3,12 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import click
 import logging
+import logging.config
+
+import click
 import pkg_resources
+import yaml
 
 LOG_LEVEL_NAMES = ['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
@@ -15,7 +18,12 @@ logger = logging.getLogger(__name__)
 
 
 class AliasedGroup(click.Group):
-    'A simple Group that supports command aliases'
+    '''A simple Group that supports command aliases, as well as notes related to
+    options'''
+
+    def __init__(self, name=None, commands=None, **attrs):
+        self.option_notes = attrs.pop('option_notes', None)
+        super().__init__(name, commands, **attrs)
 
     @property
     def aliases(self):
@@ -31,22 +39,51 @@ class AliasedGroup(click.Group):
             name = name.name
         self.aliases[alias] = name
 
+    def format_options(self, ctx, formatter):
+        click.Command.format_options(self, ctx, formatter)
+        if self.option_notes:
+            with formatter.section('Notes'):
+                formatter.write_text(self.option_notes)
+        self.format_commands(ctx, formatter)
 
-@click.group(context_settings=CONTEXT_SETTINGS, cls=AliasedGroup)
-@click.option('--log-level', '-l', default='INFO',
+
+@click.group(
+    context_settings=CONTEXT_SETTINGS, cls=AliasedGroup,
+    option_notes='''\
+If both options are present, --log-level will override the root logger
+configuration set in --log-config.
+
+The --log-config YAML must conform to the logging.config.dictConfig schema
+documented at https://docs.python.org/3/library/logging.config.html.
+'''
+)
+@click.option('--log-level', '-l', default=None,
               type=click.Choice(LOG_LEVEL_NAMES),
-              help="Log level (default to INFO)")
+              help="Log level (defaults to INFO).")
+@click.option('--log-config', default=None,
+              type=click.File('r'),
+              help="Python yaml logging configuration file.")
 @click.pass_context
-def swh(ctx, log_level):
+def swh(ctx, log_level, log_config):
     """Command line interface for Software Heritage.
     """
-    log_level = logging.getLevelName(log_level)
-    logging.root.setLevel(log_level)
+    if log_level is None and log_config is None:
+        log_level = 'INFO'
+
+    if log_config:
+        logging.config.dictConfig(yaml.safe_load(log_config.read()))
+
+    if log_level:
+        log_level = logging.getLevelName(log_level)
+        logging.root.setLevel(log_level)
+
     ctx.ensure_object(dict)
     ctx.obj['log_level'] = log_level
 
 
 def main():
+    # Even though swh() sets up logging, we need an earlier basic logging setup
+    # for the next few logging statements
     logging.basicConfig()
     # load plugins that define cli sub commands
     for entry_point in pkg_resources.iter_entry_points('swh.cli.subcommands'):
