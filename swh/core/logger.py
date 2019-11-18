@@ -5,6 +5,7 @@
 
 import datetime
 import logging
+from typing import Any, Generator, List, Tuple
 
 from systemd.journal import JournalHandler as _JournalHandler, send
 
@@ -52,12 +53,21 @@ def get_extra_data(record, task_args=True):
     return extra_data
 
 
-def flatten(data, separator='_'):
+def flatten(
+        data: Any,
+        separator: str = "_"
+) -> Generator[Tuple[str, Any], None, None]:
     """Flatten the data dictionary into a flat structure"""
-    def inner_flatten(data, prefix):
+
+    def inner_flatten(
+        data: Any, prefix: List[str]
+    ) -> Generator[Tuple[List[str], Any], None, None]:
         if isinstance(data, dict):
-            for key, value in data.items():
-                yield from inner_flatten(value, prefix + [key])
+            if all(isinstance(key, str) for key in data):
+                for key, value in data.items():
+                    yield from inner_flatten(value, prefix + [key])
+            else:
+                yield prefix, str(data)
         elif isinstance(data, (list, tuple)):
             for key, value in enumerate(data):
                 yield from inner_flatten(value, prefix + [str(key)])

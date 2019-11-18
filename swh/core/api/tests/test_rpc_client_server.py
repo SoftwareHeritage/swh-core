@@ -70,7 +70,7 @@ def test_api_client_endpoint_missing(swh_rpc_client):
 
 def test_api_server_endpoint_missing(swh_rpc_client):
     # A 'missing' endpoint (server-side) should raise an exception
-    # due to a 404, since at the end, we do a GET/POST an inexistant URL
+    # due to a 404, since at the end, we do a GET/POST an inexistent URL
     with pytest.raises(Exception, match='404 Not Found'):
         swh_rpc_client.not_on_server()
 
