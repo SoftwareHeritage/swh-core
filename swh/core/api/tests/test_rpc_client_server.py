@@ -20,6 +20,10 @@ class RPCTest:
     def something(self, data, db=None, cur=None):
         return data
 
+    @remote_api_endpoint('raises_typeerror')
+    def raise_typeerror(self):
+        raise TypeError('Did I pass through?')
+
 
 # this class is used on the client part. We cannot inherit from RPCTest
 # because the automagic metaclass based code that generates the RPCClient
@@ -39,6 +43,10 @@ class RPCTest2:
     @remote_api_endpoint('not_on_server')
     def not_on_server(self, db=None, cur=None):
         return 'ok'
+
+    @remote_api_endpoint('raises_typeerror')
+    def raise_typeerror(self):
+        return 'data'
 
 
 class RPCTestClient(RPCClient):
@@ -87,3 +95,8 @@ def test_api_endpoint_args(swh_rpc_client):
     assert res == 'whatever'
     res = swh_rpc_client.endpoint('spam')
     assert res == 'egg'
+
+
+def test_api_typeerror(swh_rpc_client):
+    with pytest.raises(TypeError, match='Did I pass through?'):
+        swh_rpc_client.raise_typeerror()

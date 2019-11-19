@@ -5,6 +5,7 @@
 
 import logging
 import logging.config
+import signal
 
 import click
 import pkg_resources
@@ -47,6 +48,12 @@ class AliasedGroup(click.Group):
         self.format_commands(ctx, formatter)
 
 
+def clean_exit_on_signal(signal, frame):
+    """Raise a SystemExit exception to let command-line clients wind themselves
+    down on exit"""
+    raise SystemExit(0)
+
+
 @click.group(
     context_settings=CONTEXT_SETTINGS, cls=AliasedGroup,
     option_notes='''\
@@ -67,6 +74,9 @@ documented at https://docs.python.org/3/library/logging.config.html.
 def swh(ctx, log_level, log_config):
     """Command line interface for Software Heritage.
     """
+    signal.signal(signal.SIGTERM, clean_exit_on_signal)
+    signal.signal(signal.SIGINT, clean_exit_on_signal)
+
     if log_level is None and log_config is None:
         log_level = 'INFO'
 
