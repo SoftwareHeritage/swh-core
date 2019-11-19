@@ -1,3 +1,13 @@
+swh-core (0.0.80-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.80     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-11-19 16:36:35 +0100)
+  * Upstream changes:     - Release swh.core v0.0.80     - Let
+    TypeErrors pass through the RPC layer     - Register SIGINT/SIGTERM
+    handlers for the CLI
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 19 Nov 2019 15:41:09 +0000
+
 swh-core (0.0.79-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.79     - (tagged by Stefano Zacchiroli
