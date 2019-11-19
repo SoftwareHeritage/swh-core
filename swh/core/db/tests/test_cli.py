@@ -12,8 +12,16 @@ help_msg = '''Usage: swh [OPTIONS] COMMAND [ARGS]...
 
 Options:
   -l, --log-level [NOTSET|DEBUG|INFO|WARNING|ERROR|CRITICAL]
-                                  Log level (default to INFO)
+                                  Log level (defaults to INFO).
+  --log-config FILENAME           Python yaml logging configuration file.
   -h, --help                      Show this message and exit.
+
+Notes:
+  If both options are present, --log-level will override the root logger
+  configuration set in --log-config.
+
+  The --log-config YAML must conform to the logging.config.dictConfig schema
+  documented at https://docs.python.org/3/library/logging.config.html.
 
 Commands:
   db  Software Heritage database generic tools.
