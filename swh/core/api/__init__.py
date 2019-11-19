@@ -250,21 +250,26 @@ class RPCClient(metaclass=MetaRPCClient):
         if status_code == 404:
             raise RemoteException(payload='404 not found', response=response)
 
+        exception = None
+
         try:
             if status_class == 4:
                 data = decode_response(response)
-                raise pickle.loads(data)
+                exception = pickle.loads(data)
 
-            if status_class == 5:
+            elif status_class == 5:
                 data = decode_response(response)
                 if 'exception_pickled' in data:
-                    raise pickle.loads(data['exception_pickled'])
+                    exception = pickle.loads(data['exception_pickled'])
                 else:
-                    raise RemoteException(payload=data['exception'],
-                                          response=response)
+                    exception = RemoteException(payload=data['exception'],
+                                                response=response)
 
         except (TypeError, pickle.UnpicklingError):
             raise RemoteException(payload=data, response=response)
+
+        if exception:
+            raise exception from None
 
         if status_class != 2:
             raise RemoteException(
