@@ -12,6 +12,16 @@ repos:
   hooks:
   - id: codespell
 
+- repo: local
+  hooks:
+  - id: mypy
+    name: mypy
+    entry: mypy
+    args: [swh]
+    pass_filenames: false
+    language: system
+    types: [python]
+
 # unfortunately, we are far from being able to enable this...
 # - repo: https://github.com/PyCQA/pydocstyle.git
 #   rev: 4.0.0
