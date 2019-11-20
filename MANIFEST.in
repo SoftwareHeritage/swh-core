@@ -1,10 +1,5 @@
 include Makefile
-include requirements.txt
-include requirements-db.txt
-include requirements-http.txt
-include requirements-logging.txt
-include requirements-swh.txt
-include requirements-test.txt
+include requirements*.txt
 include version.txt
 recursive-include swh/core/sql *.sql
 recursive-include swh py.typed
