@@ -24,13 +24,8 @@ class AliasedGroup(click.Group):
 
     def __init__(self, name=None, commands=None, **attrs):
         self.option_notes = attrs.pop('option_notes', None)
+        self.aliases = {}
         super().__init__(name, commands, **attrs)
-
-    @property
-    def aliases(self):
-        if not hasattr(self, '_aliases'):
-            self._aliases = {}
-        return self._aliases
 
     def get_command(self, ctx, cmd_name):
         return super().get_command(ctx, self.aliases.get(cmd_name, cmd_name))
