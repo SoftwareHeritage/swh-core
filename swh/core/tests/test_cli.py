@@ -7,8 +7,6 @@ import click
 from click.testing import CliRunner
 import pytest
 
-from swh.core.cli import swh as swhmain
-
 
 help_msg = '''Usage: swh [OPTIONS] COMMAND [ARGS]...
 
@@ -29,7 +27,7 @@ Notes:
 '''
 
 
-def test_swh_help():
+def test_swh_help(swhmain):
     runner = CliRunner()
     result = runner.invoke(swhmain, ['-h'])
     assert result.exit_code == 0
@@ -40,7 +38,7 @@ def test_swh_help():
     assert result.output.startswith(help_msg)
 
 
-def test_command():
+def test_command(swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -52,7 +50,7 @@ def test_command():
     assert result.output.strip() == 'Hello SWH!'
 
 
-def test_loglevel_default(caplog):
+def test_loglevel_default(caplog, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -66,7 +64,7 @@ def test_loglevel_default(caplog):
     assert result.output.strip() == '''Hello SWH!'''
 
 
-def test_loglevel_error(caplog):
+def test_loglevel_error(caplog, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -79,7 +77,7 @@ def test_loglevel_error(caplog):
     assert result.output.strip() == '''Hello SWH!'''
 
 
-def test_loglevel_debug(caplog):
+def test_loglevel_debug(caplog, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -120,7 +118,7 @@ def log_config_path(tmp_path):
     yield str(tmp_path / 'log_config.yml')
 
 
-def test_log_config(caplog, log_config_path):
+def test_log_config(caplog, log_config_path, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -145,7 +143,7 @@ def test_log_config(caplog, log_config_path):
     ])
 
 
-def test_log_config_log_level_interaction(caplog, log_config_path):
+def test_log_config_log_level_interaction(caplog, log_config_path, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -170,7 +168,7 @@ def test_log_config_log_level_interaction(caplog, log_config_path):
     ])
 
 
-def test_aliased_command():
+def test_aliased_command(swhmain):
     @swhmain.command(name='canonical-test')
     @click.pass_context
     def swhtest(ctx):

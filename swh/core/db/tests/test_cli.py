@@ -2,7 +2,6 @@
 
 from click.testing import CliRunner
 
-from swh.core.cli import swh as swhmain
 from swh.core.cli.db import db as swhdb
 
 
@@ -28,7 +27,7 @@ Commands:
 '''
 
 
-def test_swh_help():
+def test_swh_help(swhmain):
     swhmain.add_command(swhdb)
     runner = CliRunner()
     result = runner.invoke(swhmain, ['-h'])
@@ -49,7 +48,7 @@ Commands:
 '''
 
 
-def test_swh_db_help():
+def test_swh_db_help(swhmain):
     swhmain.add_command(swhdb)
     runner = CliRunner()
     result = runner.invoke(swhmain, ['db', '-h'])
