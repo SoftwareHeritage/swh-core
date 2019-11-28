@@ -3,28 +3,27 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from zipfile import ZipFile
+import os
+import pytest
+import shutil
 
 from swh.core import tarball
 
 
-def test_is_tarball(tmp_path):
+@pytest.fixture
+def prepare_shutil_state():
+    """Reset any shutil modification in its current state
 
-    nozip = tmp_path / 'nozip.zip'
-    nozip.write_text('Im no zip')
+    """
+    import shutil
 
-    assert tarball.is_tarball(str(nozip)) is False
+    registered_formats = [f[0] for f in shutil.get_unpack_formats()]
+    for format_id in tarball.ADDITIONAL_ARCHIVE_FORMATS:
+        name = format_id[0]
+        if name in registered_formats:
+            shutil.unregister_unpack_format(name)
 
-    notar = tmp_path / 'notar.tar'
-    notar.write_text('Im no tar')
-
-    assert tarball.is_tarball(str(notar)) is False
-
-    zipfile = tmp_path / 'truezip.zip'
-    with ZipFile(str(zipfile), 'w') as myzip:
-        myzip.writestr('file1.txt', 'some content')
-
-    assert tarball.is_tarball(str(zipfile)) is True
+    return shutil
 
 
 def test_compress_uncompress_zip(tmp_path):
@@ -37,8 +36,6 @@ def test_compress_uncompress_zip(tmp_path):
 
     zipfile = tmp_path / 'archive.zip'
     tarball.compress(str(zipfile), 'zip', str(tocompress))
-
-    assert tarball.is_tarball(str(zipfile))
 
     destdir = tmp_path / 'destdir'
     tarball.uncompress(str(zipfile), str(destdir))
@@ -58,10 +55,65 @@ def test_compress_uncompress_tar(tmp_path):
     tarfile = tmp_path / 'archive.tar'
     tarball.compress(str(tarfile), 'tar', str(tocompress))
 
-    assert tarball.is_tarball(str(tarfile))
-
     destdir = tmp_path / 'destdir'
     tarball.uncompress(str(tarfile), str(destdir))
 
     lsdir = sorted(x.name for x in destdir.iterdir())
     assert ['file%s.txt' % i for i in range(10)] == lsdir
+
+
+def test_uncompress_tar_Z_failure(tmp_path, datadir):
+    tarpath = os.path.join(datadir, 'archives', 'inexistent-archive.tar.Z')
+
+    assert not os.path.exists(tarpath)
+
+    with pytest.raises(shutil.ReadError,
+                       match=f'Unable to uncompress {tarpath} to {tmp_path}'):
+        tarball.unpack_tar_Z(tarpath, tmp_path)
+
+
+def test_uncompress_tar_Z(tmp_path, datadir):
+    filename = 'groff-1.02.tar.Z'
+    tarpath = os.path.join(datadir, 'archives', filename)
+
+    assert os.path.exists(tarpath)
+
+    output_directory = tarball.unpack_tar_Z(tarpath, tmp_path)
+
+    expected_path = os.path.join(tmp_path, filename)
+
+    assert os.path.exists(expected_path)
+    assert expected_path == output_directory
+    assert len(os.listdir(expected_path)) > 0
+
+
+def test_register_new_archive_formats(prepare_shutil_state):
+    unpack_formats_v1 = [f[0] for f in shutil.get_unpack_formats()]
+    for format_id in tarball.ADDITIONAL_ARCHIVE_FORMATS:
+        assert format_id[0] not in unpack_formats_v1
+
+    # when
+    tarball.register_new_archive_formats()
+
+    # then
+    unpack_formats_v2 = [f[0] for f in shutil.get_unpack_formats()]
+    for format_id in tarball.ADDITIONAL_ARCHIVE_FORMATS:
+        assert format_id[0] in unpack_formats_v2
+
+
+def test_uncompress_tarpaths(tmp_path, datadir, prepare_shutil_state):
+    archive_dir = os.path.join(datadir, 'archives')
+    tarfiles = os.listdir(archive_dir)
+    tarpaths = [os.path.join(archive_dir, tarfile) for tarfile in tarfiles]
+
+    for n, tarpath in enumerate(tarpaths, start=1):
+        with pytest.raises(ValueError,
+                           match=f'File {tarpath} is not a supported archive'):
+            tarball.uncompress(tarpath, dest=tmp_path)
+
+    assert n == len(tarpaths)
+
+    tarball.register_new_archive_formats()
+
+    for n, tarpath in enumerate(tarpaths, start=1):
+        tarball.uncompress(tarpath, dest=tmp_path)

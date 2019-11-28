@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import os
+import shutil
 import stat
 import tarfile
 import zipfile
@@ -134,7 +135,44 @@ def _uncompress_tar(tarpath, dirpath):
                      members=_safemembers(tarpath, members, dirpath))
 
 
-def uncompress(tarpath, dest):
+def unpack_tar_Z(tarpath: str, extract_dir: str) -> str:
+    """Unpack .tar.Z file and returns the full path to the uncompressed
+    directory.
+
+    Raises
+        ReadError in case of issue uncompressing the archive.
+
+    """
+    try:
+        if not os.path.exists(tarpath):
+            raise ValueError(f'{tarpath} not found')
+        filename = os.path.basename(tarpath)
+        output_directory = os.path.join(extract_dir, filename)
+        os.makedirs(output_directory, exist_ok=True)
+        from subprocess import run
+        run(['tar', 'xf', tarpath, '-C', output_directory])
+        # data = os.listdir(output_directory)
+        # assert len(data) > 0
+        return output_directory
+    except Exception as e:
+        raise shutil.ReadError(
+            f'Unable to uncompress {tarpath} to {extract_dir}. Reason: {e}')
+
+
+def register_new_archive_formats():
+    """Register new archive formats to uncompress
+
+    """
+    registered_formats = [f[0] for f in shutil.get_unpack_formats()]
+    for format_id in ADDITIONAL_ARCHIVE_FORMATS:
+        name = format_id[0]
+        if name in registered_formats:
+            continue
+        shutil.register_unpack_format(
+            name=format_id[0], extensions=format_id[1], function=format_id[2])
+
+
+def uncompress(tarpath: str, dest: str):
     """Uncompress tarpath to dest folder if tarball is supported and safe.
        Safe means, no file will be uncompressed outside of dirpath.
 
@@ -149,19 +187,13 @@ def uncompress(tarpath, dest):
         The nature of the tarball, zip or tar.
 
     Raises:
-        ValueError when:
-        - an archive member would be extracted outside basepath
-        - the archive is not supported
+        ValueError when the archive is not supported
 
     """
-    if tarfile.is_tarfile(tarpath):
-        _uncompress_tar(tarpath, dest)
-        nature = 'tar'
-    elif zipfile.is_zipfile(tarpath):
-        _uncompress_zip(tarpath, dest)
-        nature = 'zip'
-    else:
-        raise ValueError('File %s is not a supported archive.' % tarpath)
+    try:
+        shutil.unpack_archive(tarpath, extract_dir=dest)
+    except shutil.ReadError:
+        raise ValueError(f'File {tarpath} is not a supported archive.')
 
     # Fix permissions
     for dirpath, _, fnames in os.walk(dest):
@@ -172,8 +204,6 @@ def uncompress(tarpath, dest):
                 fpath_exec = os.stat(fpath).st_mode & stat.S_IXUSR
                 if not fpath_exec:
                     os.chmod(fpath, 0o644)
-
-    return nature
 
 
 def _ls(rootdir):
@@ -226,3 +256,10 @@ def compress(tarpath, nature, dirpath_or_files):
         _compress_tar(tarpath, files)
 
     return tarpath
+
+
+# Additional uncompression archive format support
+ADDITIONAL_ARCHIVE_FORMATS = [
+    # name  , extensions, function
+    ('tar.Z', ['.tar.Z'], unpack_tar_Z),
+]
