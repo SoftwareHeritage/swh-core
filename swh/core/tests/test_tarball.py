@@ -62,23 +62,23 @@ def test_compress_uncompress_tar(tmp_path):
     assert ['file%s.txt' % i for i in range(10)] == lsdir
 
 
-def test_uncompress_tar_Z_failure(tmp_path, datadir):
+def test_unpack_specific_tar_failure(tmp_path, datadir):
     tarpath = os.path.join(datadir, 'archives', 'inexistent-archive.tar.Z')
 
     assert not os.path.exists(tarpath)
 
     with pytest.raises(shutil.ReadError,
                        match=f'Unable to uncompress {tarpath} to {tmp_path}'):
-        tarball.unpack_tar_Z(tarpath, tmp_path)
+        tarball.unpack_specific_tar(tarpath, tmp_path)
 
 
-def test_uncompress_tar_Z(tmp_path, datadir):
+def test_unpack_specific_tar(tmp_path, datadir):
     filename = 'groff-1.02.tar.Z'
     tarpath = os.path.join(datadir, 'archives', filename)
 
     assert os.path.exists(tarpath)
 
-    output_directory = tarball.unpack_tar_Z(tarpath, tmp_path)
+    output_directory = tarball.unpack_specific_tar(tarpath, tmp_path)
 
     expected_path = os.path.join(tmp_path, filename)
 

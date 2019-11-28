@@ -12,7 +12,7 @@ import zipfile
 from . import utils
 
 
-def unpack_tar_Z(tarpath: str, extract_dir: str) -> str:
+def unpack_specific_tar(tarpath: str, extract_dir: str) -> str:
     """Unpack .tar.Z file and returns the full path to the uncompressed
     directory.
 
@@ -138,5 +138,5 @@ def compress(tarpath, nature, dirpath_or_files):
 # Additional uncompression archive format support
 ADDITIONAL_ARCHIVE_FORMATS = [
     # name  , extensions, function
-    ('tar.Z', ['.tar.Z'], unpack_tar_Z),
+    ('tar.Z|x', ['.tar.Z', '.tar.x'], unpack_specific_tar),
 ]
