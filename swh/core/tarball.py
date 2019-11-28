@@ -139,4 +139,6 @@ def compress(tarpath, nature, dirpath_or_files):
 ADDITIONAL_ARCHIVE_FORMATS = [
     # name  , extensions, function
     ('tar.Z|x', ['.tar.Z', '.tar.x'], unpack_specific_tar),
+    # FIXME: make this optional depending on the runtime lzip package install
+    ('tar.lz', ['.tar.lz'], unpack_specific_tar),
 ]
