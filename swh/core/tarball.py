@@ -13,8 +13,10 @@ from . import utils
 
 
 def unpack_specific_tar(tarpath: str, extract_dir: str) -> str:
-    """Unpack .tar.Z file and returns the full path to the uncompressed
-    directory.
+    """Unpack specific tarballs (.tar.Z, .tar.lz, .tar.x) file. Returns the
+    full path to the uncompressed directory.
+
+    This relies on the `tar` command.
 
     Raises
         ReadError in case of issue uncompressing the archive.
