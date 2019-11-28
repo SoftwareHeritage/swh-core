@@ -106,14 +106,16 @@ def test_uncompress_tarpaths(tmp_path, datadir, prepare_shutil_state):
     tarfiles = os.listdir(archive_dir)
     tarpaths = [os.path.join(archive_dir, tarfile) for tarfile in tarfiles]
 
-    for n, tarpath in enumerate(tarpaths, start=1):
+    unregistered_yet_tarpaths = list(
+        filter(lambda t: t.endswith('.Z'), tarpaths))
+    for tarpath in unregistered_yet_tarpaths:
         with pytest.raises(ValueError,
                            match=f'File {tarpath} is not a supported archive'):
             tarball.uncompress(tarpath, dest=tmp_path)
-
-    assert n == len(tarpaths)
 
     tarball.register_new_archive_formats()
 
     for n, tarpath in enumerate(tarpaths, start=1):
         tarball.uncompress(tarpath, dest=tmp_path)
+
+    assert n == len(tarpaths)
