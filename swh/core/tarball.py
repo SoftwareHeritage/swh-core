@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2017  The Software Heritage developers
+# Copyright (C) 2015-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -9,30 +9,32 @@ import stat
 import tarfile
 import zipfile
 
+from subprocess import run
+
 from . import utils
 
 
-def unpack_specific_tar(tarpath: str, extract_dir: str) -> str:
-    """Unpack specific tarballs (.tar.Z, .tar.lz, .tar.x) file. Returns the
-    full path to the uncompressed directory.
+def _unpack_tar(tarpath: str, extract_dir: str) -> str:
+    """Unpack tarballs unsupported by the standard python library. Examples
+    include tar.Z, tar.lz, tar.x, etc....
 
-    This relies on the `tar` command.
+    As this implementation relies on the `tar` command, this function supports
+    the same compression the tar command supports.
+
+    This expects the `extract_dir` to exist.
 
     Raises
-        ReadError in case of issue uncompressing the archive.
+
+        shutil.ReadError in case of issue uncompressing the archive (tarpath
+        does not exist, extract_dir does not exist, etc...)
+
+    Returns
+        full path to the uncompressed directory.
 
     """
     try:
-        if not os.path.exists(tarpath):
-            raise ValueError(f'{tarpath} not found')
-        filename = os.path.basename(tarpath)
-        output_directory = os.path.join(extract_dir, filename)
-        os.makedirs(output_directory, exist_ok=True)
-        from subprocess import run
-        run(['tar', 'xf', tarpath, '-C', output_directory])
-        # data = os.listdir(output_directory)
-        # assert len(data) > 0
-        return output_directory
+        run(['tar', 'xf', tarpath, '-C', extract_dir], check=True)
+        return extract_dir
     except Exception as e:
         raise shutil.ReadError(
             f'Unable to uncompress {tarpath} to {extract_dir}. Reason: {e}')
@@ -43,17 +45,14 @@ def register_new_archive_formats():
 
     """
     registered_formats = [f[0] for f in shutil.get_unpack_formats()]
-    for format_id in ADDITIONAL_ARCHIVE_FORMATS:
-        name = format_id[0]
+    for name, extensions, function in ADDITIONAL_ARCHIVE_FORMATS:
         if name in registered_formats:
             continue
-        shutil.register_unpack_format(
-            name=format_id[0], extensions=format_id[1], function=format_id[2])
+        shutil.register_unpack_format(name, extensions, function)
 
 
 def uncompress(tarpath: str, dest: str):
-    """Uncompress tarpath to dest folder if tarball is supported and safe.
-       Safe means, no file will be uncompressed outside of dirpath.
+    """Uncompress tarpath to dest folder if tarball is supported.
 
        Note that this fixes permissions after successfully
        uncompressing the archive.
@@ -66,13 +65,13 @@ def uncompress(tarpath: str, dest: str):
         The nature of the tarball, zip or tar.
 
     Raises:
-        ValueError when the archive is not supported
+        ValueError when a problem occurs during unpacking
 
     """
     try:
         shutil.unpack_archive(tarpath, extract_dir=dest)
-    except shutil.ReadError:
-        raise ValueError(f'File {tarpath} is not a supported archive.')
+    except shutil.ReadError as e:
+        raise ValueError(f'Problem during unpacking {tarpath}. Reason: {e}')
 
     # Fix permissions
     for dirpath, _, fnames in os.walk(dest):
@@ -140,7 +139,9 @@ def compress(tarpath, nature, dirpath_or_files):
 # Additional uncompression archive format support
 ADDITIONAL_ARCHIVE_FORMATS = [
     # name  , extensions, function
-    ('tar.Z|x', ['.tar.Z', '.tar.x'], unpack_specific_tar),
+    ('tar.Z|x', ['.tar.Z', '.tar.x'], _unpack_tar),
     # FIXME: make this optional depending on the runtime lzip package install
-    ('tar.lz', ['.tar.lz'], unpack_specific_tar),
+    ('tar.lz', ['.tar.lz'], _unpack_tar),
 ]
+
+register_new_archive_formats()
