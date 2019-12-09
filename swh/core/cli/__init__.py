@@ -9,6 +9,7 @@ import signal
 
 import click
 import pkg_resources
+import sentry_sdk
 import yaml
 
 LOG_LEVEL_NAMES = ['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -65,12 +66,20 @@ documented at https://docs.python.org/3/library/logging.config.html.
 @click.option('--log-config', default=None,
               type=click.File('r'),
               help="Python yaml logging configuration file.")
+@click.option('--sentry-dsn', default=None,
+              help="DSN of the Sentry instance to report to")
+@click.option('--sentry-debug/--no-sentry-debug',
+              default=False, hidden=True,
+              help="Enable debugging of sentry")
 @click.pass_context
-def swh(ctx, log_level, log_config):
+def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
     """Command line interface for Software Heritage.
     """
     signal.signal(signal.SIGTERM, clean_exit_on_signal)
     signal.signal(signal.SIGINT, clean_exit_on_signal)
+
+    if sentry_dsn:
+        sentry_sdk.init(dsn=sentry_dsn, debug=sentry_debug)
 
     if log_level is None and log_config is None:
         log_level = 'INFO'

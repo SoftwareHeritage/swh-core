@@ -1,7 +1,11 @@
-#
+# Copyright (C) 2019  The Software Heritage developers
+# See the AUTHORS file at the top-level directory of this distribution
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
 
 import logging
 import textwrap
+from unittest.mock import patch
 
 import click
 from click.testing import CliRunner
@@ -16,6 +20,7 @@ Options:
   -l, --log-level [NOTSET|DEBUG|INFO|WARNING|ERROR|CRITICAL]
                                   Log level (defaults to INFO).
   --log-config FILENAME           Python yaml logging configuration file.
+  --sentry-dsn TEXT               DSN of the Sentry instance to report to
   -h, --help                      Show this message and exit.
 
 Notes:
@@ -45,7 +50,9 @@ def test_command(swhmain):
         click.echo('Hello SWH!')
 
     runner = CliRunner()
-    result = runner.invoke(swhmain, ['test'])
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        result = runner.invoke(swhmain, ['test'])
+    sentry_sdk_init.assert_not_called()
     assert result.exit_code == 0
     assert result.output.strip() == 'Hello SWH!'
 
@@ -88,6 +95,63 @@ def test_loglevel_debug(caplog, swhmain):
     result = runner.invoke(swhmain, ['-l', 'DEBUG', 'test'])
     assert result.exit_code == 0
     assert result.output.strip() == '''Hello SWH!'''
+
+
+def test_sentry(swhmain):
+    @swhmain.command(name='test')
+    @click.pass_context
+    def swhtest(ctx):
+        click.echo('Hello SWH!')
+
+    runner = CliRunner()
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        result = runner.invoke(swhmain, ['--sentry-dsn', 'test_dsn', 'test'])
+    assert result.exit_code == 0
+    assert result.output.strip() == '''Hello SWH!'''
+    sentry_sdk_init.assert_called_once_with(
+        dsn='test_dsn',
+        debug=False,
+    )
+
+
+def test_sentry_debug(swhmain):
+    @swhmain.command(name='test')
+    @click.pass_context
+    def swhtest(ctx):
+        click.echo('Hello SWH!')
+
+    runner = CliRunner()
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        result = runner.invoke(
+            swhmain, ['--sentry-dsn', 'test_dsn', '--sentry-debug', 'test'])
+    assert result.exit_code == 0
+    assert result.output.strip() == '''Hello SWH!'''
+    sentry_sdk_init.assert_called_once_with(
+        dsn='test_dsn',
+        debug=True,
+    )
+
+
+def test_sentry_env(swhmain):
+    @swhmain.command(name='test')
+    @click.pass_context
+    def swhtest(ctx):
+        click.echo('Hello SWH!')
+
+    runner = CliRunner()
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        env = {
+            'SWH_SENTRY_DSN': 'test_dsn',
+            'SWH_SENTRY_DEBUG': '1',
+        }
+        result = runner.invoke(
+            swhmain, ['test'], env=env, auto_envvar_prefix='SWH')
+    assert result.exit_code == 0
+    assert result.output.strip() == '''Hello SWH!'''
+    sentry_sdk_init.assert_called_once_with(
+        dsn='test_dsn',
+        debug=True,
+    )
 
 
 @pytest.fixture

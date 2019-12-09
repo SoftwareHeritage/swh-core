@@ -13,6 +13,7 @@ Options:
   -l, --log-level [NOTSET|DEBUG|INFO|WARNING|ERROR|CRITICAL]
                                   Log level (defaults to INFO).
   --log-config FILENAME           Python yaml logging configuration file.
+  --sentry-dsn TEXT               DSN of the Sentry instance to report to
   -h, --help                      Show this message and exit.
 
 Notes:
