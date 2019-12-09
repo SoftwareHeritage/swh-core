@@ -7,3 +7,4 @@ Flask
 msgpack > 0.5
 python-dateutil
 requests
+blinker  # dependency of sentry-sdk[flask]
