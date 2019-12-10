@@ -1,3 +1,15 @@
+swh-core (0.0.81-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.81     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2019-12-10 13:59:17 +0100)
+  * Upstream changes:     - v0.0.81     - * Include all requirements in
+    MANIFEST.in     - * Split test requirements to try and properly
+    minimize dependencies     - * Make the CLI initialize sentry-sdk
+    based on CLI options/envvars.     - * Add gunicorn config script to
+    initialize sentry-sdk based on envvars.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 10 Dec 2019 13:03:13 +0000
+
 swh-core (0.0.80-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.80     - (tagged by Nicolas Dandrimont
