@@ -51,10 +51,14 @@ setup(
     install_requires=parse_requirements(None, 'swh'),
     setup_requires=['vcversioner'],
     extras_require={
-        'testing': parse_requirements('test', 'db', 'http', 'logging'),
+        'testing-core': parse_requirements('test'),
         'logging': parse_requirements('logging'),
         'db': parse_requirements('db'),
+        'testing-db': parse_requirements('test-db'),
         'http': parse_requirements('http'),
+        # kitchen sink, please do not use
+        'testing': parse_requirements('test', 'test-db', 'db', 'http',
+                                      'logging'),
     },
     vcversioner={},
     include_package_data=True,

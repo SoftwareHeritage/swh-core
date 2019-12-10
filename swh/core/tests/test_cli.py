@@ -1,13 +1,15 @@
-#
+# Copyright (C) 2019  The Software Heritage developers
+# See the AUTHORS file at the top-level directory of this distribution
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
 
 import logging
 import textwrap
+from unittest.mock import patch
 
 import click
 from click.testing import CliRunner
 import pytest
-
-from swh.core.cli import swh as swhmain
 
 
 help_msg = '''Usage: swh [OPTIONS] COMMAND [ARGS]...
@@ -18,6 +20,7 @@ Options:
   -l, --log-level [NOTSET|DEBUG|INFO|WARNING|ERROR|CRITICAL]
                                   Log level (defaults to INFO).
   --log-config FILENAME           Python yaml logging configuration file.
+  --sentry-dsn TEXT               DSN of the Sentry instance to report to
   -h, --help                      Show this message and exit.
 
 Notes:
@@ -29,7 +32,7 @@ Notes:
 '''
 
 
-def test_swh_help():
+def test_swh_help(swhmain):
     runner = CliRunner()
     result = runner.invoke(swhmain, ['-h'])
     assert result.exit_code == 0
@@ -40,19 +43,21 @@ def test_swh_help():
     assert result.output.startswith(help_msg)
 
 
-def test_command():
+def test_command(swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
         click.echo('Hello SWH!')
 
     runner = CliRunner()
-    result = runner.invoke(swhmain, ['test'])
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        result = runner.invoke(swhmain, ['test'])
+    sentry_sdk_init.assert_not_called()
     assert result.exit_code == 0
     assert result.output.strip() == 'Hello SWH!'
 
 
-def test_loglevel_default(caplog):
+def test_loglevel_default(caplog, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -66,7 +71,7 @@ def test_loglevel_default(caplog):
     assert result.output.strip() == '''Hello SWH!'''
 
 
-def test_loglevel_error(caplog):
+def test_loglevel_error(caplog, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -79,7 +84,7 @@ def test_loglevel_error(caplog):
     assert result.output.strip() == '''Hello SWH!'''
 
 
-def test_loglevel_debug(caplog):
+def test_loglevel_debug(caplog, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -90,6 +95,63 @@ def test_loglevel_debug(caplog):
     result = runner.invoke(swhmain, ['-l', 'DEBUG', 'test'])
     assert result.exit_code == 0
     assert result.output.strip() == '''Hello SWH!'''
+
+
+def test_sentry(swhmain):
+    @swhmain.command(name='test')
+    @click.pass_context
+    def swhtest(ctx):
+        click.echo('Hello SWH!')
+
+    runner = CliRunner()
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        result = runner.invoke(swhmain, ['--sentry-dsn', 'test_dsn', 'test'])
+    assert result.exit_code == 0
+    assert result.output.strip() == '''Hello SWH!'''
+    sentry_sdk_init.assert_called_once_with(
+        dsn='test_dsn',
+        debug=False,
+    )
+
+
+def test_sentry_debug(swhmain):
+    @swhmain.command(name='test')
+    @click.pass_context
+    def swhtest(ctx):
+        click.echo('Hello SWH!')
+
+    runner = CliRunner()
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        result = runner.invoke(
+            swhmain, ['--sentry-dsn', 'test_dsn', '--sentry-debug', 'test'])
+    assert result.exit_code == 0
+    assert result.output.strip() == '''Hello SWH!'''
+    sentry_sdk_init.assert_called_once_with(
+        dsn='test_dsn',
+        debug=True,
+    )
+
+
+def test_sentry_env(swhmain):
+    @swhmain.command(name='test')
+    @click.pass_context
+    def swhtest(ctx):
+        click.echo('Hello SWH!')
+
+    runner = CliRunner()
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        env = {
+            'SWH_SENTRY_DSN': 'test_dsn',
+            'SWH_SENTRY_DEBUG': '1',
+        }
+        result = runner.invoke(
+            swhmain, ['test'], env=env, auto_envvar_prefix='SWH')
+    assert result.exit_code == 0
+    assert result.output.strip() == '''Hello SWH!'''
+    sentry_sdk_init.assert_called_once_with(
+        dsn='test_dsn',
+        debug=True,
+    )
 
 
 @pytest.fixture
@@ -120,7 +182,7 @@ def log_config_path(tmp_path):
     yield str(tmp_path / 'log_config.yml')
 
 
-def test_log_config(caplog, log_config_path):
+def test_log_config(caplog, log_config_path, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -145,7 +207,7 @@ def test_log_config(caplog, log_config_path):
     ])
 
 
-def test_log_config_log_level_interaction(caplog, log_config_path):
+def test_log_config_log_level_interaction(caplog, log_config_path, swhmain):
     @swhmain.command(name='test')
     @click.pass_context
     def swhtest(ctx):
@@ -170,7 +232,7 @@ def test_log_config_log_level_interaction(caplog, log_config_path):
     ])
 
 
-def test_aliased_command():
+def test_aliased_command(swhmain):
     @swhmain.command(name='canonical-test')
     @click.pass_context
     def swhtest(ctx):

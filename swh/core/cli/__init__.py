@@ -9,6 +9,7 @@ import signal
 
 import click
 import pkg_resources
+import sentry_sdk
 import yaml
 
 LOG_LEVEL_NAMES = ['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -24,13 +25,8 @@ class AliasedGroup(click.Group):
 
     def __init__(self, name=None, commands=None, **attrs):
         self.option_notes = attrs.pop('option_notes', None)
+        self.aliases = {}
         super().__init__(name, commands, **attrs)
-
-    @property
-    def aliases(self):
-        if not hasattr(self, '_aliases'):
-            self._aliases = {}
-        return self._aliases
 
     def get_command(self, ctx, cmd_name):
         return super().get_command(ctx, self.aliases.get(cmd_name, cmd_name))
@@ -70,12 +66,20 @@ documented at https://docs.python.org/3/library/logging.config.html.
 @click.option('--log-config', default=None,
               type=click.File('r'),
               help="Python yaml logging configuration file.")
+@click.option('--sentry-dsn', default=None,
+              help="DSN of the Sentry instance to report to")
+@click.option('--sentry-debug/--no-sentry-debug',
+              default=False, hidden=True,
+              help="Enable debugging of sentry")
 @click.pass_context
-def swh(ctx, log_level, log_config):
+def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
     """Command line interface for Software Heritage.
     """
     signal.signal(signal.SIGTERM, clean_exit_on_signal)
     signal.signal(signal.SIGINT, clean_exit_on_signal)
+
+    if sentry_dsn:
+        sentry_sdk.init(dsn=sentry_dsn, debug=sentry_debug)
 
     if log_level is None and log_config is None:
         log_level = 'INFO'

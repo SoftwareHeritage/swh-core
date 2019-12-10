@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: swh.core
-Version: 0.0.80
+Version: 0.0.81
 Summary: Software Heritage core utilities
 Home-page: https://forge.softwareheritage.org/diffusion/DCORE/
 Author: Software Heritage developers
@@ -83,7 +83,9 @@ Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
 Classifier: Operating System :: OS Independent
 Classifier: Development Status :: 5 - Production/Stable
 Description-Content-Type: text/markdown
-Provides-Extra: testing
+Provides-Extra: testing-core
 Provides-Extra: logging
 Provides-Extra: db
+Provides-Extra: testing-db
 Provides-Extra: http
+Provides-Extra: testing
