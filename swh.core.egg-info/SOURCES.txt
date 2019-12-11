@@ -1,10 +1,12 @@
 MANIFEST.in
 Makefile
 README.md
+conftest.py
 requirements-db.txt
 requirements-http.txt
 requirements-logging.txt
 requirements-swh.txt
+requirements-test-db.txt
 requirements-test.txt
 requirements.txt
 setup.py
@@ -27,11 +29,13 @@ swh/core/tarball.py
 swh/core/utils.py
 swh/core/api/__init__.py
 swh/core/api/asynchronous.py
+swh/core/api/gunicorn_config.py
 swh/core/api/negotiation.py
 swh/core/api/serializers.py
 swh/core/api/tests/__init__.py
 swh/core/api/tests/server_testing.py
 swh/core/api/tests/test_async.py
+swh/core/api/tests/test_gunicorn.py
 swh/core/api/tests/test_rpc_client.py
 swh/core/api/tests/test_rpc_client_server.py
 swh/core/api/tests/test_rpc_server.py
