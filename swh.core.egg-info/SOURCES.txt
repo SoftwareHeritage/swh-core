@@ -1,6 +1,7 @@
 MANIFEST.in
 Makefile
 README.md
+conftest.py
 requirements-db.txt
 requirements-http.txt
 requirements-logging.txt
