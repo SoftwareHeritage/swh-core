@@ -1,3 +1,9 @@
+swh-core (0.0.81-1~swh2) unstable-swh; urgency=medium
+
+  * Add dependency to python3-sentry-sdk
+
+ -- Nicolas Dandrimont <olasd@debian.org>  Wed, 11 Dec 2019 14:58:54 +0100
+
 swh-core (0.0.81-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.81     - (tagged by Valentin Lorentz
