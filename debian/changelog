@@ -1,3 +1,12 @@
+swh-core (0.0.82-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.82     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2019-12-11 15:04:09 +0100)
+  * Upstream changes:     - Release swh.core 0.0.82     - Add missing
+    conftest.py to MANIFEST.in
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 11 Dec 2019 14:09:00 +0000
+
 swh-core (0.0.81-1~swh2) unstable-swh; urgency=medium
 
   * Add dependency to python3-sentry-sdk
