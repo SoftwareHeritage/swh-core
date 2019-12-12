@@ -25,7 +25,7 @@ SWH_CONFIG_DIRECTORIES = [
 SWH_GLOBAL_CONFIG = 'global.ini'
 
 SWH_DEFAULT_GLOBAL_CONFIG = {
-    'content_size_limit': ('int', 100 * 1024 * 1024),
+    'max_content_size': ('int', 100 * 1024 * 1024),
     'log_db': ('str', 'dbname=softwareheritage-log'),
 }
 

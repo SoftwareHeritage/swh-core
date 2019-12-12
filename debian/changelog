@@ -1,8 +1,12 @@
-swh-core (0.0.82-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.83-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.0.83     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2019-12-12 16:03:25
+    +0100)
+  * Upstream changes:     - v0.0.83     - core.config: Rename
+    configuration key
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 11 Dec 2019 14:10:27 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 12 Dec 2019 15:06:28 +0000
 
 swh-core (0.0.82-1~swh1) unstable-swh; urgency=medium
 
