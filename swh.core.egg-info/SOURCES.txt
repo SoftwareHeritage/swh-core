@@ -59,6 +59,13 @@ swh/core/tests/test_pytest_plugin.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_tarball.py
 swh/core/tests/test_utils.py
+swh/core/tests/data/archives/groff-1.02.tar.Z
+swh/core/tests/data/archives/hello.tar
+swh/core/tests/data/archives/hello.tar.bz2
+swh/core/tests/data/archives/hello.tar.gz
+swh/core/tests/data/archives/hello.tar.lz
+swh/core/tests/data/archives/hello.tar.x
+swh/core/tests/data/archives/hello.zip
 swh/core/tests/data/http_example.com/something.json
 swh/core/tests/data/https_example.com/file.json
 swh/core/tests/data/https_example.com/file.json,name=doe,firstname=jane
