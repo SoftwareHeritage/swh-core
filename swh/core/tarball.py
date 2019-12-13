@@ -1,142 +1,58 @@
-# Copyright (C) 2015-2017  The Software Heritage developers
+# Copyright (C) 2015-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import os
+import shutil
 import stat
 import tarfile
 import zipfile
 
-from os.path import abspath, realpath, join, dirname
+from subprocess import run
+
 from . import utils
 
 
-def _canonical_abspath(path):
-    """Resolve all paths to an absolute and real one.
+def _unpack_tar(tarpath: str, extract_dir: str) -> str:
+    """Unpack tarballs unsupported by the standard python library. Examples
+    include tar.Z, tar.lz, tar.x, etc....
 
-    Args:
-        path: to resolve
+    As this implementation relies on the `tar` command, this function supports
+    the same compression the tar command supports.
 
-    Returns:
-        canonical absolute path to path
+    This expects the `extract_dir` to exist.
 
-    """
-    return realpath(abspath(path))
+    Raises
 
+        shutil.ReadError in case of issue uncompressing the archive (tarpath
+        does not exist, extract_dir does not exist, etc...)
 
-def _badpath(path, basepath):
-    """Determine if a path is outside basepath.
-
-    Args:
-        path: a relative or absolute path of a file or directory
-        basepath: the basepath path must be in
-
-    Returns:
-        True if path is outside basepath, false otherwise.
+    Returns
+        full path to the uncompressed directory.
 
     """
-    return not _canonical_abspath(join(basepath, path)).startswith(basepath)
+    try:
+        run(['tar', 'xf', tarpath, '-C', extract_dir], check=True)
+        return extract_dir
+    except Exception as e:
+        raise shutil.ReadError(
+            f'Unable to uncompress {tarpath} to {extract_dir}. Reason: {e}')
 
 
-def _badlink(info, basepath):
-    """Determine if the tarinfo member is outside basepath.
-
-    Args:
-        info: TarInfo member representing a symlink or hardlink of tar archive
-        basepath: the basepath the info member must be in
-
-    Returns:
-        True if info is outside basepath, false otherwise.
+def register_new_archive_formats():
+    """Register new archive formats to uncompress
 
     """
-    tippath = _canonical_abspath(join(basepath, dirname(info.name)))
-    return _badpath(info.linkname, basepath=tippath)
+    registered_formats = [f[0] for f in shutil.get_unpack_formats()]
+    for name, extensions, function in ADDITIONAL_ARCHIVE_FORMATS:
+        if name in registered_formats:
+            continue
+        shutil.register_unpack_format(name, extensions, function)
 
 
-def is_tarball(filepath):
-    """Given a filepath, determine if it represents an archive.
-
-    Args:
-        filepath: file to test for tarball property
-
-    Returns:
-        Bool, True if it's a tarball, False otherwise
-
-    """
-    return tarfile.is_tarfile(filepath) or zipfile.is_zipfile(filepath)
-
-
-def _uncompress_zip(tarpath, dirpath):
-    """Uncompress zip archive safely.
-
-    As per zipfile is concerned
-    (cf. note on https://docs.python.org/3.5/library/zipfile.html#zipfile.ZipFile.extract)  # noqa
-
-    Args:
-        tarpath: path to the archive
-        dirpath: directory to uncompress the archive to
-
-    """
-    with zipfile.ZipFile(tarpath) as z:
-        z.extractall(path=dirpath)
-
-
-def _safemembers(tarpath, members, basepath):
-    """Given a list of archive members, yield the members (directory,
-    file, hard-link) that stays in bounds with basepath.  Note
-    that symbolic link are authorized to point outside the
-    basepath though.
-
-    Args:
-        tarpath: Name of the tarball
-        members: Archive members for such tarball
-        basepath: the basepath sandbox
-
-    Yields:
-        Safe TarInfo member
-
-    Raises:
-        ValueError when a member would be extracted outside basepath
-
-    """
-    errormsg = 'Archive {} blocked. Illegal path to %s %s'.format(tarpath)
-
-    for finfo in members:
-        if finfo.isdir() and _badpath(finfo.name, basepath):
-            raise ValueError(errormsg % ('directory', finfo.name))
-        elif finfo.isfile() and _badpath(finfo.name, basepath):
-            raise ValueError(errormsg % ('file', finfo.name))
-        elif finfo.islnk() and _badlink(finfo, basepath):
-            raise ValueError(errormsg % ('hard-link', finfo.linkname))
-        # Authorize symlinks to point outside basepath
-        # elif finfo.issym() and _badlink(finfo, basepath):
-        #     raise ValueError(errormsg % ('symlink', finfo.linkname))
-        else:
-            yield finfo
-
-
-def _uncompress_tar(tarpath, dirpath):
-    """Uncompress tarpath if the tarpath is safe.
-    Safe means, no file will be uncompressed outside of dirpath.
-
-    Args:
-        tarpath: path to the archive
-        dirpath: directory to uncompress the archive to
-
-    Raises:
-        ValueError when a member would be extracted outside dirpath.
-
-    """
-    with tarfile.open(tarpath) as t:
-        members = t.getmembers()
-        t.extractall(path=dirpath,
-                     members=_safemembers(tarpath, members, dirpath))
-
-
-def uncompress(tarpath, dest):
-    """Uncompress tarpath to dest folder if tarball is supported and safe.
-       Safe means, no file will be uncompressed outside of dirpath.
+def uncompress(tarpath: str, dest: str):
+    """Uncompress tarpath to dest folder if tarball is supported.
 
        Note that this fixes permissions after successfully
        uncompressing the archive.
@@ -149,19 +65,13 @@ def uncompress(tarpath, dest):
         The nature of the tarball, zip or tar.
 
     Raises:
-        ValueError when:
-        - an archive member would be extracted outside basepath
-        - the archive is not supported
+        ValueError when a problem occurs during unpacking
 
     """
-    if tarfile.is_tarfile(tarpath):
-        _uncompress_tar(tarpath, dest)
-        nature = 'tar'
-    elif zipfile.is_zipfile(tarpath):
-        _uncompress_zip(tarpath, dest)
-        nature = 'zip'
-    else:
-        raise ValueError('File %s is not a supported archive.' % tarpath)
+    try:
+        shutil.unpack_archive(tarpath, extract_dir=dest)
+    except shutil.ReadError as e:
+        raise ValueError(f'Problem during unpacking {tarpath}. Reason: {e}')
 
     # Fix permissions
     for dirpath, _, fnames in os.walk(dest):
@@ -172,8 +82,6 @@ def uncompress(tarpath, dest):
                 fpath_exec = os.stat(fpath).st_mode & stat.S_IXUSR
                 if not fpath_exec:
                     os.chmod(fpath, 0o644)
-
-    return nature
 
 
 def _ls(rootdir):
@@ -226,3 +134,14 @@ def compress(tarpath, nature, dirpath_or_files):
         _compress_tar(tarpath, files)
 
     return tarpath
+
+
+# Additional uncompression archive format support
+ADDITIONAL_ARCHIVE_FORMATS = [
+    # name  , extensions, function
+    ('tar.Z|x', ['.tar.Z', '.tar.x'], _unpack_tar),
+    # FIXME: make this optional depending on the runtime lzip package install
+    ('tar.lz', ['.tar.lz'], _unpack_tar),
+]
+
+register_new_archive_formats()
