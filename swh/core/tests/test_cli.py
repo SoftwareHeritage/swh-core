@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import logging
+import pkg_resources
 import textwrap
 from unittest.mock import patch
 
@@ -111,6 +112,8 @@ def test_sentry(swhmain):
     sentry_sdk_init.assert_called_once_with(
         dsn='test_dsn',
         debug=False,
+        integrations=[],
+        release=None,
     )
 
 
@@ -129,6 +132,8 @@ def test_sentry_debug(swhmain):
     sentry_sdk_init.assert_called_once_with(
         dsn='test_dsn',
         debug=True,
+        integrations=[],
+        release=None,
     )
 
 
@@ -151,6 +156,35 @@ def test_sentry_env(swhmain):
     sentry_sdk_init.assert_called_once_with(
         dsn='test_dsn',
         debug=True,
+        integrations=[],
+        release=None,
+    )
+
+
+def test_sentry_env_main_package(swhmain):
+    @swhmain.command(name='test')
+    @click.pass_context
+    def swhtest(ctx):
+        click.echo('Hello SWH!')
+
+    runner = CliRunner()
+    with patch('sentry_sdk.init') as sentry_sdk_init:
+        env = {
+            'SWH_SENTRY_DSN': 'test_dsn',
+            'SWH_MAIN_PACKAGE': 'swh.core',
+        }
+        result = runner.invoke(
+            swhmain, ['test'], env=env, auto_envvar_prefix='SWH')
+    assert result.exit_code == 0
+
+    version = pkg_resources.get_distribution('swh.core').version
+
+    assert result.output.strip() == '''Hello SWH!'''
+    sentry_sdk_init.assert_called_once_with(
+        dsn='test_dsn',
+        debug=False,
+        integrations=[],
+        release='swh.core@' + version,
     )
 
 

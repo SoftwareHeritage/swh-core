@@ -24,6 +24,7 @@ swh/core/config.py
 swh/core/logger.py
 swh/core/py.typed
 swh/core/pytest_plugin.py
+swh/core/sentry.py
 swh/core/statsd.py
 swh/core/tarball.py
 swh/core/utils.py

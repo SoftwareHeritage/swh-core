@@ -9,8 +9,9 @@ import signal
 
 import click
 import pkg_resources
-import sentry_sdk
 import yaml
+
+from ..sentry import init_sentry
 
 LOG_LEVEL_NAMES = ['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
@@ -78,8 +79,7 @@ def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
     signal.signal(signal.SIGTERM, clean_exit_on_signal)
     signal.signal(signal.SIGINT, clean_exit_on_signal)
 
-    if sentry_dsn:
-        sentry_sdk.init(dsn=sentry_dsn, debug=sentry_debug)
+    init_sentry(sentry_dsn, debug=sentry_debug)
 
     if log_level is None and log_config is None:
         log_level = 'INFO'
