@@ -11,34 +11,20 @@ and redefining functions and variables they want.
 May be imported by gunicorn using
 `--config 'python:swh.core.api.gunicorn_config'`."""
 
-import os
 
-
-def _init_sentry(
-        sentry_dsn, *, flask=True, integrations=None, extra_kwargs={}):
-    import sentry_sdk
-
-    integrations = integrations or []
-
-    if flask:
-        from sentry_sdk.integrations.flask import FlaskIntegration
-        integrations.append(FlaskIntegration())
-
-    sentry_sdk.init(
-        dsn=sentry_dsn,
-        integrations=integrations,
-        debug=bool(os.environ.get('SWH_SENTRY_DEBUG')),
-        **extra_kwargs,
-    )
+from ..sentry import init_sentry
 
 
 def post_fork(
         server, worker, *, default_sentry_dsn=None, flask=True,
         sentry_integrations=None, extra_sentry_kwargs={}):
-
     # Initializes sentry as soon as possible in gunicorn's worker processes.
-    sentry_dsn = os.environ.get('SWH_SENTRY_DSN', default_sentry_dsn)
-    if sentry_dsn:
-        _init_sentry(
-            sentry_dsn, flask=flask, integrations=sentry_integrations,
-            extra_kwargs=extra_sentry_kwargs)
+
+    sentry_integrations = sentry_integrations or []
+    if flask:
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_integrations.append(FlaskIntegration())
+
+    init_sentry(
+        default_sentry_dsn, integrations=sentry_integrations,
+        extra_kwargs=extra_sentry_kwargs)

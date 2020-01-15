@@ -1,8 +1,10 @@
-swh-core (0.0.84-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.85-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.0.85     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-01-15 13:07:36 +0100)
+  * Upstream changes:     - v0.0.85     - Add env var SWH_MAIN_PACKAGE
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 13 Dec 2019 08:15:48 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 15 Jan 2020 12:11:49 +0000
 
 swh-core (0.0.84-1~swh1) unstable-swh; urgency=medium
 
