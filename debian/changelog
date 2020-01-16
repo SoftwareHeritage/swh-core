@@ -1,3 +1,9 @@
+swh-core (0.0.85-1~swh2) unstable-swh; urgency=medium
+
+  * Fix package build on buster
+
+ -- Antoine Lambert <antoine.lambert@inria.fr>  Thu, 16 Jan 2020 11:00:00 +0000
+
 swh-core (0.0.85-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.85     - (tagged by Valentin Lorentz
