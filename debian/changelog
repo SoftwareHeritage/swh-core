@@ -1,8 +1,8 @@
-swh-core (0.0.85-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.85-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Fix package build on buster
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 15 Jan 2020 12:13:09 +0000
+ -- Antoine Lambert <antoine.lambert@inria.fr>  Thu, 16 Jan 2020 11:00:00 +0000
 
 swh-core (0.0.85-1~swh1) unstable-swh; urgency=medium
 
