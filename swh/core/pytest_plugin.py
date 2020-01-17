@@ -119,8 +119,8 @@ def get_response_cb(
 def datadir(request):
     """By default, returns the test directory's data directory.
 
-    This can be overridden on a per arborescence basis. Add an override
-    definition in the local conftest, for example:
+    This can be overridden on a per file tree basis. Add an override
+    definition in the local conftest, for example::
 
         import pytest
 
@@ -271,6 +271,9 @@ class RPCTestAdapter(BaseAdapter):
         return response
 
     def send(self, request, **kw):
+        """
+        Overrides ``requests.adapters.BaseAdapter.send``
+        """
         resp = self._client.open(
             request.url, method=request.method,
             headers=request.headers.items(),
