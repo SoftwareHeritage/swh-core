@@ -114,6 +114,7 @@ def test_sentry(swhmain):
         debug=False,
         integrations=[],
         release=None,
+        environment=None,
     )
 
 
@@ -134,6 +135,7 @@ def test_sentry_debug(swhmain):
         debug=True,
         integrations=[],
         release=None,
+        environment=None,
     )
 
 
@@ -158,6 +160,7 @@ def test_sentry_env(swhmain):
         debug=True,
         integrations=[],
         release=None,
+        environment=None,
     )
 
 
@@ -172,6 +175,7 @@ def test_sentry_env_main_package(swhmain):
         env = {
             'SWH_SENTRY_DSN': 'test_dsn',
             'SWH_MAIN_PACKAGE': 'swh.core',
+            'SWH_SENTRY_ENVIRONMENT': 'tests',
         }
         result = runner.invoke(
             swhmain, ['test'], env=env, auto_envvar_prefix='SWH')
@@ -185,6 +189,7 @@ def test_sentry_env_main_package(swhmain):
         debug=False,
         integrations=[],
         release='swh.core@' + version,
+        environment='tests',
     )
 
 
