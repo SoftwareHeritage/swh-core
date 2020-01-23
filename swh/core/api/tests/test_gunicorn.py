@@ -30,6 +30,7 @@ def test_post_fork_with_dsn_env():
         integrations=[flask_integration],
         debug=False,
         release=None,
+        environment=None,
     )
 
 
@@ -39,6 +40,7 @@ def test_post_fork_with_package_env():
                new=lambda: flask_integration):
         with patch('sentry_sdk.init') as sentry_sdk_init:
             with patch.dict(os.environ, {'SWH_SENTRY_DSN': 'test_dsn',
+                                         'SWH_SENTRY_ENVIRONMENT': 'tests',
                                          'SWH_MAIN_PACKAGE': 'swh.core'}):
                 gunicorn_config.post_fork(None, None)
 
@@ -49,6 +51,7 @@ def test_post_fork_with_package_env():
         integrations=[flask_integration],
         debug=False,
         release='swh.core@' + version,
+        environment='tests',
     )
 
 
@@ -66,6 +69,7 @@ def test_post_fork_debug():
         integrations=[flask_integration],
         debug=True,
         release=None,
+        environment=None,
     )
 
 
@@ -79,6 +83,7 @@ def test_post_fork_no_flask():
         integrations=[],
         debug=False,
         release=None,
+        environment=None,
     )
 
 
@@ -98,4 +103,5 @@ def test_post_fork_extras():
         debug=False,
         bar='baz',
         release=None,
+        environment=None,
     )
