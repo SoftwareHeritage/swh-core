@@ -22,12 +22,14 @@ def init_sentry(
     if debug is None:
         debug = bool(os.environ.get('SWH_SENTRY_DEBUG'))
     sentry_dsn = sentry_dsn or os.environ.get('SWH_SENTRY_DSN')
+    environment = os.environ.get('SWH_SENTRY_ENVIRONMENT')
 
     if sentry_dsn:
         import sentry_sdk
 
         sentry_sdk.init(
             release=get_sentry_release(),
+            environment=environment,
             dsn=sentry_dsn,
             integrations=integrations,
             debug=debug,
