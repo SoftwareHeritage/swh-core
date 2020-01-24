@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import inspect
 import os.path
 import tempfile
 import unittest
@@ -151,6 +152,21 @@ def test_db_transaction__with_generator():
                 yield None
 
 
+def test_db_transaction_signature():
+    """Checks db_transaction removes the 'cur' and 'db' arguments."""
+    def f(self, foo, *, bar=None):
+        pass
+    expected_sig = inspect.signature(f)
+
+    @db_transaction()
+    def g(self, foo, *, bar=None, db=None, cur=None):
+        pass
+
+    actual_sig = inspect.signature(g)
+
+    assert actual_sig == expected_sig
+
+
 def test_db_transaction_generator(mocker):
     expected_cur = object()
 
@@ -189,3 +205,18 @@ def test_db_transaction_generator__with_nongenerator():
             @db_transaction_generator()
             def endpoint(self, cur=None, db=None):
                 pass
+
+
+def test_db_transaction_generator_signature():
+    """Checks db_transaction removes the 'cur' and 'db' arguments."""
+    def f(self, foo, *, bar=None):
+        pass
+    expected_sig = inspect.signature(f)
+
+    @db_transaction_generator()
+    def g(self, foo, *, bar=None, db=None, cur=None):
+        yield None
+
+    actual_sig = inspect.signature(g)
+
+    assert actual_sig == expected_sig
