@@ -1,3 +1,12 @@
+swh-core (0.0.87-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.87     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-01-29 12:21:48 +0100)
+  * Upstream changes:     - v0.0.87     - Make db_transaction* remove
+    db/cur from the signature.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 29 Jan 2020 11:28:23 +0000
+
 swh-core (0.0.86-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.86     - (tagged by Antoine R. Dumont
