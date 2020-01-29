@@ -7,6 +7,19 @@ import inspect
 import functools
 
 
+def remove_kwargs(names):
+    def decorator(f):
+        sig = inspect.signature(f)
+        params = sig.parameters
+        params = [param for param in params.values()
+                  if param.name not in names]
+        sig = sig.replace(parameters=params)
+        f.__signature__ = sig
+        return f
+
+    return decorator
+
+
 def apply_options(cursor, options):
     """Applies the given postgresql client options to the given cursor.
 
@@ -33,6 +46,7 @@ def db_transaction(**client_options):
             raise ValueError(
                     'Use db_transaction_generator for generator functions.')
 
+        @remove_kwargs(['cur', 'db'])
         @functools.wraps(meth)
         def _meth(self, *args, **kwargs):
             if 'cur' in kwargs and kwargs['cur']:
@@ -67,6 +81,7 @@ def db_transaction_generator(**client_options):
             raise ValueError(
                     'Use db_transaction for non-generator functions.')
 
+        @remove_kwargs(['cur', 'db'])
         @functools.wraps(meth)
         def _meth(self, *args, **kwargs):
             if 'cur' in kwargs and kwargs['cur']:
