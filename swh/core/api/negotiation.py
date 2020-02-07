@@ -27,7 +27,10 @@ from collections import defaultdict
 from decorator import decorator
 from inspect import getcallargs
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Callable, \
+    Type, NoReturn, DefaultDict
+
+from requests import Response
 
 
 class FormatterNotFound(Exception):
@@ -35,10 +38,10 @@ class FormatterNotFound(Exception):
 
 
 class Formatter:
-    format = None  # type: Optional[str]
-    mimetypes = []  # type: List[Any]
+    format: Optional[str] = None
+    mimetypes: List[str] = []
 
-    def __init__(self, request_mimetype=None):
+    def __init__(self, request_mimetype: Optional[str] = None) -> None:
         if request_mimetype is None or request_mimetype not in self.mimetypes:
             try:
                 self.response_mimetype = self.mimetypes[0]
@@ -49,18 +52,18 @@ class Formatter:
         else:
             self.response_mimetype = request_mimetype
 
-    def configure(self):
+    def configure(self) -> None:
         pass
 
-    def render(self, obj):
+    def render(self, obj: Any) -> bytes:
         raise NotImplementedError(
             "render() should be implemented by Formatter subclasses")
 
-    def __call__(self, obj):
+    def __call__(self, obj: Any) -> Response:
         return self._make_response(
             self.render(obj), content_type=self.response_mimetype)
 
-    def _make_response(self, body, content_type):
+    def _make_response(self, body: bytes, content_type: str) -> Response:
         raise NotImplementedError(
             "_make_response() should be implemented by "
             "framework-specific subclasses of Formatter"
@@ -69,13 +72,13 @@ class Formatter:
 
 class Negotiator:
 
-    def __init__(self, func):
+    def __init__(self, func: Callable[..., Any]) -> None:
         self.func = func
-        self._formatters = []
-        self._formatters_by_format = defaultdict(list)
-        self._formatters_by_mimetype = defaultdict(list)
+        self._formatters: List[Type[Formatter]] = []
+        self._formatters_by_format: DefaultDict = defaultdict(list)
+        self._formatters_by_mimetype: DefaultDict = defaultdict(list)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Response:
         result = self.func(*args, **kwargs)
         format = getcallargs(self.func, *args, **kwargs).get('format')
         mimetype = self.best_mimetype()
@@ -87,7 +90,8 @@ class Negotiator:
 
         return formatter(result)
 
-    def register_formatter(self, formatter, *args, **kwargs):
+    def register_formatter(self, formatter: Type[Formatter],
+                           *args, **kwargs) -> None:
         self._formatters.append(formatter)
         self._formatters_by_format[formatter.format].append(
             (formatter, args, kwargs))
@@ -95,7 +99,8 @@ class Negotiator:
             self._formatters_by_mimetype[mimetype].append(
                 (formatter, args, kwargs))
 
-    def get_formatter(self, format=None, mimetype=None):
+    def get_formatter(self, format: Optional[str] = None,
+                      mimetype: Optional[str] = None) -> Formatter:
         if format is None and mimetype is None:
             raise TypeError(
                 "get_formatter expects one of the 'format' or 'mimetype' "
@@ -123,23 +128,24 @@ class Negotiator:
         return formatter
 
     @property
-    def accept_mimetypes(self):
+    def accept_mimetypes(self) -> List[str]:
         return [m for f in self._formatters for m in f.mimetypes]
 
-    def best_mimetype(self):
+    def best_mimetype(self) -> str:
         raise NotImplementedError(
             "best_mimetype() should be implemented in "
             "framework-specific subclasses of Negotiator"
         )
 
-    def _abort(self, status_code, err=None):
+    def _abort(self, status_code: int, err: Optional[str] = None) -> NoReturn:
         raise NotImplementedError(
             "_abort() should be implemented in framework-specific "
             "subclasses of Negotiator"
         )
 
 
-def negotiate(negotiator_cls, formatter_cls, *args, **kwargs):
+def negotiate(negotiator_cls: Type[Negotiator], formatter_cls: Type[Formatter],
+              *args, **kwargs) -> Callable:
     def _negotiate(f, *args, **kwargs):
         return f.negotiator(*args, **kwargs)
 
