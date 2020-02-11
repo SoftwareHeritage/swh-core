@@ -186,8 +186,8 @@ class BaseDb:
                         item_cb(d)
                     line = []
                     for k in columns:
+                        value = d.get(k, default_values.get(k))
                         try:
-                            value = d.get(k, default_values.get(k))
                             line.append(escape(value))
                         except Exception as e:
                             logger.error(
