@@ -1,3 +1,12 @@
+swh-core (0.0.88-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.88     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-02-14 12:22:23 +0100)
+  * Upstream changes:     - v0.0.88     - In case of errors, return a
+    simple dictionary instead of pickled exception.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 14 Feb 2020 11:27:02 +0000
+
 swh-core (0.0.87-1~swh2) unstable-swh; urgency=medium
 
   * Fix package build
