@@ -13,8 +13,11 @@ import arrow
 import dateutil.parser
 import msgpack
 
+from typing import Any, Dict, Union, Tuple
+from requests import Response
 
-def encode_data_client(data):
+
+def encode_data_client(data: Any) -> bytes:
     try:
         return msgpack_dumps(data)
     except OverflowError as e:
@@ -22,7 +25,7 @@ def encode_data_client(data):
                          str(e))
 
 
-def decode_response(response):
+def decode_response(response: Response) -> Any:
     content_type = response.headers['content-type']
 
     if content_type.startswith('application/x-msgpack'):
@@ -62,7 +65,8 @@ class SWHJSONEncoder(json.JSONEncoder):
 
     """
 
-    def default(self, o):
+    def default(self, o: Any
+                ) -> Union[Dict[str, Union[Dict[str, int], str]], list]:
         if isinstance(o, bytes):
             return {
                 'swhtype': 'bytes',
@@ -122,7 +126,8 @@ class SWHJSONDecoder(json.JSONDecoder):
     contain a known value, the dictionary is decoded as-is.
 
     """
-    def decode_data(self, o):
+
+    def decode_data(self, o: Any) -> Any:
         if isinstance(o, dict):
             if set(o.keys()) == {'d', 'swhtype'}:
                 datatype = o['swhtype']
@@ -142,12 +147,12 @@ class SWHJSONDecoder(json.JSONDecoder):
         else:
             return o
 
-    def raw_decode(self, s, idx=0):
+    def raw_decode(self, s: str, idx: int = 0) -> Tuple[Any, int]:
         data, index = super().raw_decode(s, idx)
         return self.decode_data(data), index
 
 
-def msgpack_dumps(data):
+def msgpack_dumps(data: Any) -> bytes:
     """Write data as a msgpack stream"""
     def encode_types(obj):
         if isinstance(obj, datetime.datetime):
@@ -172,7 +177,7 @@ def msgpack_dumps(data):
     return msgpack.packb(data, use_bin_type=True, default=encode_types)
 
 
-def msgpack_loads(data):
+def msgpack_loads(data: bytes) -> Any:
     """Read data as a msgpack stream"""
     def decode_types(obj):
         if b'__datetime__' in obj and obj[b'__datetime__']:
