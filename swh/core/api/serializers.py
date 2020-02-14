@@ -10,7 +10,7 @@ import types
 from uuid import UUID
 
 import arrow
-import dateutil.parser
+import iso8601
 import msgpack
 
 from typing import Any, Dict, Union, Tuple
@@ -33,7 +33,7 @@ ENCODERS = [
 
 DECODERS = {
     'arrow': arrow.get,
-    'datetime': dateutil.parser.parse,
+    'datetime': lambda d: iso8601.parse_date(d, default_timezone=None),
     'timedelta': lambda d: datetime.timedelta(**d),
     'uuid': UUID,
 
