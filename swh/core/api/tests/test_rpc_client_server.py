@@ -6,7 +6,7 @@
 import pytest
 
 from swh.core.api import remote_api_endpoint, RPCServerApp, RPCClient
-from swh.core.api import error_handler, encode_data_server
+from swh.core.api import error_handler, encode_data_server, RemoteException
 
 
 # this class is used on the server part
@@ -79,7 +79,7 @@ def test_api_client_endpoint_missing(swh_rpc_client):
 def test_api_server_endpoint_missing(swh_rpc_client):
     # A 'missing' endpoint (server-side) should raise an exception
     # due to a 404, since at the end, we do a GET/POST an inexistent URL
-    with pytest.raises(Exception, match='404 Not Found'):
+    with pytest.raises(Exception, match='404 not found'):
         swh_rpc_client.not_on_server()
 
 
@@ -98,5 +98,10 @@ def test_api_endpoint_args(swh_rpc_client):
 
 
 def test_api_typeerror(swh_rpc_client):
-    with pytest.raises(TypeError, match='Did I pass through?'):
+    with pytest.raises(RemoteException) as exc_info:
         swh_rpc_client.raise_typeerror()
+
+    assert exc_info.value.args[0]['type'] == 'TypeError'
+    assert exc_info.value.args[0]['args'] == ['Did I pass through?']
+    assert str(exc_info.value) \
+        == "<RemoteException 500 TypeError: ['Did I pass through?']>"
