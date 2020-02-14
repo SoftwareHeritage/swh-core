@@ -57,7 +57,7 @@ def decode_response(response: Response, extra_decoders=None) -> Any:
         r = msgpack_loads(response.content,
                           extra_decoders=extra_decoders)
     elif content_type.startswith('application/json'):
-        r = json.loads(response.text, cls=SWHJSONDecoder,
+        r = json_loads(response.text,
                        extra_decoders=extra_decoders)
     elif content_type.startswith('text/'):
         r = response.text
@@ -160,6 +160,16 @@ class SWHJSONDecoder(json.JSONDecoder):
     def raw_decode(self, s: str, idx: int = 0) -> Tuple[Any, int]:
         data, index = super().raw_decode(s, idx)
         return self.decode_data(data), index
+
+
+def json_dumps(data: Any, extra_encoders=None) -> str:
+    return json.dumps(data, cls=SWHJSONEncoder,
+                      extra_encoders=extra_encoders)
+
+
+def json_loads(data: str, extra_decoders=None) -> Any:
+    return json.loads(data, cls=SWHJSONDecoder,
+                      extra_decoders=extra_decoders)
 
 
 def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:

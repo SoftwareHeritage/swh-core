@@ -5,6 +5,7 @@
 
 import datetime
 import json
+from typing import Any, Callable, List, Tuple
 import unittest
 from uuid import UUID
 
@@ -30,10 +31,11 @@ class ExtraType:
         return f'ExtraType({self.arg1}, {self.arg2})'
 
     def __eq__(self, other):
-        return (self.arg1, self.arg2) == (other.arg1, other.arg2)
+        return isinstance(other, ExtraType) \
+            and (self.arg1, self.arg2) == (other.arg1, other.arg2)
 
 
-extra_encoders = [
+extra_encoders: List[Tuple[type, str, Callable[..., Any]]] = [
     (ExtraType, 'extratype', lambda o: (o.arg1, o.arg2))
 ]
 
