@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2017  The Software Heritage developers
+# Copyright (C) 2015-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -9,7 +9,6 @@ import inspect
 import logging
 import pickle
 import requests
-import traceback
 
 from typing import (
     Any, Callable, ClassVar, Dict, List, Optional, Tuple, Type, Union,
@@ -21,7 +20,8 @@ from werkzeug.exceptions import HTTPException
 from .serializers import (decode_response,
                           encode_data_client as encode_data,
                           msgpack_dumps, msgpack_loads,
-                          json_dumps, json_loads)
+                          json_dumps, json_loads,
+                          exception_to_dict)
 
 from .negotiation import (Formatter as FormatterBase,
                           Negotiator as NegotiatorBase,
@@ -362,16 +362,7 @@ def decode_request(request, extra_decoders=None):
 
 def error_handler(exception, encoder, status_code=500):
     logging.exception(exception)
-    tb = traceback.format_exception(None, exception, exception.__traceback__)
-    error = {
-        'exception': {
-            'type': type(exception).__name__,
-            'args': exception.args,
-            'message': str(exception),
-            'traceback': tb,
-        }
-    }
-    response = encoder(error)
+    response = encoder(exception_to_dict(exception))
     if isinstance(exception, HTTPException):
         response.status_code = exception.code
     else:

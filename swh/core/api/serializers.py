@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2018  The Software Heritage developers
+# Copyright (C) 2015-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,6 +6,7 @@
 import base64
 import datetime
 import json
+import traceback
 import types
 from uuid import UUID
 
@@ -212,3 +213,15 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
     except TypeError:  # msgpack < 0.5.2
         return msgpack.unpackb(data, encoding='utf-8',
                                object_hook=decode_types)
+
+
+def exception_to_dict(exception):
+    tb = traceback.format_exception(None, exception, exception.__traceback__)
+    return {
+        'exception': {
+            'type': type(exception).__name__,
+            'args': exception.args,
+            'message': str(exception),
+            'traceback': tb,
+        }
+    }
