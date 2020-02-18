@@ -50,7 +50,7 @@ class Formatter(FormatterBase):
     def _make_response(self, body, content_type):
         return Response(body, content_type=content_type)
 
-    def configure(self, extra_encoders):
+    def configure(self, extra_encoders=None):
         self.extra_encoders = extra_encoders
 
 
