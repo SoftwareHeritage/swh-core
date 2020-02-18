@@ -12,8 +12,8 @@ aiohttp_utils>=3.1.1
 arrow
 decorator
 Flask
+iso8601
 msgpack>0.5
-python-dateutil
 requests
 blinker
 
@@ -34,8 +34,8 @@ aiohttp_utils>=3.1.1
 arrow
 decorator
 Flask
+iso8601
 msgpack>0.5
-python-dateutil
 requests
 blinker
 systemd-python

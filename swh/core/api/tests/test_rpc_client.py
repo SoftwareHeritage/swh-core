@@ -8,20 +8,28 @@ import pytest
 
 from swh.core.api import remote_api_endpoint, RPCClient
 
+from .test_serializers import ExtraType, extra_encoders, extra_decoders
+
 
 @pytest.fixture
 def rpc_client(requests_mock):
     class TestStorage:
         @remote_api_endpoint('test_endpoint_url')
         def test_endpoint(self, test_data, db=None, cur=None):
-            return 'egg'
+            ...
 
         @remote_api_endpoint('path/to/endpoint')
         def something(self, data, db=None, cur=None):
-            return 'spam'
+            ...
+
+        @remote_api_endpoint('serializer_test')
+        def serializer_test(self, data, db=None, cur=None):
+            ...
 
     class Testclient(RPCClient):
         backend_class = TestStorage
+        extra_type_encoders = extra_encoders
+        extra_type_decoders = extra_decoders
 
     def callback(request, context):
         assert request.headers['Content-Type'] == 'application/x-msgpack'
@@ -30,6 +38,10 @@ def rpc_client(requests_mock):
             context.content = b'\xa3egg'
         elif request.path == '/path/to/endpoint':
             context.content = b'\xa4spam'
+        elif request.path == '/serializer_test':
+            context.content = (
+                b'\x82\xc4\x07swhtype\xa9extratype'
+                b'\xc4\x01d\x92\x81\xa4spam\xa3egg\xa3qux')
         else:
             assert False
         return context.content
@@ -54,3 +66,8 @@ def test_client(rpc_client):
     assert res == 'spam'
     res = rpc_client.something(data='whatever')
     assert res == 'spam'
+
+
+def test_client_extra_serializers(rpc_client):
+    res = rpc_client.serializer_test(['foo', ExtraType('bar', b'baz')])
+    assert res == ExtraType({'spam': 'egg'}, 'qux')
