@@ -11,6 +11,13 @@ from flask import url_for
 
 from swh.core.api import remote_api_endpoint, RPCServerApp
 
+from .test_serializers import ExtraType, extra_encoders, extra_decoders
+
+
+class MyRPCServerApp(RPCServerApp):
+    extra_type_encoders = extra_encoders
+    extra_type_decoders = extra_decoders
+
 
 @pytest.fixture
 def app():
@@ -24,7 +31,12 @@ def app():
         def something(self, data, db=None, cur=None):
             return data
 
-    return RPCServerApp('testapp', backend_class=TestStorage)
+        @remote_api_endpoint('serializer_test')
+        def serializer_test(self, data, db=None, cur=None):
+            assert data == ['foo', ExtraType('bar', b'baz')]
+            return ExtraType({'spam': 'egg'}, 'qux')
+
+    return MyRPCServerApp('testapp', backend_class=TestStorage)
 
 
 def test_api_endpoint(flask_app_client):
@@ -71,3 +83,18 @@ def test_rpc_server(flask_app_client):
     assert res.status_code == 200
     assert res.mimetype == 'application/x-msgpack'
     assert res.data == b'\xa3egg'
+
+
+def test_rpc_server_extra_serializers(flask_app_client):
+    res = flask_app_client.post(
+        url_for('serializer_test'),
+        headers=[('Content-Type', 'application/x-msgpack'),
+                 ('Accept', 'application/x-msgpack')],
+        data=b'\x81\xa4data\x92\xa3foo\x82\xc4\x07swhtype\xa9extratype'
+             b'\xc4\x01d\x92\xa3bar\xc4\x03baz')
+
+    assert res.status_code == 200
+    assert res.mimetype == 'application/x-msgpack'
+    assert res.data == (
+        b'\x82\xc4\x07swhtype\xa9extratype\xc4'
+        b'\x01d\x92\x81\xa4spam\xa3egg\xa3qux')

@@ -5,6 +5,7 @@
 
 import datetime
 import json
+from typing import Any, Callable, List, Tuple
 import unittest
 from uuid import UUID
 
@@ -19,6 +20,29 @@ from swh.core.api.serializers import (
     msgpack_loads,
     decode_response
 )
+
+
+class ExtraType:
+    def __init__(self, arg1, arg2):
+        self.arg1 = arg1
+        self.arg2 = arg2
+
+    def __repr__(self):
+        return f'ExtraType({self.arg1}, {self.arg2})'
+
+    def __eq__(self, other):
+        return isinstance(other, ExtraType) \
+            and (self.arg1, self.arg2) == (other.arg1, other.arg2)
+
+
+extra_encoders: List[Tuple[type, str, Callable[..., Any]]] = [
+    (ExtraType, 'extratype', lambda o: (o.arg1, o.arg2))
+]
+
+
+extra_decoders = {
+    'extratype': lambda o: ExtraType(*o),
+}
 
 
 class Serializers(unittest.TestCase):
@@ -67,6 +91,16 @@ class Serializers(unittest.TestCase):
         data = json.dumps(self.data, cls=SWHJSONEncoder)
         self.assertEqual(self.data, json.loads(data, cls=SWHJSONDecoder))
 
+    def test_round_trip_json_extra_types(self):
+        original_data = [ExtraType('baz', self.data), 'qux']
+
+        data = json.dumps(original_data, cls=SWHJSONEncoder,
+                          extra_encoders=extra_encoders)
+        self.assertEqual(
+            original_data,
+            json.loads(
+                data, cls=SWHJSONDecoder, extra_decoders=extra_decoders))
+
     def test_encode_swh_json(self):
         data = json.dumps(self.data, cls=SWHJSONEncoder)
         self.assertEqual(self.encoded_data, json.loads(data))
@@ -74,6 +108,13 @@ class Serializers(unittest.TestCase):
     def test_round_trip_msgpack(self):
         data = msgpack_dumps(self.data)
         self.assertEqual(self.data, msgpack_loads(data))
+
+    def test_round_trip_msgpack_extra_types(self):
+        original_data = [ExtraType('baz', self.data), 'qux']
+
+        data = msgpack_dumps(original_data, extra_encoders=extra_encoders)
+        self.assertEqual(
+            original_data, msgpack_loads(data, extra_decoders=extra_decoders))
 
     def test_generator_json(self):
         data = json.dumps(self.generator, cls=SWHJSONEncoder)
