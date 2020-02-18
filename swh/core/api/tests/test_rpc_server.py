@@ -10,7 +10,7 @@ import msgpack
 from flask import url_for
 
 from swh.core.api import remote_api_endpoint, RPCServerApp
-
+from swh.core.api import negotiate, JSONFormatter, MsgpackFormatter
 from .test_serializers import ExtraType, extra_encoders, extra_decoders
 
 
@@ -98,3 +98,21 @@ def test_rpc_server_extra_serializers(flask_app_client):
     assert res.data == (
         b'\x82\xc4\x07swhtype\xa9extratype\xc4'
         b'\x01d\x92\x81\xa4spam\xa3egg\xa3qux')
+
+
+def test_api_negotiate_no_extra_encoders(app, flask_app_client):
+    url = '/test/negotiate/no/extra/encoders'
+
+    @app.route(url, methods=['POST'])
+    @negotiate(MsgpackFormatter)
+    @negotiate(JSONFormatter)
+    def endpoint():
+        return 'test'
+
+    res = flask_app_client.post(
+        url,
+        headers=[('Content-Type', 'application/json')],
+    )
+    assert res.status_code == 200
+    assert res.mimetype == 'application/json'
+    assert res.data == b'"test"'
