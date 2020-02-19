@@ -1,3 +1,9 @@
+swh-core (0.0.91-1~swh2) unstable-swh; urgency=medium
+
+  * Add missing python3-iso8601 build dependency
+
+ -- Antoine Lambert <antoine.lambert@inria.fr>  Wed, 19 Feb 2020 11:18:34 +0100
+
 swh-core (0.0.91-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.91     - (tagged by Antoine Lambert
