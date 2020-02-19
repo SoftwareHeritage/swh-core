@@ -1,3 +1,9 @@
+swh-core (0.0.91-1~swh2~bpo10+1) buster-swh; urgency=medium
+
+  * Rebuild for buster-swh
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 19 Feb 2020 10:39:36 +0000
+
 swh-core (0.0.91-1~swh2) unstable-swh; urgency=medium
 
   * Add missing python3-iso8601 build dependency
