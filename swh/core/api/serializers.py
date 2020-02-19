@@ -208,8 +208,13 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
         return obj
 
     try:
-        return msgpack.unpackb(data, raw=False,
-                               object_hook=decode_types)
+        try:
+            return msgpack.unpackb(data, raw=False,
+                                   object_hook=decode_types,
+                                   strict_map_key=False)
+        except TypeError:  # msgpack < 0.6.0
+            return msgpack.unpackb(data, raw=False,
+                                   object_hook=decode_types)
     except TypeError:  # msgpack < 0.5.2
         return msgpack.unpackb(data, encoding='utf-8',
                                object_hook=decode_types)

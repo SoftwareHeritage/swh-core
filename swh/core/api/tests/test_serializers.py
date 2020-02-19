@@ -106,8 +106,12 @@ class Serializers(unittest.TestCase):
         self.assertEqual(self.encoded_data, json.loads(data))
 
     def test_round_trip_msgpack(self):
-        data = msgpack_dumps(self.data)
-        self.assertEqual(self.data, msgpack_loads(data))
+        original_data = {
+            **self.data,
+            'none_dict_key': {None: 42},
+        }
+        data = msgpack_dumps(original_data)
+        self.assertEqual(original_data, msgpack_loads(data))
 
     def test_round_trip_msgpack_extra_types(self):
         original_data = [ExtraType('baz', self.data), 'qux']

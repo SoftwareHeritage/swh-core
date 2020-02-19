@@ -102,8 +102,8 @@ async def test_get_server_exception(async_app, aiohttp_client) -> None:
     resp = await cli.get('/server_exception')
     assert resp.status == 500
     data = await resp.read()
-    data = msgpack.unpackb(data)
-    assert data[b'exception'][b'type'] == b'TestServerException'
+    data = msgpack.unpackb(data, raw=False)
+    assert data['exception']['type'] == 'TestServerException'
 
 
 async def test_get_client_error(async_app, aiohttp_client) -> None:
@@ -111,8 +111,8 @@ async def test_get_client_error(async_app, aiohttp_client) -> None:
     resp = await cli.get('/client_error')
     assert resp.status == 400
     data = await resp.read()
-    data = msgpack.unpackb(data)
-    assert data[b'exception'][b'type'] == b'TestClientError'
+    data = msgpack.unpackb(data, raw=False)
+    assert data['exception']['type'] == 'TestClientError'
 
 
 async def test_get_simple_nego(async_app, aiohttp_client) -> None:
