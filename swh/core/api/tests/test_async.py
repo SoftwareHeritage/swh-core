@@ -1,4 +1,4 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -16,6 +16,14 @@ from swh.core.api.serializers import msgpack_dumps, SWHJSONEncoder
 
 
 pytest_plugins = ['aiohttp.pytest_plugin', 'pytester']
+
+
+class TestServerException(Exception):
+    pass
+
+
+class TestClientError(Exception):
+    pass
 
 
 async def root(request):
@@ -43,6 +51,14 @@ async def echo(request):
     return Response(data)
 
 
+async def server_exception(request):
+    raise TestServerException()
+
+
+async def client_error(request):
+    raise TestClientError()
+
+
 async def echo_no_nego(request):
     # let the content negotiation handle the serialization for us...
     data = await decode_request(request)
@@ -59,9 +75,12 @@ def check_mimetype(src, dst):
 @pytest.fixture
 def async_app():
     app = RPCServerApp()
+    app.client_exception_classes = (TestClientError,)
     app.router.add_route('GET', '/', root)
     app.router.add_route('GET', '/struct', struct)
     app.router.add_route('POST', '/echo', echo)
+    app.router.add_route('GET', '/server_exception', server_exception)
+    app.router.add_route('GET', '/client_error', client_error)
     app.router.add_route('POST', '/echo-no-nego', echo_no_nego)
     return app
 
@@ -76,6 +95,24 @@ async def test_get_simple(async_app, aiohttp_client) -> None:
     data = await resp.read()
     value = msgpack.unpackb(data, raw=False)
     assert value == 'toor'
+
+
+async def test_get_server_exception(async_app, aiohttp_client) -> None:
+    cli = await aiohttp_client(async_app)
+    resp = await cli.get('/server_exception')
+    assert resp.status == 500
+    data = await resp.read()
+    data = msgpack.unpackb(data)
+    assert data[b'exception'][b'type'] == b'TestServerException'
+
+
+async def test_get_client_error(async_app, aiohttp_client) -> None:
+    cli = await aiohttp_client(async_app)
+    resp = await cli.get('/client_error')
+    assert resp.status == 400
+    data = await resp.read()
+    data = msgpack.unpackb(data)
+    assert data[b'exception'][b'type'] == b'TestClientError'
 
 
 async def test_get_simple_nego(async_app, aiohttp_client) -> None:

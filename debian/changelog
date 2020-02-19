@@ -1,8 +1,37 @@
-swh-core (0.0.88-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.91-1~swh2) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Add missing python3-iso8601 build dependency
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 14 Feb 2020 11:28:28 +0000
+ -- Antoine Lambert <antoine.lambert@inria.fr>  Wed, 19 Feb 2020 11:18:34 +0100
+
+swh-core (0.0.91-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.91     - (tagged by Antoine Lambert
+    <antoine.lambert@inria.fr> on 2020-02-18 16:43:59 +0100)
+  * Upstream changes:     - version 0.0.91
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 18 Feb 2020 15:51:39 +0000
+
+swh-core (0.0.90-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.90     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-02-18 13:54:30 +0100)
+  * Upstream changes:     - v0.0.90     - Remove exception pickling from
+    the async server, as in the sync server.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 18 Feb 2020 12:59:38 +0000
+
+swh-core (0.0.89-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.89     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-02-18 11:35:01 +0100)
+  * Upstream changes:     - v0.0.89     - * Change msgpack serialization
+    to be closer to the JSON one.     - * Add support for extra
+    {de,en}coders.     - * Add extra_type_encoders and
+    extra_type_decoders attributes to RPC clients and servers.     - *
+    Use iso8601.parse_date instead of dateutil.parser.parse.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 18 Feb 2020 10:43:34 +0000
 
 swh-core (0.0.88-1~swh1) unstable-swh; urgency=medium
 
