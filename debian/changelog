@@ -1,3 +1,11 @@
+swh-core (0.0.92-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.92     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-02-19 15:40:57 +0100)
+  * Upstream changes:     - v0.0.92     - Add support for msgpack 1.0.0
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 19 Feb 2020 14:45:27 +0000
+
 swh-core (0.0.91-1~swh2) unstable-swh; urgency=medium
 
   * Add missing python3-iso8601 build dependency
