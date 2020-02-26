@@ -1,3 +1,12 @@
+swh-core (0.0.93-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.0.93     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-02-26 15:26:29 +0100)
+  * Upstream changes:     - v0.0.93     - Reintroduce support for
+    decoding legacy msgpack encoding
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 26 Feb 2020 14:29:46 +0000
+
 swh-core (0.0.92-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.0.92     - (tagged by Valentin Lorentz
