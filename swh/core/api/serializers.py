@@ -201,10 +201,23 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
         decoders = {**decoders, **extra_decoders}
 
     def decode_types(obj):
+        # Support for current encodings
         if set(obj.keys()) == {b'd', b'swhtype'}:
             decoder = decoders.get(obj[b'swhtype'])
             if decoder:
                 return decoder(obj[b'd'])
+
+        # Support for legacy encodings
+        if b'__datetime__' in obj and obj[b'__datetime__']:
+            return iso8601.parse_date(obj[b's'], default_timezone=None)
+        if b'__uuid__' in obj and obj[b'__uuid__']:
+            return UUID(obj[b's'])
+        if b'__timedelta__' in obj and obj[b'__timedelta__']:
+            return datetime.timedelta(**obj[b's'])
+        if b'__arrow__' in obj and obj[b'__arrow__']:
+            return arrow.get(obj[b's'])
+
+        # Fallthrough
         return obj
 
     try:
