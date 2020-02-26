@@ -84,6 +84,37 @@ class Serializers(unittest.TestCase):
                      'd': 'cdd8f804-9db6-40c3-93ab-5955d3836234'},
         }
 
+        self.legacy_msgpack = {
+            'bytes': b'\xc4\x0e123456789\x99\xaf\xff\x00\x12',
+            'datetime_naive': (
+                b'\x82\xc4\x0c__datetime__\xc3\xc4\x01s\xba'
+                b'2015-01-01T12:04:42.231455'
+            ),
+            'datetime_tz': (
+                b'\x82\xc4\x0c__datetime__\xc3\xc4\x01s\xd9 '
+                b'2015-03-04T18:25:13.001234+01:58'
+            ),
+            'datetime_utc': (
+                b'\x82\xc4\x0c__datetime__\xc3\xc4\x01s\xd9 '
+                b'2015-03-04T18:25:13.001234+00:00'
+            ),
+            'datetime_delta': (
+                b'\x82\xc4\r__timedelta__\xc3\xc4\x01s\x83\xa4'
+                b'days@\xa7seconds\x00\xacmicroseconds\x00'
+            ),
+            'arrow_date': (
+                b'\x82\xc4\t__arrow__\xc3\xc4\x01s\xd9 '
+                b'2018-04-25T16:17:53.533672+00:00'
+            ),
+            'swhtype': b'\xa4fake',
+            'swh_dict': b'\x82\xa7swhtype*\xa1d\xa4test',
+            'random_dict': b'\x81\xa7swhtype+',
+            'uuid': (
+                b'\x82\xc4\x08__uuid__\xc3\xc4\x01s\xd9$'
+                b'cdd8f804-9db6-40c3-93ab-5955d3836234'
+            ),
+        }
+
         self.generator = (i for i in range(5))
         self.gen_lst = list(range(5))
 
@@ -135,3 +166,7 @@ class Serializers(unittest.TestCase):
                           headers={'content-type': 'application/json'})
         response = requests.get('https://example.org/test/data')
         assert decode_response(response) == self.data
+
+    def test_decode_legacy_msgpack(self):
+        for k, v in self.legacy_msgpack.items():
+            assert msgpack_loads(v) == self.data[k]
