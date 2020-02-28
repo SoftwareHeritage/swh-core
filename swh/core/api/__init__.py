@@ -152,7 +152,8 @@ class MetaRPCClient(type):
 
             # Send the request.
             return self.post(meth._endpoint_path, post_data)
-        attributes[meth_name] = meth_
+        if meth_name not in attributes:
+            attributes[meth_name] = meth_
 
 
 class RPCClient(metaclass=MetaRPCClient):
