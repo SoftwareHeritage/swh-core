@@ -26,10 +26,17 @@ def rpc_client(requests_mock):
         def serializer_test(self, data, db=None, cur=None):
             ...
 
+        @remote_api_endpoint('overridden/endpoint')
+        def overridden_method(self, data):
+            return 'foo'
+
     class Testclient(RPCClient):
         backend_class = TestStorage
         extra_type_encoders = extra_encoders
         extra_type_decoders = extra_decoders
+
+        def overridden_method(self, data):
+            return 'bar'
 
     def callback(request, context):
         assert request.headers['Content-Type'] == 'application/x-msgpack'
@@ -71,3 +78,8 @@ def test_client(rpc_client):
 def test_client_extra_serializers(rpc_client):
     res = rpc_client.serializer_test(['foo', ExtraType('bar', b'baz')])
     assert res == ExtraType({'spam': 'egg'}, 'qux')
+
+
+def test_client_overridden_method(rpc_client):
+    res = rpc_client.overridden_method('foo')
+    assert res == 'bar'
