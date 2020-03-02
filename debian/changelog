@@ -1,8 +1,11 @@
-swh-core (0.0.93-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.94-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.0.94     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-02-28 14:28:11 +0100)
+  * Upstream changes:     - v0.0.94     - Allow subclasses of RPCClient
+    to override methods.
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 26 Feb 2020 14:31:10 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 28 Feb 2020 13:32:41 +0000
 
 swh-core (0.0.93-1~swh1) unstable-swh; urgency=medium
 
