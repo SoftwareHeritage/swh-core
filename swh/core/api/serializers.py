@@ -195,7 +195,12 @@ def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
 
 
 def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
-    """Read data as a msgpack stream"""
+    """Read data as a msgpack stream.
+
+    .. Caution::
+       This function is used by swh.journal to decode the contents of the
+       journal. This function **must** be kept backwards-compatible.
+    """
     decoders = DECODERS
     if extra_decoders:
         decoders = {**decoders, **extra_decoders}
