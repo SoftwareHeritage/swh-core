@@ -115,7 +115,10 @@ def test_journal_handler_w_data(send):
     log.addHandler(logger.JournalHandler())
     log.setLevel(logging.DEBUG)
 
-    _, ln = log.debug('something cool %s', ['with', {'extra': 'data'}]), lineno()  # noqa
+    _, ln = (
+        log.debug('something cool %s', ['with', {'extra': 'data'}]),
+        lineno() - 1,
+    )
 
     send.assert_called_with(
         "something cool ['with', {'extra': 'data'}]",
