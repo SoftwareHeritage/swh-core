@@ -11,14 +11,13 @@ from .conftest import DATADIR
 # "datadir" fixture to specify where to retrieve the data files from.
 
 
-def test_requests_mock_datadir_with_datadir_fixture_override(
-        requests_mock_datadir):
+def test_requests_mock_datadir_with_datadir_fixture_override(requests_mock_datadir):
     """Override datadir fixture should retrieve data from elsewhere
 
     """
-    response = requests.get('https://example.com/file.json')
+    response = requests.get("https://example.com/file.json")
     assert response.ok
-    assert response.json() == {'welcome': 'you'}
+    assert response.json() == {"welcome": "you"}
 
 
 def test_data_dir_override(datadir):

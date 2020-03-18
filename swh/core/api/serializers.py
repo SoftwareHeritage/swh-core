@@ -19,27 +19,29 @@ from requests import Response
 
 
 ENCODERS = [
-    (arrow.Arrow, 'arrow', arrow.Arrow.isoformat),
-    (datetime.datetime, 'datetime', datetime.datetime.isoformat),
-    (datetime.timedelta, 'timedelta', lambda o: {
-        'days': o.days,
-        'seconds': o.seconds,
-        'microseconds': o.microseconds,
-    }),
-    (UUID, 'uuid', str),
-
+    (arrow.Arrow, "arrow", arrow.Arrow.isoformat),
+    (datetime.datetime, "datetime", datetime.datetime.isoformat),
+    (
+        datetime.timedelta,
+        "timedelta",
+        lambda o: {
+            "days": o.days,
+            "seconds": o.seconds,
+            "microseconds": o.microseconds,
+        },
+    ),
+    (UUID, "uuid", str),
     # Only for JSON:
-    (bytes, 'bytes', lambda o: base64.b85encode(o).decode('ascii')),
+    (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
 ]
 
 DECODERS = {
-    'arrow': arrow.get,
-    'datetime': lambda d: iso8601.parse_date(d, default_timezone=None),
-    'timedelta': lambda d: datetime.timedelta(**d),
-    'uuid': UUID,
-
+    "arrow": arrow.get,
+    "datetime": lambda d: iso8601.parse_date(d, default_timezone=None),
+    "timedelta": lambda d: datetime.timedelta(**d),
+    "uuid": UUID,
     # Only for JSON:
-    'bytes': base64.b85decode,
+    "bytes": base64.b85decode,
 }
 
 
@@ -47,24 +49,20 @@ def encode_data_client(data: Any, extra_encoders=None) -> bytes:
     try:
         return msgpack_dumps(data, extra_encoders=extra_encoders)
     except OverflowError as e:
-        raise ValueError('Limits were reached. Please, check your input.\n' +
-                         str(e))
+        raise ValueError("Limits were reached. Please, check your input.\n" + str(e))
 
 
 def decode_response(response: Response, extra_decoders=None) -> Any:
-    content_type = response.headers['content-type']
+    content_type = response.headers["content-type"]
 
-    if content_type.startswith('application/x-msgpack'):
-        r = msgpack_loads(response.content,
-                          extra_decoders=extra_decoders)
-    elif content_type.startswith('application/json'):
-        r = json_loads(response.text,
-                       extra_decoders=extra_decoders)
-    elif content_type.startswith('text/'):
+    if content_type.startswith("application/x-msgpack"):
+        r = msgpack_loads(response.content, extra_decoders=extra_decoders)
+    elif content_type.startswith("application/json"):
+        r = json_loads(response.text, extra_decoders=extra_decoders)
+    elif content_type.startswith("text/"):
         r = response.text
     else:
-        raise ValueError('Wrong content type `%s` for API response'
-                         % content_type)
+        raise ValueError("Wrong content type `%s` for API response" % content_type)
 
     return r
 
@@ -99,13 +97,12 @@ class SWHJSONEncoder(json.JSONEncoder):
         if extra_encoders:
             self.encoders += extra_encoders
 
-    def default(self, o: Any
-                ) -> Union[Dict[str, Union[Dict[str, int], str]], list]:
+    def default(self, o: Any) -> Union[Dict[str, Union[Dict[str, int], str]], list]:
         for (type_, type_name, encoder) in self.encoders:
             if isinstance(o, type_):
                 return {
-                    'swhtype': type_name,
-                    'd': encoder(o),
+                    "swhtype": type_name,
+                    "d": encoder(o),
                 }
         try:
             return super().default(o)
@@ -146,12 +143,12 @@ class SWHJSONDecoder(json.JSONDecoder):
 
     def decode_data(self, o: Any) -> Any:
         if isinstance(o, dict):
-            if set(o.keys()) == {'d', 'swhtype'}:
-                if o['swhtype'] == 'bytes':
-                    return base64.b85decode(o['d'])
-                decoder = self.decoders.get(o['swhtype'])
+            if set(o.keys()) == {"d", "swhtype"}:
+                if o["swhtype"] == "bytes":
+                    return base64.b85decode(o["d"])
+                decoder = self.decoders.get(o["swhtype"])
                 if decoder:
-                    return decoder(self.decode_data(o['d']))
+                    return decoder(self.decode_data(o["d"]))
             return {key: self.decode_data(value) for key, value in o.items()}
         if isinstance(o, list):
             return [self.decode_data(value) for value in o]
@@ -164,13 +161,11 @@ class SWHJSONDecoder(json.JSONDecoder):
 
 
 def json_dumps(data: Any, extra_encoders=None) -> str:
-    return json.dumps(data, cls=SWHJSONEncoder,
-                      extra_encoders=extra_encoders)
+    return json.dumps(data, cls=SWHJSONEncoder, extra_encoders=extra_encoders)
 
 
 def json_loads(data: str, extra_decoders=None) -> Any:
-    return json.loads(data, cls=SWHJSONDecoder,
-                      extra_decoders=extra_decoders)
+    return json.loads(data, cls=SWHJSONDecoder, extra_decoders=extra_decoders)
 
 
 def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
@@ -186,8 +181,8 @@ def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
         for (type_, type_name, encoder) in encoders:
             if isinstance(obj, type_):
                 return {
-                    b'swhtype': type_name,
-                    b'd': encoder(obj),
+                    b"swhtype": type_name,
+                    b"d": encoder(obj),
                 }
         return obj
 
@@ -207,44 +202,42 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
 
     def decode_types(obj):
         # Support for current encodings
-        if set(obj.keys()) == {b'd', b'swhtype'}:
-            decoder = decoders.get(obj[b'swhtype'])
+        if set(obj.keys()) == {b"d", b"swhtype"}:
+            decoder = decoders.get(obj[b"swhtype"])
             if decoder:
-                return decoder(obj[b'd'])
+                return decoder(obj[b"d"])
 
         # Support for legacy encodings
-        if b'__datetime__' in obj and obj[b'__datetime__']:
-            return iso8601.parse_date(obj[b's'], default_timezone=None)
-        if b'__uuid__' in obj and obj[b'__uuid__']:
-            return UUID(obj[b's'])
-        if b'__timedelta__' in obj and obj[b'__timedelta__']:
-            return datetime.timedelta(**obj[b's'])
-        if b'__arrow__' in obj and obj[b'__arrow__']:
-            return arrow.get(obj[b's'])
+        if b"__datetime__" in obj and obj[b"__datetime__"]:
+            return iso8601.parse_date(obj[b"s"], default_timezone=None)
+        if b"__uuid__" in obj and obj[b"__uuid__"]:
+            return UUID(obj[b"s"])
+        if b"__timedelta__" in obj and obj[b"__timedelta__"]:
+            return datetime.timedelta(**obj[b"s"])
+        if b"__arrow__" in obj and obj[b"__arrow__"]:
+            return arrow.get(obj[b"s"])
 
         # Fallthrough
         return obj
 
     try:
         try:
-            return msgpack.unpackb(data, raw=False,
-                                   object_hook=decode_types,
-                                   strict_map_key=False)
+            return msgpack.unpackb(
+                data, raw=False, object_hook=decode_types, strict_map_key=False
+            )
         except TypeError:  # msgpack < 0.6.0
-            return msgpack.unpackb(data, raw=False,
-                                   object_hook=decode_types)
+            return msgpack.unpackb(data, raw=False, object_hook=decode_types)
     except TypeError:  # msgpack < 0.5.2
-        return msgpack.unpackb(data, encoding='utf-8',
-                               object_hook=decode_types)
+        return msgpack.unpackb(data, encoding="utf-8", object_hook=decode_types)
 
 
 def exception_to_dict(exception):
     tb = traceback.format_exception(None, exception, exception.__traceback__)
     return {
-        'exception': {
-            'type': type(exception).__name__,
-            'args': exception.args,
-            'message': str(exception),
-            'traceback': tb,
+        "exception": {
+            "type": type(exception).__name__,
+            "args": exception.args,
+            "message": str(exception),
+            "traceback": tb,
         }
     }

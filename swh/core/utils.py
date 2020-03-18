@@ -51,14 +51,14 @@ def grouper(iterable, n):
 
 def backslashescape_errors(exception):
     if isinstance(exception, UnicodeDecodeError):
-        bad_data = exception.object[exception.start:exception.end]
-        escaped = ''.join(r'\x%02x' % x for x in bad_data)
+        bad_data = exception.object[exception.start : exception.end]
+        escaped = "".join(r"\x%02x" % x for x in bad_data)
         return escaped, exception.end
 
     return codecs.backslashreplace_errors(exception)
 
 
-codecs.register_error('backslashescape', backslashescape_errors)
+codecs.register_error("backslashescape", backslashescape_errors)
 
 
 def encode_with_unescape(value):
@@ -68,17 +68,18 @@ def encode_with_unescape(value):
     odd_backslashes = False
     i = 0
     while i < len(value):
-        if value[i] == '\\':
+        if value[i] == "\\":
             odd_backslashes = not odd_backslashes
         else:
             if odd_backslashes:
-                if value[i] != 'x':
-                    raise ValueError('invalid escape for %r at position %d' %
-                                     (value, i-1))
+                if value[i] != "x":
+                    raise ValueError(
+                        "invalid escape for %r at position %d" % (value, i - 1)
+                    )
                 slices.append(
-                    value[start:i-1].replace('\\\\', '\\').encode('utf-8')
+                    value[start : i - 1].replace("\\\\", "\\").encode("utf-8")
                 )
-                slices.append(bytes.fromhex(value[i+1:i+3]))
+                slices.append(bytes.fromhex(value[i + 1 : i + 3]))
 
                 odd_backslashes = False
                 start = i = i + 3
@@ -86,11 +87,9 @@ def encode_with_unescape(value):
 
         i += 1
 
-    slices.append(
-        value[start:i].replace('\\\\', '\\').encode('utf-8')
-    )
+    slices.append(value[start:i].replace("\\\\", "\\").encode("utf-8"))
 
-    return b''.join(slices)
+    return b"".join(slices)
 
 
 def decode_with_escape(value):
@@ -99,9 +98,9 @@ def decode_with_escape(value):
     strings.
     """
     # escape backslashes
-    value = value.replace(b'\\', b'\\\\')
-    value = value.replace(b'\x00', b'\\x00')
-    return value.decode('utf-8', 'backslashescape')
+    value = value.replace(b"\\", b"\\\\")
+    value = value.replace(b"\x00", b"\\x00")
+    return value.decode("utf-8", "backslashescape")
 
 
 def commonname(path0, path1, as_str=False):
@@ -120,5 +119,5 @@ def numfile_sortkey(fname):
 
     Typically used to sort sql/nn-swh-xxx.sql files.
     """
-    num, rem = re.match(r'(\d*)(.*)', fname).groups()
+    num, rem = re.match(r"(\d*)(.*)", fname).groups()
     return (num and int(num) or 99, rem)
