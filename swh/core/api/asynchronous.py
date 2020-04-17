@@ -21,9 +21,8 @@ from aiohttp_utils import negotiation, Response
 def encode_msgpack(data, **kwargs):
     return aiohttp.web.Response(
         body=msgpack_dumps(data),
-        headers=multidict.MultiDict(
-            {'Content-Type': 'application/x-msgpack'}),
-        **kwargs
+        headers=multidict.MultiDict({"Content-Type": "application/x-msgpack"}),
+        **kwargs,
     )
 
 
@@ -39,17 +38,16 @@ def render_json(request, data):
 
 
 async def decode_request(request):
-    content_type = request.headers.get('Content-Type').split(';')[0].strip()
+    content_type = request.headers.get("Content-Type").split(";")[0].strip()
     data = await request.read()
     if not data:
         return {}
-    if content_type == 'application/x-msgpack':
+    if content_type == "application/x-msgpack":
         r = msgpack_loads(data)
-    elif content_type == 'application/json':
+    elif content_type == "application/json":
         r = json_loads(data)
     else:
-        raise ValueError('Wrong content type `%s` for API request'
-                         % content_type)
+        raise ValueError("Wrong content type `%s` for API request" % content_type)
     return r
 
 
@@ -67,6 +65,7 @@ async def error_middleware(app, handler):
             else:
                 status = 500
             return encode_data_server(res, status=status)
+
     return middleware_handler
 
 
@@ -79,19 +78,20 @@ class RPCServerApp(aiohttp.web.Application):
         middlewares = (error_middleware,) + middlewares
         # renderers are sorted in order of increasing desirability (!)
         # see mimeparse.best_match() docstring.
-        renderers = OrderedDict([
-            ('application/json', render_json),
-            ('application/x-msgpack', render_msgpack),
-        ])
+        renderers = OrderedDict(
+            [
+                ("application/json", render_json),
+                ("application/x-msgpack", render_msgpack),
+            ]
+        )
         nego_middleware = negotiation.negotiation_middleware(
-            renderers=renderers,
-            force_rendering=True)
+            renderers=renderers, force_rendering=True
+        )
         middlewares = (nego_middleware,) + middlewares
 
         super().__init__(*args, middlewares=middlewares, **kwargs)
 
 
-@deprecated(version='0.0.64',
-            reason='Use the RPCServerApp instead')
+@deprecated(version="0.0.64", reason="Use the RPCServerApp instead")
 class SWHRemoteAPI(RPCServerApp):
     pass

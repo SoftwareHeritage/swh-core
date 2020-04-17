@@ -15,7 +15,7 @@ except ImportError:
     current_task = None
 
 
-EXTRA_LOGDATA_PREFIX = 'swh_'
+EXTRA_LOGDATA_PREFIX = "swh_"
 
 
 def db_level_of_py_level(lvl):
@@ -30,33 +30,34 @@ def get_extra_data(record, task_args=True):
     """Get the extra data to insert to the database from the logging record"""
     log_data = record.__dict__
 
-    extra_data = {k[len(EXTRA_LOGDATA_PREFIX):]: v
-                  for k, v in log_data.items()
-                  if k.startswith(EXTRA_LOGDATA_PREFIX)}
+    extra_data = {
+        k[len(EXTRA_LOGDATA_PREFIX) :]: v
+        for k, v in log_data.items()
+        if k.startswith(EXTRA_LOGDATA_PREFIX)
+    }
 
-    args = log_data.get('args')
+    args = log_data.get("args")
     if args:
-        extra_data['logging_args'] = args
+        extra_data["logging_args"] = args
 
     # Retrieve Celery task info
     if current_task and current_task.request:
-        extra_data['task'] = {
-            'id': current_task.request.id,
-            'name': current_task.name,
+        extra_data["task"] = {
+            "id": current_task.request.id,
+            "name": current_task.name,
         }
         if task_args:
-            extra_data['task'].update({
-                'kwargs': current_task.request.kwargs,
-                'args': current_task.request.args,
-            })
+            extra_data["task"].update(
+                {
+                    "kwargs": current_task.request.kwargs,
+                    "args": current_task.request.args,
+                }
+            )
 
     return extra_data
 
 
-def flatten(
-        data: Any,
-        separator: str = "_"
-) -> Generator[Tuple[str, Any], None, None]:
+def flatten(data: Any, separator: str = "_") -> Generator[Tuple[str, Any], None, None]:
     """Flatten the data dictionary into a flat structure"""
 
     def inner_flatten(
@@ -102,13 +103,15 @@ class JournalHandler(_JournalHandler):
             }
             msg = self.format(record)
             pri = self.mapPriority(record.levelno)
-            send(msg,
-                 PRIORITY=format(pri),
-                 LOGGER=record.name,
-                 THREAD_NAME=record.threadName,
-                 CODE_FILE=record.pathname,
-                 CODE_LINE=record.lineno,
-                 CODE_FUNC=record.funcName,
-                 **extra_data)
+            send(
+                msg,
+                PRIORITY=format(pri),
+                LOGGER=record.name,
+                THREAD_NAME=record.threadName,
+                CODE_FILE=record.pathname,
+                CODE_LINE=record.lineno,
+                CODE_FUNC=record.funcName,
+                **extra_data,
+            )
         except Exception:
             self.handleError(record)

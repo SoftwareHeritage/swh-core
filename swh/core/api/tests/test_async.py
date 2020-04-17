@@ -15,7 +15,7 @@ from swh.core.api.asynchronous import encode_msgpack, decode_request
 from swh.core.api.serializers import msgpack_dumps, SWHJSONEncoder
 
 
-pytest_plugins = ['aiohttp.pytest_plugin', 'pytester']
+pytest_plugins = ["aiohttp.pytest_plugin", "pytester"]
 
 
 class TestServerException(Exception):
@@ -27,19 +27,19 @@ class TestClientError(Exception):
 
 
 async def root(request):
-    return Response('toor')
+    return Response("toor")
 
-STRUCT = {'txt': 'something stupid',
-          # 'date': datetime.date(2019, 6, 9),  # not supported
-          'datetime': datetime.datetime(2019, 6, 9, 10, 12),
-          'timedelta': datetime.timedelta(days=-2, hours=3),
-          'int': 42,
-          'float': 3.14,
-          'subdata': {'int': 42,
-                      'datetime': datetime.datetime(2019, 6, 10, 11, 12),
-                      },
-          'list': [42, datetime.datetime(2019, 9, 10, 11, 12), 'ok'],
-          }
+
+STRUCT = {
+    "txt": "something stupid",
+    # 'date': datetime.date(2019, 6, 9),  # not supported
+    "datetime": datetime.datetime(2019, 6, 9, 10, 12),
+    "timedelta": datetime.timedelta(days=-2, hours=3),
+    "int": 42,
+    "float": 3.14,
+    "subdata": {"int": 42, "datetime": datetime.datetime(2019, 6, 10, 11, 12),},
+    "list": [42, datetime.datetime(2019, 9, 10, 11, 12), "ok"],
+}
 
 
 async def struct(request):
@@ -67,8 +67,8 @@ async def echo_no_nego(request):
 
 
 def check_mimetype(src, dst):
-    src = src.split(';')[0].strip()
-    dst = dst.split(';')[0].strip()
+    src = src.split(";")[0].strip()
+    dst = dst.split(";")[0].strip()
     assert src == dst
 
 
@@ -76,12 +76,12 @@ def check_mimetype(src, dst):
 def async_app():
     app = RPCServerApp()
     app.client_exception_classes = (TestClientError,)
-    app.router.add_route('GET', '/', root)
-    app.router.add_route('GET', '/struct', struct)
-    app.router.add_route('POST', '/echo', echo)
-    app.router.add_route('GET', '/server_exception', server_exception)
-    app.router.add_route('GET', '/client_error', client_error)
-    app.router.add_route('POST', '/echo-no-nego', echo_no_nego)
+    app.router.add_route("GET", "/", root)
+    app.router.add_route("GET", "/struct", struct)
+    app.router.add_route("POST", "/echo", echo)
+    app.router.add_route("GET", "/server_exception", server_exception)
+    app.router.add_route("GET", "/client_error", client_error)
+    app.router.add_route("POST", "/echo-no-nego", echo_no_nego)
     return app
 
 
@@ -89,58 +89,57 @@ async def test_get_simple(async_app, aiohttp_client) -> None:
     assert async_app is not None
 
     cli = await aiohttp_client(async_app)
-    resp = await cli.get('/')
+    resp = await cli.get("/")
     assert resp.status == 200
-    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
+    check_mimetype(resp.headers["Content-Type"], "application/x-msgpack")
     data = await resp.read()
     value = msgpack.unpackb(data, raw=False)
-    assert value == 'toor'
+    assert value == "toor"
 
 
 async def test_get_server_exception(async_app, aiohttp_client) -> None:
     cli = await aiohttp_client(async_app)
-    resp = await cli.get('/server_exception')
+    resp = await cli.get("/server_exception")
     assert resp.status == 500
     data = await resp.read()
     data = msgpack.unpackb(data, raw=False)
-    assert data['exception']['type'] == 'TestServerException'
+    assert data["exception"]["type"] == "TestServerException"
 
 
 async def test_get_client_error(async_app, aiohttp_client) -> None:
     cli = await aiohttp_client(async_app)
-    resp = await cli.get('/client_error')
+    resp = await cli.get("/client_error")
     assert resp.status == 400
     data = await resp.read()
     data = msgpack.unpackb(data, raw=False)
-    assert data['exception']['type'] == 'TestClientError'
+    assert data["exception"]["type"] == "TestClientError"
 
 
 async def test_get_simple_nego(async_app, aiohttp_client) -> None:
     cli = await aiohttp_client(async_app)
-    for ctype in ('x-msgpack', 'json'):
-        resp = await cli.get('/', headers={'Accept': 'application/%s' % ctype})
+    for ctype in ("x-msgpack", "json"):
+        resp = await cli.get("/", headers={"Accept": "application/%s" % ctype})
         assert resp.status == 200
-        check_mimetype(resp.headers['Content-Type'], 'application/%s' % ctype)
-        assert (await decode_request(resp)) == 'toor'
+        check_mimetype(resp.headers["Content-Type"], "application/%s" % ctype)
+        assert (await decode_request(resp)) == "toor"
 
 
 async def test_get_struct(async_app, aiohttp_client) -> None:
     """Test returned structured from a simple GET data is OK"""
     cli = await aiohttp_client(async_app)
-    resp = await cli.get('/struct')
+    resp = await cli.get("/struct")
     assert resp.status == 200
-    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
+    check_mimetype(resp.headers["Content-Type"], "application/x-msgpack")
     assert (await decode_request(resp)) == STRUCT
 
 
 async def test_get_struct_nego(async_app, aiohttp_client) -> None:
     """Test returned structured from a simple GET data is OK"""
     cli = await aiohttp_client(async_app)
-    for ctype in ('x-msgpack', 'json'):
-        resp = await cli.get('/struct',
-                             headers={'Accept': 'application/%s' % ctype})
+    for ctype in ("x-msgpack", "json"):
+        resp = await cli.get("/struct", headers={"Accept": "application/%s" % ctype})
         assert resp.status == 200
-        check_mimetype(resp.headers['Content-Type'], 'application/%s' % ctype)
+        check_mimetype(resp.headers["Content-Type"], "application/%s" % ctype)
         assert (await decode_request(resp)) == STRUCT
 
 
@@ -149,19 +148,21 @@ async def test_post_struct_msgpack(async_app, aiohttp_client) -> None:
     cli = await aiohttp_client(async_app)
     # simple struct
     resp = await cli.post(
-        '/echo',
-        headers={'Content-Type': 'application/x-msgpack'},
-        data=msgpack_dumps({'toto': 42}))
+        "/echo",
+        headers={"Content-Type": "application/x-msgpack"},
+        data=msgpack_dumps({"toto": 42}),
+    )
     assert resp.status == 200
-    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
-    assert (await decode_request(resp)) == {'toto': 42}
+    check_mimetype(resp.headers["Content-Type"], "application/x-msgpack")
+    assert (await decode_request(resp)) == {"toto": 42}
     # complex struct
     resp = await cli.post(
-        '/echo',
-        headers={'Content-Type': 'application/x-msgpack'},
-        data=msgpack_dumps(STRUCT))
+        "/echo",
+        headers={"Content-Type": "application/x-msgpack"},
+        data=msgpack_dumps(STRUCT),
+    )
     assert resp.status == 200
-    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
+    check_mimetype(resp.headers["Content-Type"], "application/x-msgpack")
     assert (await decode_request(resp)) == STRUCT
 
 
@@ -170,19 +171,21 @@ async def test_post_struct_json(async_app, aiohttp_client) -> None:
     cli = await aiohttp_client(async_app)
 
     resp = await cli.post(
-        '/echo',
-        headers={'Content-Type': 'application/json'},
-        data=json.dumps({'toto': 42}, cls=SWHJSONEncoder))
+        "/echo",
+        headers={"Content-Type": "application/json"},
+        data=json.dumps({"toto": 42}, cls=SWHJSONEncoder),
+    )
     assert resp.status == 200
-    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
-    assert (await decode_request(resp)) == {'toto': 42}
+    check_mimetype(resp.headers["Content-Type"], "application/x-msgpack")
+    assert (await decode_request(resp)) == {"toto": 42}
 
     resp = await cli.post(
-        '/echo',
-        headers={'Content-Type': 'application/json'},
-        data=json.dumps(STRUCT, cls=SWHJSONEncoder))
+        "/echo",
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(STRUCT, cls=SWHJSONEncoder),
+    )
     assert resp.status == 200
-    check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
+    check_mimetype(resp.headers["Content-Type"], "application/x-msgpack")
     # assert resp.headers['Content-Type'] == 'application/x-msgpack'
     assert (await decode_request(resp)) == STRUCT
 
@@ -194,14 +197,17 @@ async def test_post_struct_nego(async_app, aiohttp_client) -> None:
     """
     cli = await aiohttp_client(async_app)
 
-    for ctype in ('x-msgpack', 'json'):
+    for ctype in ("x-msgpack", "json"):
         resp = await cli.post(
-            '/echo',
-            headers={'Content-Type': 'application/json',
-                     'Accept': 'application/%s' % ctype},
-            data=json.dumps(STRUCT, cls=SWHJSONEncoder))
+            "/echo",
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/%s" % ctype,
+            },
+            data=json.dumps(STRUCT, cls=SWHJSONEncoder),
+        )
         assert resp.status == 200
-        check_mimetype(resp.headers['Content-Type'], 'application/%s' % ctype)
+        check_mimetype(resp.headers["Content-Type"], "application/%s" % ctype)
         assert (await decode_request(resp)) == STRUCT
 
 
@@ -212,12 +218,15 @@ async def test_post_struct_no_nego(async_app, aiohttp_client) -> None:
     """
     cli = await aiohttp_client(async_app)
 
-    for ctype in ('x-msgpack', 'json'):
+    for ctype in ("x-msgpack", "json"):
         resp = await cli.post(
-            '/echo-no-nego',
-            headers={'Content-Type': 'application/json',
-                     'Accept': 'application/%s' % ctype},
-            data=json.dumps(STRUCT, cls=SWHJSONEncoder))
+            "/echo-no-nego",
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/%s" % ctype,
+            },
+            data=json.dumps(STRUCT, cls=SWHJSONEncoder),
+        )
         assert resp.status == 200
-        check_mimetype(resp.headers['Content-Type'], 'application/x-msgpack')
+        check_mimetype(resp.headers["Content-Type"], "application/x-msgpack")
         assert (await decode_request(resp)) == STRUCT

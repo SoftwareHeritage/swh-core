@@ -8,21 +8,19 @@ import os
 
 
 def get_sentry_release():
-    main_package = os.environ.get('SWH_MAIN_PACKAGE')
+    main_package = os.environ.get("SWH_MAIN_PACKAGE")
     if main_package:
         version = pkg_resources.get_distribution(main_package).version
-        return f'{main_package}@{version}'
+        return f"{main_package}@{version}"
     else:
         return None
 
 
-def init_sentry(
-        sentry_dsn, *, debug=None, integrations=[],
-        extra_kwargs={}):
+def init_sentry(sentry_dsn, *, debug=None, integrations=[], extra_kwargs={}):
     if debug is None:
-        debug = bool(os.environ.get('SWH_SENTRY_DEBUG'))
-    sentry_dsn = sentry_dsn or os.environ.get('SWH_SENTRY_DSN')
-    environment = os.environ.get('SWH_SENTRY_ENVIRONMENT')
+        debug = bool(os.environ.get("SWH_SENTRY_DEBUG"))
+    sentry_dsn = sentry_dsn or os.environ.get("SWH_SENTRY_DSN")
+    environment = os.environ.get("SWH_SENTRY_ENVIRONMENT")
 
     if sentry_dsn:
         import sentry_sdk

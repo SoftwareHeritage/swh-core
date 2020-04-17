@@ -2,6 +2,7 @@ MANIFEST.in
 Makefile
 README.md
 conftest.py
+pyproject.toml
 requirements-db.txt
 requirements-http.txt
 requirements-logging.txt
@@ -9,6 +10,7 @@ requirements-swh.txt
 requirements-test-db.txt
 requirements-test.txt
 requirements.txt
+setup.cfg
 setup.py
 version.txt
 swh/__init__.py

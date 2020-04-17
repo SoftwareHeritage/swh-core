@@ -27,51 +27,52 @@ def prepare_shutil_state():
 
 
 def test_compress_uncompress_zip(tmp_path):
-    tocompress = tmp_path / 'compressme'
+    tocompress = tmp_path / "compressme"
     tocompress.mkdir()
 
     for i in range(10):
-        fpath = tocompress / ('file%s.txt' % i)
-        fpath.write_text('content of file %s' % i)
+        fpath = tocompress / ("file%s.txt" % i)
+        fpath.write_text("content of file %s" % i)
 
-    zipfile = tmp_path / 'archive.zip'
-    tarball.compress(str(zipfile), 'zip', str(tocompress))
+    zipfile = tmp_path / "archive.zip"
+    tarball.compress(str(zipfile), "zip", str(tocompress))
 
-    destdir = tmp_path / 'destdir'
+    destdir = tmp_path / "destdir"
     tarball.uncompress(str(zipfile), str(destdir))
 
     lsdir = sorted(x.name for x in destdir.iterdir())
-    assert ['file%s.txt' % i for i in range(10)] == lsdir
+    assert ["file%s.txt" % i for i in range(10)] == lsdir
 
 
 def test_compress_uncompress_tar(tmp_path):
-    tocompress = tmp_path / 'compressme'
+    tocompress = tmp_path / "compressme"
     tocompress.mkdir()
 
     for i in range(10):
-        fpath = tocompress / ('file%s.txt' % i)
-        fpath.write_text('content of file %s' % i)
+        fpath = tocompress / ("file%s.txt" % i)
+        fpath.write_text("content of file %s" % i)
 
-    tarfile = tmp_path / 'archive.tar'
-    tarball.compress(str(tarfile), 'tar', str(tocompress))
+    tarfile = tmp_path / "archive.tar"
+    tarball.compress(str(tarfile), "tar", str(tocompress))
 
-    destdir = tmp_path / 'destdir'
+    destdir = tmp_path / "destdir"
     tarball.uncompress(str(tarfile), str(destdir))
 
     lsdir = sorted(x.name for x in destdir.iterdir())
-    assert ['file%s.txt' % i for i in range(10)] == lsdir
+    assert ["file%s.txt" % i for i in range(10)] == lsdir
 
 
 def test__unpack_tar_failure(tmp_path, datadir):
     """Unpack inexistent tarball should fail
 
     """
-    tarpath = os.path.join(datadir, 'archives', 'inexistent-archive.tar.Z')
+    tarpath = os.path.join(datadir, "archives", "inexistent-archive.tar.Z")
 
     assert not os.path.exists(tarpath)
 
-    with pytest.raises(shutil.ReadError,
-                       match=f'Unable to uncompress {tarpath} to {tmp_path}'):
+    with pytest.raises(
+        shutil.ReadError, match=f"Unable to uncompress {tarpath} to {tmp_path}"
+    ):
         tarball._unpack_tar(tarpath, tmp_path)
 
 
@@ -79,15 +80,16 @@ def test__unpack_tar_failure2(tmp_path, datadir):
     """Unpack Existent tarball into an inexistent folder should fail
 
     """
-    filename = 'groff-1.02.tar.Z'
-    tarpath = os.path.join(datadir, 'archives', filename)
+    filename = "groff-1.02.tar.Z"
+    tarpath = os.path.join(datadir, "archives", filename)
 
     assert os.path.exists(tarpath)
 
-    extract_dir = os.path.join(tmp_path, 'dir', 'inexistent')
+    extract_dir = os.path.join(tmp_path, "dir", "inexistent")
 
-    with pytest.raises(shutil.ReadError,
-                       match=f'Unable to uncompress {tarpath} to {tmp_path}'):
+    with pytest.raises(
+        shutil.ReadError, match=f"Unable to uncompress {tarpath} to {tmp_path}"
+    ):
         tarball._unpack_tar(tarpath, extract_dir)
 
 
@@ -95,13 +97,14 @@ def test__unpack_tar_failure3(tmp_path, datadir):
     """Unpack unsupported tarball should fail
 
     """
-    filename = 'hello.zip'
-    tarpath = os.path.join(datadir, 'archives', filename)
+    filename = "hello.zip"
+    tarpath = os.path.join(datadir, "archives", filename)
 
     assert os.path.exists(tarpath)
 
-    with pytest.raises(shutil.ReadError,
-                       match=f'Unable to uncompress {tarpath} to {tmp_path}'):
+    with pytest.raises(
+        shutil.ReadError, match=f"Unable to uncompress {tarpath} to {tmp_path}"
+    ):
         tarball._unpack_tar(tarpath, tmp_path)
 
 
@@ -109,8 +112,8 @@ def test__unpack_tar(tmp_path, datadir):
     """Unpack supported tarball into an existent folder should be ok
 
     """
-    filename = 'groff-1.02.tar.Z'
-    tarpath = os.path.join(datadir, 'archives', filename)
+    filename = "groff-1.02.tar.Z"
+    tarpath = os.path.join(datadir, "archives", filename)
 
     assert os.path.exists(tarpath)
 
@@ -144,19 +147,18 @@ def test_uncompress_tarpaths(tmp_path, datadir, prepare_shutil_state):
     """High level call uncompression on un/supported tarballs
 
     """
-    archive_dir = os.path.join(datadir, 'archives')
+    archive_dir = os.path.join(datadir, "archives")
     tarfiles = os.listdir(archive_dir)
     tarpaths = [os.path.join(archive_dir, tarfile) for tarfile in tarfiles]
 
     unsupported_tarpaths = []
     for t in tarpaths:
-        if t.endswith('.Z') or t.endswith('.x') or t.endswith('.lz'):
+        if t.endswith(".Z") or t.endswith(".x") or t.endswith(".lz"):
             unsupported_tarpaths.append(t)
 
     # not supported yet
     for tarpath in unsupported_tarpaths:
-        with pytest.raises(ValueError,
-                           match=f'Problem during unpacking {tarpath}.'):
+        with pytest.raises(ValueError, match=f"Problem during unpacking {tarpath}."):
             tarball.uncompress(tarpath, dest=tmp_path)
 
     # register those unsupported formats

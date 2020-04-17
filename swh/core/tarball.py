@@ -33,11 +33,12 @@ def _unpack_tar(tarpath: str, extract_dir: str) -> str:
 
     """
     try:
-        run(['tar', 'xf', tarpath, '-C', extract_dir], check=True)
+        run(["tar", "xf", tarpath, "-C", extract_dir], check=True)
         return extract_dir
     except Exception as e:
         raise shutil.ReadError(
-            f'Unable to uncompress {tarpath} to {extract_dir}. Reason: {e}')
+            f"Unable to uncompress {tarpath} to {extract_dir}. Reason: {e}"
+        )
 
 
 def register_new_archive_formats():
@@ -71,7 +72,7 @@ def uncompress(tarpath: str, dest: str):
     try:
         shutil.unpack_archive(tarpath, extract_dir=dest)
     except shutil.ReadError as e:
-        raise ValueError(f'Problem during unpacking {tarpath}. Reason: {e}')
+        raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
 
     # Fix permissions
     for dirpath, _, fnames in os.walk(dest):
@@ -89,7 +90,7 @@ def _ls(rootdir):
 
     """
     for dirpath, dirnames, fnames in os.walk(rootdir):
-        for fname in (dirnames+fnames):
+        for fname in dirnames + fnames:
             fpath = os.path.join(dirpath, fname)
             fname = utils.commonname(rootdir, fpath)
             yield fpath, fname
@@ -99,7 +100,7 @@ def _compress_zip(tarpath, files):
     """Compress dirpath's content as tarpath.
 
     """
-    with zipfile.ZipFile(tarpath, 'w') as z:
+    with zipfile.ZipFile(tarpath, "w") as z:
         for fpath, fname in files:
             z.write(fpath, arcname=fname)
 
@@ -108,7 +109,7 @@ def _compress_tar(tarpath, files):
     """Compress dirpath's content as tarpath.
 
     """
-    with tarfile.open(tarpath, 'w:bz2') as t:
+    with tarfile.open(tarpath, "w:bz2") as t:
         for fpath, fname in files:
             t.add(fpath, arcname=fname, recursive=False)
 
@@ -128,7 +129,7 @@ def compress(tarpath, nature, dirpath_or_files):
     else:  # iterable of 'filepath, filename'
         files = dirpath_or_files
 
-    if nature == 'zip':
+    if nature == "zip":
         _compress_zip(tarpath, files)
     else:
         _compress_tar(tarpath, files)
@@ -139,9 +140,9 @@ def compress(tarpath, nature, dirpath_or_files):
 # Additional uncompression archive format support
 ADDITIONAL_ARCHIVE_FORMATS = [
     # name  , extensions, function
-    ('tar.Z|x', ['.tar.Z', '.tar.x'], _unpack_tar),
+    ("tar.Z|x", [".tar.Z", ".tar.x"], _unpack_tar),
     # FIXME: make this optional depending on the runtime lzip package install
-    ('tar.lz', ['.tar.lz'], _unpack_tar),
+    ("tar.lz", [".tar.lz"], _unpack_tar),
 ]
 
 register_new_archive_formats()

@@ -14,7 +14,7 @@ from typing import Dict, Iterable, Optional, Tuple, Union
 from swh.core.utils import numfile_sortkey as sortkey
 
 
-DB_DUMP_TYPES = {'.sql': 'psql', '.dump': 'pg_dump'}  # type: Dict[str, str]
+DB_DUMP_TYPES = {".sql": "psql", ".dump": "pg_dump"}  # type: Dict[str, str]
 
 
 def swh_db_version(dbname_or_service):
@@ -28,48 +28,70 @@ def swh_db_version(dbname_or_service):
         Optional[Int]: Either the db's version or None
 
     """
-    query = 'select version from dbversion order by dbversion desc limit 1'
+    query = "select version from dbversion order by dbversion desc limit 1"
     cmd = [
-        'psql', '--tuples-only', '--no-psqlrc', '--quiet',
-        '-v', 'ON_ERROR_STOP=1', "--command=%s" % query,
-        dbname_or_service
+        "psql",
+        "--tuples-only",
+        "--no-psqlrc",
+        "--quiet",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "--command=%s" % query,
+        dbname_or_service,
     ]
 
     try:
-        r = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
-                           universal_newlines=True)
+        r = subprocess.run(
+            cmd, check=True, stdout=subprocess.PIPE, universal_newlines=True
+        )
         result = int(r.stdout.strip())
     except Exception:  # db not initialized
         result = None
     return result
 
 
-def pg_restore(dbname, dumpfile, dumptype='pg_dump'):
+def pg_restore(dbname, dumpfile, dumptype="pg_dump"):
     """
     Args:
         dbname: name of the DB to restore into
         dumpfile: path of the dump file
         dumptype: one of 'pg_dump' (for binary dumps), 'psql' (for SQL dumps)
     """
-    assert dumptype in ['pg_dump', 'psql']
-    if dumptype == 'pg_dump':
-        subprocess.check_call(['pg_restore', '--no-owner', '--no-privileges',
-                               '--dbname', dbname, dumpfile])
-    elif dumptype == 'psql':
-        subprocess.check_call(['psql', '--quiet',
-                                       '--no-psqlrc',
-                                       '-v', 'ON_ERROR_STOP=1',
-                                       '-f', dumpfile,
-                                       dbname])
+    assert dumptype in ["pg_dump", "psql"]
+    if dumptype == "pg_dump":
+        subprocess.check_call(
+            [
+                "pg_restore",
+                "--no-owner",
+                "--no-privileges",
+                "--dbname",
+                dbname,
+                dumpfile,
+            ]
+        )
+    elif dumptype == "psql":
+        subprocess.check_call(
+            [
+                "psql",
+                "--quiet",
+                "--no-psqlrc",
+                "-v",
+                "ON_ERROR_STOP=1",
+                "-f",
+                dumpfile,
+                dbname,
+            ]
+        )
 
 
 def pg_dump(dbname, dumpfile):
-    subprocess.check_call(['pg_dump', '--no-owner', '--no-privileges', '-Fc',
-                           '-f', dumpfile, dbname])
+    subprocess.check_call(
+        ["pg_dump", "--no-owner", "--no-privileges", "-Fc", "-f", dumpfile, dbname]
+    )
 
 
 def pg_dropdb(dbname):
-    subprocess.check_call(['dropdb', dbname])
+    subprocess.check_call(["dropdb", dbname])
 
 
 def pg_createdb(dbname, check=True):
@@ -79,7 +101,7 @@ def pg_createdb(dbname, check=True):
        not exist, the db will be created.
 
     """
-    subprocess.run(['createdb', dbname], check=check)
+    subprocess.run(["createdb", dbname], check=check)
 
 
 def db_create(dbname, dumps=None):
@@ -93,7 +115,7 @@ def db_create(dbname, dumps=None):
     try:
         pg_createdb(dbname)
     except subprocess.CalledProcessError:  # try recovering once, in case
-        pg_dropdb(dbname)                  # the db already existed
+        pg_dropdb(dbname)  # the db already existed
         pg_createdb(dbname)
     for dump, dtype in dumps:
         pg_restore(dbname, dump, dtype)
@@ -115,11 +137,8 @@ def db_connect(dbname):
     context: setUp
 
     """
-    conn = psycopg2.connect('dbname=' + dbname)
-    return {
-        'conn': conn,
-        'cursor': conn.cursor()
-    }
+    conn = psycopg2.connect("dbname=" + dbname)
+    return {"conn": conn, "cursor": conn.cursor()}
 
 
 def db_close(conn):
@@ -139,8 +158,8 @@ class DbTestConn:
 
     def __enter__(self):
         self.db_setup = db_connect(self.dbname)
-        self.conn = self.db_setup['conn']
-        self.cursor = self.db_setup['cursor']
+        self.conn = self.db_setup["conn"]
+        self.cursor = self.db_setup["cursor"]
         return self
 
     def __exit__(self, *_):
@@ -148,13 +167,12 @@ class DbTestConn:
 
 
 class DbTestContext:
-    def __init__(self, name='softwareheritage-test', dumps=None):
+    def __init__(self, name="softwareheritage-test", dumps=None):
         self.dbname = name
         self.dumps = dumps
 
     def __enter__(self):
-        db_create(dbname=self.dbname,
-                  dumps=self.dumps)
+        db_create(dbname=self.dbname, dumps=self.dumps)
         return self
 
     def __exit__(self, *_):
@@ -215,7 +233,7 @@ class DbTestFixture:
     DB_TEST_FIXTURE_IMPORTED = True
 
     @classmethod
-    def add_db(cls, name='softwareheritage-test', dumps=None):
+    def add_db(cls, name="softwareheritage-test", dumps=None):
         cls._DB_DUMP_LIST[name] = dumps
 
     @classmethod
@@ -248,15 +266,18 @@ class DbTestFixture:
         conn = db.conn
         cursor = db.cursor
 
-        cursor.execute("""SELECT table_name FROM information_schema.tables
-                          WHERE table_schema = %s""", ('public',))
+        cursor.execute(
+            """SELECT table_name FROM information_schema.tables
+                          WHERE table_schema = %s""",
+            ("public",),
+        )
 
         tables = set(table for (table,) in cursor.fetchall())
         if excluded is not None:
             tables -= set(excluded)
 
         for table in tables:
-            cursor.execute('truncate table %s cascade' % table)
+            cursor.execute("truncate table %s cascade" % table)
 
         conn.commit()
 
@@ -288,7 +309,7 @@ class SingleDbTestFixture(DbTestFixture):
         cursor: open psycopg2 cursor to the DB
     """
 
-    TEST_DB_NAME = 'softwareheritage-test'
+    TEST_DB_NAME = "softwareheritage-test"
     TEST_DB_DUMP = None  # type: Optional[Union[str, Iterable[str]]]
 
     @classmethod
@@ -302,14 +323,13 @@ class SingleDbTestFixture(DbTestFixture):
             dump_files = [dump_files]
         all_dump_files = []
         for files in dump_files:
-            all_dump_files.extend(
-                sorted(glob.glob(files), key=sortkey))
+            all_dump_files.extend(sorted(glob.glob(files), key=sortkey))
 
-        all_dump_files = [(x, DB_DUMP_TYPES[os.path.splitext(x)[1]])
-                          for x in all_dump_files]
+        all_dump_files = [
+            (x, DB_DUMP_TYPES[os.path.splitext(x)[1]]) for x in all_dump_files
+        ]
 
-        cls.add_db(name=cls.TEST_DB_NAME,
-                   dumps=all_dump_files)
+        cls.add_db(name=cls.TEST_DB_NAME, dumps=all_dump_files)
         super().setUpClass()
 
     def setUp(self, *args, **kwargs):
