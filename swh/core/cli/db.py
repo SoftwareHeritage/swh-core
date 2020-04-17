@@ -21,16 +21,20 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(name="db", context_settings=CONTEXT_SETTINGS)
-@click.option("--config-file", "-C", default=None,
-              type=click.Path(exists=True, dir_okay=False),
-              help="Configuration file.")
+@click.option(
+    "--config-file",
+    "-C",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Configuration file.",
+)
 @click.pass_context
 def db(ctx, config_file):
     """Software Heritage database generic tools.
     """
     ctx.ensure_object(dict)
     if config_file is None:
-        config_file = environ.get('SWH_CONFIG_FILENAME')
+        config_file = environ.get("SWH_CONFIG_FILENAME")
     cfg = config_read(config_file)
     ctx.obj["config"] = cfg
 
@@ -74,8 +78,8 @@ def init(ctx):
                 sqlfiles = get_sql_for_package(modname)
             except click.BadParameter:
                 logger.info(
-                    "Failed to load/find sql initialization files for %s",
-                    modname)
+                    "Failed to load/find sql initialization files for %s", modname
+                )
 
             if sqlfiles:
                 conninfo = cfg["args"]["db"]
@@ -96,12 +100,20 @@ def init(ctx):
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument('module', nargs=-1, required=True)
-@click.option('--db-name', '-d', help='Database name.',
-              default='softwareheritage-dev', show_default=True)
-@click.option('--create-db/--no-create-db', '-C',
-              help='Attempt to create the database.',
-              default=False)
+@click.argument("module", nargs=-1, required=True)
+@click.option(
+    "--db-name",
+    "-d",
+    help="Database name.",
+    default="softwareheritage-dev",
+    show_default=True,
+)
+@click.option(
+    "--create-db/--no-create-db",
+    "-C",
+    help="Attempt to create the database.",
+    default=False,
+)
 def db_init(module, db_name, create_db):
     """Initialise a database for the Software Heritage <module>.  By
     default, does not attempt to create the database.
@@ -122,11 +134,13 @@ def db_init(module, db_name, create_db):
     # put import statements here so we can keep startup time of the main swh
     # command as short as possible
     from swh.core.db.tests.db_testing import (
-        pg_createdb, pg_restore, DB_DUMP_TYPES,
-        swh_db_version
+        pg_createdb,
+        pg_restore,
+        DB_DUMP_TYPES,
+        swh_db_version,
     )
 
-    logger.debug('db_init %s dn_name=%s', module, db_name)
+    logger.debug("db_init %s dn_name=%s", module, db_name)
     dump_files = []
 
     for modname in module:
@@ -138,10 +152,9 @@ def db_init(module, db_name, create_db):
     # Try to retrieve the db version if any
     db_version = swh_db_version(db_name)
     if not db_version:  # Initialize the db
-        dump_files = [(x, DB_DUMP_TYPES[path.splitext(x)[1]])
-                      for x in dump_files]
+        dump_files = [(x, DB_DUMP_TYPES[path.splitext(x)[1]]) for x in dump_files]
         for dump, dtype in dump_files:
-            click.secho('Loading {}'.format(dump), fg='yellow')
+            click.secho("Loading {}".format(dump), fg="yellow")
             pg_restore(db_name, dump, dtype)
 
         db_version = swh_db_version(db_name)
@@ -149,8 +162,11 @@ def db_init(module, db_name, create_db):
     # TODO: Ideally migrate the version from db_version to the latest
     # db version
 
-    click.secho('DONE database is {} version {}'.format(db_name, db_version),
-                fg='green', bold=True)
+    click.secho(
+        "DONE database is {} version {}".format(db_name, db_version),
+        fg="green",
+        bold=True,
+    )
 
 
 def get_sql_for_package(modname):
@@ -167,6 +183,6 @@ def get_sql_for_package(modname):
     sqldir = path.join(path.dirname(m.__file__), "sql")
     if not path.isdir(sqldir):
         raise click.BadParameter(
-            "Module {} does not provide a db schema "
-            "(no sql/ dir)".format(modname))
+            "Module {} does not provide a db schema " "(no sql/ dir)".format(modname)
+        )
     return list(sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey))

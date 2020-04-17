@@ -63,7 +63,7 @@ import threading
 import warnings
 
 
-log = logging.getLogger('swh.core.statsd')
+log = logging.getLogger("swh.core.statsd")
 
 
 class TimedContextManagerDecorator(object):
@@ -74,8 +74,10 @@ class TimedContextManagerDecorator(object):
     Attributes:
       elapsed (float): the elapsed time at the point of completion
     """
-    def __init__(self, statsd, metric=None, error_metric=None,
-                 tags=None, sample_rate=1):
+
+    def __init__(
+        self, statsd, metric=None, error_metric=None, tags=None, sample_rate=1
+    ):
         self.statsd = statsd
         self.metric = metric
         self.error_metric = error_metric
@@ -90,10 +92,11 @@ class TimedContextManagerDecorator(object):
         Default to the function name if metric was not provided.
         """
         if not self.metric:
-            self.metric = '%s.%s' % (func.__module__, func.__name__)
+            self.metric = "%s.%s" % (func.__module__, func.__name__)
 
         # Coroutines
         if iscoroutinefunction(func):
+
             @wraps(func)
             async def wrapped_co(*args, **kwargs):
                 start = monotonic()
@@ -104,6 +107,7 @@ class TimedContextManagerDecorator(object):
                     raise
                 self._send(start)
                 return result
+
             return wrapped_co
 
         # Others
@@ -117,6 +121,7 @@ class TimedContextManagerDecorator(object):
                 raise
             self._send(start)
             return result
+
         return wrapped
 
     def __enter__(self):
@@ -134,13 +139,14 @@ class TimedContextManagerDecorator(object):
 
     def _send(self, start):
         elapsed = (monotonic() - start) * 1000
-        self.statsd.timing(self.metric, elapsed,
-                           tags=self.tags, sample_rate=self.sample_rate)
+        self.statsd.timing(
+            self.metric, elapsed, tags=self.tags, sample_rate=self.sample_rate
+        )
         self.elapsed = elapsed
 
     def _send_error(self):
         if self.error_metric is None:
-            self.error_metric = self.metric + '_error_count'
+            self.error_metric = self.metric + "_error_count"
         self.statsd.increment(self.error_metric, tags=self.tags)
 
     def start(self):
@@ -179,15 +185,21 @@ class Statsd(object):
         "label:value,other_label:other_value"
     """
 
-    def __init__(self, host=None, port=None, max_buffer_size=50,
-                 namespace=None, constant_tags=None):
+    def __init__(
+        self,
+        host=None,
+        port=None,
+        max_buffer_size=50,
+        namespace=None,
+        constant_tags=None,
+    ):
         # Connection
         if host is None:
-            host = os.environ.get('STATSD_HOST') or 'localhost'
+            host = os.environ.get("STATSD_HOST") or "localhost"
         self.host = host
 
         if port is None:
-            port = os.environ.get('STATSD_PORT') or 8125
+            port = os.environ.get("STATSD_PORT") or 8125
         self.port = int(port)
 
         # Socket
@@ -195,29 +207,27 @@ class Statsd(object):
         self.lock = threading.Lock()
         self.max_buffer_size = max_buffer_size
         self._send = self._send_to_server
-        self.encoding = 'utf-8'
+        self.encoding = "utf-8"
 
         # Tags
         self.constant_tags = {}
-        tags_envvar = os.environ.get('STATSD_TAGS', '')
-        for tag in tags_envvar.split(','):
+        tags_envvar = os.environ.get("STATSD_TAGS", "")
+        for tag in tags_envvar.split(","):
             if not tag:
                 continue
-            if ':' not in tag:
+            if ":" not in tag:
                 warnings.warn(
-                    'STATSD_TAGS needs to be in key:value format, '
-                    '%s invalid' % tag,
+                    "STATSD_TAGS needs to be in key:value format, " "%s invalid" % tag,
                     UserWarning,
                 )
                 continue
-            k, v = tag.split(':', 1)
+            k, v = tag.split(":", 1)
             self.constant_tags[k] = v
 
         if constant_tags:
-            self.constant_tags.update({
-                str(k): str(v)
-                for k, v in constant_tags.items()
-            })
+            self.constant_tags.update(
+                {str(k): str(v) for k, v in constant_tags.items()}
+            )
 
         # Namespace
         if namespace is not None:
@@ -239,7 +249,7 @@ class Statsd(object):
         >>> statsd.gauge('users.online', 123)
         >>> statsd.gauge('active.connections', 1001, tags={"protocol": "http"})
         """
-        return self._report(metric, 'g', value, tags, sample_rate)
+        return self._report(metric, "g", value, tags, sample_rate)
 
     def increment(self, metric, value=1, tags=None, sample_rate=1):
         """
@@ -249,7 +259,7 @@ class Statsd(object):
         >>> statsd.increment('page.views')
         >>> statsd.increment('files.transferred', 124)
         """
-        self._report(metric, 'c', value, tags, sample_rate)
+        self._report(metric, "c", value, tags, sample_rate)
 
     def decrement(self, metric, value=1, tags=None, sample_rate=1):
         """
@@ -260,7 +270,7 @@ class Statsd(object):
         >>> statsd.decrement('active.connections', 2)
         """
         metric_value = -value if value else value
-        self._report(metric, 'c', metric_value, tags, sample_rate)
+        self._report(metric, "c", metric_value, tags, sample_rate)
 
     def histogram(self, metric, value, tags=None, sample_rate=1):
         """
@@ -269,7 +279,7 @@ class Statsd(object):
         >>> statsd.histogram('uploaded.file.size', 1445)
         >>> statsd.histogram('file.count', 26, tags={"filetype": "python"})
         """
-        self._report(metric, 'h', value, tags, sample_rate)
+        self._report(metric, "h", value, tags, sample_rate)
 
     def timing(self, metric, value, tags=None, sample_rate=1):
         """
@@ -277,7 +287,7 @@ class Statsd(object):
 
         >>> statsd.timing("query.response.time", 1234)
         """
-        self._report(metric, 'ms', value, tags, sample_rate)
+        self._report(metric, "ms", value, tags, sample_rate)
 
     def timed(self, metric=None, error_metric=None, tags=None, sample_rate=1):
         """
@@ -306,9 +316,12 @@ class Statsd(object):
                 statsd.timing('user.query.time', time.monotonic() - start)
         """
         return TimedContextManagerDecorator(
-            statsd=self, metric=metric,
+            statsd=self,
+            metric=metric,
             error_metric=error_metric,
-            tags=tags, sample_rate=sample_rate)
+            tags=tags,
+            sample_rate=sample_rate,
+        )
 
     def set(self, metric, value, tags=None, sample_rate=1):
         """
@@ -316,7 +329,7 @@ class Statsd(object):
 
         >>> statsd.set('visitors.uniques', 999)
         """
-        self._report(metric, 's', value, tags, sample_rate)
+        self._report(metric, "s", value, tags, sample_rate)
 
     @property
     def socket(self):
@@ -387,10 +400,9 @@ class Statsd(object):
             value,
             metric_type,
             ("|@" + str(sample_rate)) if sample_rate != 1 else "",
-            ("|#" + ",".join(
-                "%s:%s" % (k, v)
-                for (k, v) in sorted(tags.items())
-            )) if tags else "",
+            ("|#" + ",".join("%s:%s" % (k, v) for (k, v) in sorted(tags.items())))
+            if tags
+            else "",
         )
         # Send it
         self._send(payload)
@@ -398,7 +410,7 @@ class Statsd(object):
     def _send_to_server(self, packet):
         try:
             # If set, use socket directly
-            self.socket.send(packet.encode('utf-8'))
+            self.socket.send(packet.encode("utf-8"))
         except socket.timeout:
             return
         except socket.error:
@@ -421,8 +433,7 @@ class Statsd(object):
         return {
             str(k): str(v)
             for k, v in itertools.chain(
-                    self.constant_tags.items(),
-                    (tags if tags else {}).items(),
+                self.constant_tags.items(), (tags if tags else {}).items(),
             )
         }
 

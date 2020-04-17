@@ -16,15 +16,24 @@ from ..sentry import init_sentry
 
 
 def post_fork(
-        server, worker, *, default_sentry_dsn=None, flask=True,
-        sentry_integrations=None, extra_sentry_kwargs={}):
+    server,
+    worker,
+    *,
+    default_sentry_dsn=None,
+    flask=True,
+    sentry_integrations=None,
+    extra_sentry_kwargs={},
+):
     # Initializes sentry as soon as possible in gunicorn's worker processes.
 
     sentry_integrations = sentry_integrations or []
     if flask:
         from sentry_sdk.integrations.flask import FlaskIntegration
+
         sentry_integrations.append(FlaskIntegration())
 
     init_sentry(
-        default_sentry_dsn, integrations=sentry_integrations,
-        extra_kwargs=extra_sentry_kwargs)
+        default_sentry_dsn,
+        integrations=sentry_integrations,
+        extra_kwargs=extra_sentry_kwargs,
+    )

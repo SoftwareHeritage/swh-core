@@ -11,8 +11,7 @@ def remove_kwargs(names):
     def decorator(f):
         sig = inspect.signature(f)
         params = sig.parameters
-        params = [param for param in params.values()
-                  if param.name not in names]
+        params = [param for param in params.values() if param.name not in names]
         sig = sig.replace(parameters=params)
         f.__signature__ = sig
         return f
@@ -26,10 +25,10 @@ def apply_options(cursor, options):
     Returns a dictionary with the old values if they changed."""
     old_options = {}
     for option, value in options.items():
-        cursor.execute('SHOW %s' % option)
+        cursor.execute("SHOW %s" % option)
         old_value = cursor.fetchall()[0][0]
         if old_value != value:
-            cursor.execute('SET LOCAL %s TO %%s' % option, (value,))
+            cursor.execute("SET LOCAL %s TO %%s" % option, (value,))
             old_options[option] = old_value
     return old_options
 
@@ -41,16 +40,16 @@ def db_transaction(**client_options):
 
     Client options are passed as `set` options to the postgresql server
     """
+
     def decorator(meth, __client_options=client_options):
         if inspect.isgeneratorfunction(meth):
-            raise ValueError(
-                    'Use db_transaction_generator for generator functions.')
+            raise ValueError("Use db_transaction_generator for generator functions.")
 
-        @remove_kwargs(['cur', 'db'])
+        @remove_kwargs(["cur", "db"])
         @functools.wraps(meth)
         def _meth(self, *args, **kwargs):
-            if 'cur' in kwargs and kwargs['cur']:
-                cur = kwargs['cur']
+            if "cur" in kwargs and kwargs["cur"]:
+                cur = kwargs["cur"]
                 old_options = apply_options(cur, __client_options)
                 ret = meth(self, *args, **kwargs)
                 apply_options(cur, old_options)
@@ -63,6 +62,7 @@ def db_transaction(**client_options):
                         return meth(self, *args, db=db, cur=cur, **kwargs)
                 finally:
                     self.put_db(db)
+
         return _meth
 
     return decorator
@@ -76,16 +76,16 @@ def db_transaction_generator(**client_options):
 
     Client options are passed as `set` options to the postgresql server
     """
+
     def decorator(meth, __client_options=client_options):
         if not inspect.isgeneratorfunction(meth):
-            raise ValueError(
-                    'Use db_transaction for non-generator functions.')
+            raise ValueError("Use db_transaction for non-generator functions.")
 
-        @remove_kwargs(['cur', 'db'])
+        @remove_kwargs(["cur", "db"])
         @functools.wraps(meth)
         def _meth(self, *args, **kwargs):
-            if 'cur' in kwargs and kwargs['cur']:
-                cur = kwargs['cur']
+            if "cur" in kwargs and kwargs["cur"]:
+                cur = kwargs["cur"]
                 old_options = apply_options(cur, __client_options)
                 yield from meth(self, *args, **kwargs)
                 apply_options(cur, old_options)
@@ -99,4 +99,5 @@ def db_transaction_generator(**client_options):
                     self.put_db(db)
 
         return _meth
+
     return decorator
