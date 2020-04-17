@@ -150,6 +150,7 @@ class Serializers(unittest.TestCase):
         original_data = {
             **self.data,
             "none_dict_key": {None: 42},
+            "long_int_is_loooong": 10000000000000000000000000000000,
         }
         data = msgpack_dumps(original_data)
         self.assertEqual(original_data, msgpack_loads(data))

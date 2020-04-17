@@ -5,6 +5,7 @@
 
 import base64
 import datetime
+from enum import Enum
 import json
 import traceback
 import types
@@ -43,6 +44,10 @@ DECODERS = {
     # Only for JSON:
     "bytes": base64.b85decode,
 }
+
+
+class MsgpackExtTypeCodes(Enum):
+    LONG_INT = 1
 
 
 def encode_data_client(data: Any, extra_encoders=None) -> bytes:
@@ -175,6 +180,15 @@ def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
         encoders += extra_encoders
 
     def encode_types(obj):
+        if isinstance(obj, int):
+            # integer overflowed while packing. Handle it as an extended type
+            length, rem = divmod(obj.bit_length(), 8)
+            if rem:
+                length += 1
+            return msgpack.ExtType(
+                MsgpackExtTypeCodes.LONG_INT.value, int.to_bytes(obj, length, "big")
+            )
+
         if isinstance(obj, types.GeneratorType):
             return list(obj)
 
@@ -200,6 +214,11 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
     if extra_decoders:
         decoders = {**decoders, **extra_decoders}
 
+    def ext_hook(code, data):
+        if code == MsgpackExtTypeCodes.LONG_INT.value:
+            return int.from_bytes(data, "big")
+        raise ValueError("Unknown msgpack extended code %s" % code)
+
     def decode_types(obj):
         # Support for current encodings
         if set(obj.keys()) == {b"d", b"swhtype"}:
@@ -223,12 +242,20 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
     try:
         try:
             return msgpack.unpackb(
-                data, raw=False, object_hook=decode_types, strict_map_key=False
+                data,
+                raw=False,
+                object_hook=decode_types,
+                ext_hook=ext_hook,
+                strict_map_key=False,
             )
         except TypeError:  # msgpack < 0.6.0
-            return msgpack.unpackb(data, raw=False, object_hook=decode_types)
+            return msgpack.unpackb(
+                data, raw=False, object_hook=decode_types, ext_hook=ext_hook
+            )
     except TypeError:  # msgpack < 0.5.2
-        return msgpack.unpackb(data, encoding="utf-8", object_hook=decode_types)
+        return msgpack.unpackb(
+            data, encoding="utf-8", object_hook=decode_types, ext_hook=ext_hook
+        )
 
 
 def exception_to_dict(exception):
