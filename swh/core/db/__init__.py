@@ -26,9 +26,9 @@ psycopg2.extras.register_uuid()
 
 def escape(data):
     if data is None:
-        return ''
+        return ""
     if isinstance(data, bytes):
-        return '\\x%s' % binascii.hexlify(data).decode('ascii')
+        return "\\x%s" % binascii.hexlify(data).decode("ascii")
     elif isinstance(data, str):
         return '"%s"' % data.replace('"', '""')
     elif isinstance(data, datetime.datetime):
@@ -38,16 +38,17 @@ def escape(data):
     elif isinstance(data, dict):
         return escape(json.dumps(data))
     elif isinstance(data, list):
-        return escape("{%s}" % ','.join(escape(d) for d in data))
+        return escape("{%s}" % ",".join(escape(d) for d in data))
     elif isinstance(data, psycopg2.extras.Range):
         # We escape twice here too, so that we make sure
         # everything gets passed to copy properly
         return escape(
-            '%s%s,%s%s' % (
-                '[' if data.lower_inc else '(',
-                '-infinity' if data.lower_inf else escape(data.lower),
-                'infinity' if data.upper_inf else escape(data.upper),
-                ']' if data.upper_inc else ')',
+            "%s%s,%s%s"
+            % (
+                "[" if data.lower_inc else "(",
+                "-infinity" if data.lower_inf else escape(data.lower),
+                "infinity" if data.upper_inf else escape(data.upper),
+                "]" if data.upper_inc else ")",
             )
         )
     elif isinstance(data, enum.IntEnum):
@@ -74,12 +75,10 @@ class BaseDb:
     def adapt_conn(cls, conn):
         """Makes psycopg2 use 'bytes' to decode bytea instead of
         'memoryview', for this connection."""
-        t_bytes = psycopg2.extensions.new_type(
-            (17,), "bytea", typecast_bytea)
+        t_bytes = psycopg2.extensions.new_type((17,), "bytea", typecast_bytea)
         psycopg2.extensions.register_type(t_bytes, conn)
 
-        t_bytes_array = psycopg2.extensions.new_array_type(
-            (1001,), "bytea[]", t_bytes)
+        t_bytes_array = psycopg2.extensions.new_array_type((1001,), "bytea[]", t_bytes)
         psycopg2.extensions.register_type(t_bytes_array, conn)
 
     @classmethod
@@ -128,6 +127,7 @@ class BaseDb:
             return cur_arg
         else:
             return self.conn.cursor()
+
     _cursor = cursor  # for bw compat
 
     @contextmanager
@@ -147,8 +147,9 @@ class BaseDb:
                     self.conn.rollback()
                 raise
 
-    def copy_to(self, items, tblname, columns,
-                cur=None, item_cb=None, default_values={}):
+    def copy_to(
+        self, items, tblname, columns, cur=None, item_cb=None, default_values={}
+    ):
         """Copy items' entries to table tblname with columns information.
 
         Args:
@@ -168,10 +169,11 @@ class BaseDb:
         def writer():
             nonlocal exc_info
             cursor = self.cursor(cur)
-            with open(read_file, 'r') as f:
+            with open(read_file, "r") as f:
                 try:
-                    cursor.copy_expert('COPY %s (%s) FROM STDIN CSV' % (
-                        tblname, ', '.join(columns)), f)
+                    cursor.copy_expert(
+                        "COPY %s (%s) FROM STDIN CSV" % (tblname, ", ".join(columns)), f
+                    )
                 except Exception:
                     # Tell the main thread about the exception
                     exc_info = sys.exc_info()
@@ -180,7 +182,7 @@ class BaseDb:
         write_thread.start()
 
         try:
-            with open(write_file, 'w') as f:
+            with open(write_file, "w") as f:
                 for d in items:
                     if item_cb is not None:
                         item_cb(d)
@@ -191,13 +193,15 @@ class BaseDb:
                             line.append(escape(value))
                         except Exception as e:
                             logger.error(
-                                'Could not escape value `%r` for column `%s`:'
-                                'Received exception: `%s`',
-                                value, k, e
+                                "Could not escape value `%r` for column `%s`:"
+                                "Received exception: `%s`",
+                                value,
+                                k,
+                                e,
                             )
                             raise e from None
-                    f.write(','.join(line))
-                    f.write('\n')
+                    f.write(",".join(line))
+                    f.write("\n")
 
         finally:
             # No problem bubbling up exceptions, but we still need to make sure
@@ -209,4 +213,4 @@ class BaseDb:
                 raise exc_info[1].with_traceback(exc_info[2])
 
     def mktemp(self, tblname, cur=None):
-        self.cursor(cur).execute('SELECT swh_mktemp(%s)', (tblname,))
+        self.cursor(cur).execute("SELECT swh_mktemp(%s)", (tblname,))

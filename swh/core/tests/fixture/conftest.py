@@ -8,7 +8,7 @@ import pytest
 from os import path
 
 
-DATADIR = path.join(path.abspath(path.dirname(__file__)), 'data')
+DATADIR = path.join(path.abspath(path.dirname(__file__)), "data")
 
 
 @pytest.fixture

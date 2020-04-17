@@ -1,8 +1,12 @@
-swh-core (0.0.94-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.0.95-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.0.95     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-04-17 17:20:35 +0200)
+  * Upstream changes:     - Release swh.core v0.0.95     - support
+    serializing large integers in msgpack     - add documentation for
+    CLI     - move formatting to black
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 02 Mar 2020 11:18:39 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 17 Apr 2020 16:05:01 +0000
 
 swh-core (0.0.94-1~swh1) unstable-swh; urgency=medium
 

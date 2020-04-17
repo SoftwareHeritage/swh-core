@@ -26,13 +26,16 @@ def stored_procedure(stored_proc):
     not, the stored procedure will be executed first; the function body then.
 
     """
+
     def wrap(meth):
         @functools.wraps(meth)
         def _meth(self, *args, **kwargs):
-            cur = kwargs.get('cur', None)
-            self._cursor(cur).execute('SELECT %s()' % stored_proc)
+            cur = kwargs.get("cur", None)
+            self._cursor(cur).execute("SELECT %s()" % stored_proc)
             meth(self, *args, **kwargs)
+
         return _meth
+
     return wrap
 
 
@@ -69,23 +72,24 @@ def _split_sql(sql):
     """
     curr = pre = []
     post = []
-    tokens = re.split(br'(%.)', sql)
+    tokens = re.split(br"(%.)", sql)
     for token in tokens:
-        if len(token) != 2 or token[:1] != b'%':
+        if len(token) != 2 or token[:1] != b"%":
             curr.append(token)
             continue
 
-        if token[1:] == b's':
+        if token[1:] == b"s":
             if curr is pre:
                 curr = post
             else:
-                raise ValueError(
-                    "the query contains more than one '%s' placeholder")
-        elif token[1:] == b'%':
-            curr.append(b'%')
+                raise ValueError("the query contains more than one '%s' placeholder")
+        elif token[1:] == b"%":
+            curr.append(b"%")
         else:
-            raise ValueError("unsupported format character: '%s'"
-                             % token[1:].decode('ascii', 'replace'))
+            raise ValueError(
+                "unsupported format character: '%s'"
+                % token[1:].decode("ascii", "replace")
+            )
 
     if curr is pre:
         raise ValueError("the query doesn't contain any '%s' placeholder")
@@ -94,7 +98,7 @@ def _split_sql(sql):
 
 
 def execute_values_generator(cur, sql, argslist, template=None, page_size=100):
-    '''Execute a statement using SQL ``VALUES`` with a sequence of parameters.
+    """Execute a statement using SQL ``VALUES`` with a sequence of parameters.
     Rows returned by the query are returned through a generator.
     You need to consume the generator for the queries to be executed!
 
@@ -127,23 +131,21 @@ def execute_values_generator(cur, sql, argslist, template=None, page_size=100):
 
     After the execution of the function the `cursor.rowcount` property will
     **not** contain a total result.
-    '''
+    """
     # we can't just use sql % vals because vals is bytes: if sql is bytes
     # there will be some decoding error because of stupid codec used, and Py3
     # doesn't implement % on bytes.
     if not isinstance(sql, bytes):
-        sql = sql.encode(
-            psycopg2.extensions.encodings[cur.connection.encoding]
-        )
+        sql = sql.encode(psycopg2.extensions.encodings[cur.connection.encoding])
     pre, post = _split_sql(sql)
 
     for page in _paginate(argslist, page_size=page_size):
         if template is None:
-            template = b'(' + b','.join([b'%s'] * len(page[0])) + b')'
+            template = b"(" + b",".join([b"%s"] * len(page[0])) + b")"
         parts = pre[:]
         for args in page:
             parts.append(cur.mogrify(template, args))
-            parts.append(b',')
+            parts.append(b",")
         parts[-1:] = post
-        cur.execute(b''.join(parts))
+        cur.execute(b"".join(parts))
         yield from cur

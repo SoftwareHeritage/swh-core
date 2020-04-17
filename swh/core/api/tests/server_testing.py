@@ -29,6 +29,7 @@ class ServerTestFixtureBaseClass(metaclass=abc.ABCMeta):
     class's setUp() and tearDown() methods.
 
     """
+
     def setUp(self):
         super().setUp()
         self.start_server()
@@ -38,7 +39,7 @@ class ServerTestFixtureBaseClass(metaclass=abc.ABCMeta):
         super().tearDown()
 
     def url(self):
-        return 'http://127.0.0.1:%d/' % self.port
+        return "http://127.0.0.1:%d/" % self.port
 
     def process_config(self):
         """Process the server's configuration.  Do something useful for
@@ -106,6 +107,7 @@ class ServerTestFixture(ServerTestFixtureBaseClass):
     In order to correctly work, the subclass must call the parents
     class's setUp() and tearDown() methods.
     """
+
     def process_config(self):
         # WSGI app configuration
         for key, value in self.config.items():
@@ -114,7 +116,7 @@ class ServerTestFixture(ServerTestFixtureBaseClass):
     def define_worker_function(self):
         def worker(app, port):
             # Make Flask 1.0 stop printing its server banner
-            os.environ['WERKZEUG_RUN_MAIN'] = 'true'
+            os.environ["WERKZEUG_RUN_MAIN"] = "true"
             return app.run(port=port, use_reloader=False)
 
         return worker
@@ -136,9 +138,9 @@ class ServerTestFixtureAsync(ServerTestFixtureBaseClass):
     class's setUp() and tearDown() methods.
 
     """
+
     def define_worker_function(self):
         def worker(app, port):
-            return aiohttp.web.run_app(app, port=int(port),
-                                       print=lambda *_: None)
+            return aiohttp.web.run_app(app, port=int(port), print=lambda *_: None)
 
         return worker

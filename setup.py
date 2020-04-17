@@ -13,7 +13,7 @@ from io import open
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 
@@ -21,9 +21,9 @@ def parse_requirements(*names):
     requirements = []
     for name in names:
         if name:
-            reqf = 'requirements-%s.txt' % name
+            reqf = "requirements-%s.txt" % name
         else:
-            reqf = 'requirements.txt'
+            reqf = "requirements.txt"
 
         if not os.path.exists(reqf):
             return requirements
@@ -31,38 +31,37 @@ def parse_requirements(*names):
         with open(reqf) as f:
             for line in f.readlines():
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
                 requirements.append(line)
     return requirements
 
 
 setup(
-    name='swh.core',
-    description='Software Heritage core utilities',
+    name="swh.core",
+    description="Software Heritage core utilities",
     long_description=long_description,
-    long_description_content_type='text/markdown',
-    author='Software Heritage developers',
-    author_email='swh-devel@inria.fr',
-    url='https://forge.softwareheritage.org/diffusion/DCORE/',
+    long_description_content_type="text/markdown",
+    author="Software Heritage developers",
+    author_email="swh-devel@inria.fr",
+    url="https://forge.softwareheritage.org/diffusion/DCORE/",
     packages=find_packages(),
-    py_modules=['pytest_swh_core'],
+    py_modules=["pytest_swh_core"],
     scripts=[],
-    install_requires=parse_requirements(None, 'swh'),
-    setup_requires=['vcversioner'],
+    install_requires=parse_requirements(None, "swh"),
+    setup_requires=["vcversioner"],
     extras_require={
-        'testing-core': parse_requirements('test'),
-        'logging': parse_requirements('logging'),
-        'db': parse_requirements('db'),
-        'testing-db': parse_requirements('test-db'),
-        'http': parse_requirements('http'),
+        "testing-core": parse_requirements("test"),
+        "logging": parse_requirements("logging"),
+        "db": parse_requirements("db"),
+        "testing-db": parse_requirements("test-db"),
+        "http": parse_requirements("http"),
         # kitchen sink, please do not use
-        'testing': parse_requirements('test', 'test-db', 'db', 'http',
-                                      'logging'),
+        "testing": parse_requirements("test", "test-db", "db", "http", "logging"),
     },
     vcversioner={},
     include_package_data=True,
-    entry_points='''
+    entry_points="""
         [console_scripts]
         swh=swh.core.cli:main
         swh-db-init=swh.core.cli.db:db_init
@@ -71,7 +70,7 @@ setup(
         db-init=swh.core.cli.db:db_init
         [pytest11]
         pytest_swh_core = swh.core.pytest_plugin
-    ''',
+    """,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Intended Audience :: Developers",
@@ -80,8 +79,8 @@ setup(
         "Development Status :: 5 - Production/Stable",
     ],
     project_urls={
-        'Bug Reports': 'https://forge.softwareheritage.org/maniphest',
-        'Funding': 'https://www.softwareheritage.org/donate',
-        'Source': 'https://forge.softwareheritage.org/source/swh-core',
+        "Bug Reports": "https://forge.softwareheritage.org/maniphest",
+        "Funding": "https://www.softwareheritage.org/donate",
+        "Source": "https://forge.softwareheritage.org/source/swh-core",
     },
 )

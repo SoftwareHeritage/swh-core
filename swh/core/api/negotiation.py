@@ -27,8 +27,7 @@ from collections import defaultdict
 from decorator import decorator
 from inspect import getcallargs
 
-from typing import Any, List, Optional, Callable, \
-    Type, NoReturn, DefaultDict
+from typing import Any, List, Optional, Callable, Type, NoReturn, DefaultDict
 
 from requests import Response
 
@@ -47,8 +46,8 @@ class Formatter:
                 self.response_mimetype = self.mimetypes[0]
             except IndexError:
                 raise NotImplementedError(
-                    "%s.mimetypes should be a non-empty list" %
-                    self.__class__.__name__)
+                    "%s.mimetypes should be a non-empty list" % self.__class__.__name__
+                )
         else:
             self.response_mimetype = request_mimetype
 
@@ -57,11 +56,13 @@ class Formatter:
 
     def render(self, obj: Any) -> bytes:
         raise NotImplementedError(
-            "render() should be implemented by Formatter subclasses")
+            "render() should be implemented by Formatter subclasses"
+        )
 
     def __call__(self, obj: Any) -> Response:
         return self._make_response(
-            self.render(obj), content_type=self.response_mimetype)
+            self.render(obj), content_type=self.response_mimetype
+        )
 
     def _make_response(self, body: bytes, content_type: str) -> Response:
         raise NotImplementedError(
@@ -71,7 +72,6 @@ class Formatter:
 
 
 class Negotiator:
-
     def __init__(self, func: Callable[..., Any]) -> None:
         self.func = func
         self._formatters: List[Type[Formatter]] = []
@@ -80,7 +80,7 @@ class Negotiator:
 
     def __call__(self, *args, **kwargs) -> Response:
         result = self.func(*args, **kwargs)
-        format = getcallargs(self.func, *args, **kwargs).get('format')
+        format = getcallargs(self.func, *args, **kwargs).get("format")
         mimetype = self.best_mimetype()
 
         try:
@@ -90,38 +90,35 @@ class Negotiator:
 
         return formatter(result)
 
-    def register_formatter(self, formatter: Type[Formatter],
-                           *args, **kwargs) -> None:
+    def register_formatter(self, formatter: Type[Formatter], *args, **kwargs) -> None:
         self._formatters.append(formatter)
-        self._formatters_by_format[formatter.format].append(
-            (formatter, args, kwargs))
+        self._formatters_by_format[formatter.format].append((formatter, args, kwargs))
         for mimetype in formatter.mimetypes:
-            self._formatters_by_mimetype[mimetype].append(
-                (formatter, args, kwargs))
+            self._formatters_by_mimetype[mimetype].append((formatter, args, kwargs))
 
-    def get_formatter(self, format: Optional[str] = None,
-                      mimetype: Optional[str] = None) -> Formatter:
+    def get_formatter(
+        self, format: Optional[str] = None, mimetype: Optional[str] = None
+    ) -> Formatter:
         if format is None and mimetype is None:
             raise TypeError(
                 "get_formatter expects one of the 'format' or 'mimetype' "
-                "kwargs to be set")
+                "kwargs to be set"
+            )
 
         if format is not None:
             try:
                 # the first added will be the most specific
-                formatter_cls, args, kwargs = (
-                    self._formatters_by_format[format][0])
+                formatter_cls, args, kwargs = self._formatters_by_format[format][0]
             except IndexError:
-                raise FormatterNotFound(
-                    "Formatter for format '%s' not found!" % format)
+                raise FormatterNotFound("Formatter for format '%s' not found!" % format)
         elif mimetype is not None:
             try:
                 # the first added will be the most specific
-                formatter_cls, args, kwargs = (
-                    self._formatters_by_mimetype[mimetype][0])
+                formatter_cls, args, kwargs = self._formatters_by_mimetype[mimetype][0]
             except IndexError:
                 raise FormatterNotFound(
-                    "Formatter for mimetype '%s' not found!" % mimetype)
+                    "Formatter for mimetype '%s' not found!" % mimetype
+                )
 
         formatter = formatter_cls(request_mimetype=mimetype)
         formatter.configure(*args, **kwargs)
@@ -144,13 +141,14 @@ class Negotiator:
         )
 
 
-def negotiate(negotiator_cls: Type[Negotiator], formatter_cls: Type[Formatter],
-              *args, **kwargs) -> Callable:
+def negotiate(
+    negotiator_cls: Type[Negotiator], formatter_cls: Type[Formatter], *args, **kwargs
+) -> Callable:
     def _negotiate(f, *args, **kwargs):
         return f.negotiator(*args, **kwargs)
 
     def decorate(f):
-        if not hasattr(f, 'negotiator'):
+        if not hasattr(f, "negotiator"):
             f.negotiator = negotiator_cls(f)
 
         f.negotiator.register_formatter(formatter_cls, *args, **kwargs)
