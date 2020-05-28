@@ -22,6 +22,17 @@ repos:
     language: system
     types: [python]
 
+  - id: check-copyright-date
+    name: check-copyright-date
+    entry: bash
+    # Checks that there is either:
+    # * no Copyright header at all, or
+    # * at least one Copyright header followed by the current year
+    args: ['-c', '(! grep -q "^# Copyright" $0) || grep -q "^# Copyright.*$(date +%Y)" $0']
+    language: system
+    types: [python]
+
+
 - repo: https://github.com/python/black
   rev: 19.10b0
   hooks:
