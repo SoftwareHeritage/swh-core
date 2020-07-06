@@ -33,12 +33,21 @@ async def root(request):
 STRUCT = {
     "txt": "something stupid",
     # 'date': datetime.date(2019, 6, 9),  # not supported
-    "datetime": datetime.datetime(2019, 6, 9, 10, 12),
+    "datetime": datetime.datetime(2019, 6, 9, 10, 12, tzinfo=datetime.timezone.utc),
     "timedelta": datetime.timedelta(days=-2, hours=3),
     "int": 42,
     "float": 3.14,
-    "subdata": {"int": 42, "datetime": datetime.datetime(2019, 6, 10, 11, 12),},
-    "list": [42, datetime.datetime(2019, 9, 10, 11, 12), "ok"],
+    "subdata": {
+        "int": 42,
+        "datetime": datetime.datetime(
+            2019, 6, 10, 11, 12, tzinfo=datetime.timezone.utc
+        ),
+    },
+    "list": [
+        42,
+        datetime.datetime(2019, 9, 10, 11, 12, tzinfo=datetime.timezone.utc),
+        "ok",
+    ],
 }
 
 

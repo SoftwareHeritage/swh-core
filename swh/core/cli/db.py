@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2018  The Software Heritage developers
+# Copyright (C) 2018-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -10,12 +10,14 @@ from os import path, environ
 import subprocess
 import warnings
 
-warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
-
 import click
 
 from swh.core.cli import CONTEXT_SETTINGS
 from swh.core.config import read as config_read
+
+
+warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
+
 
 logger = logging.getLogger(__name__)
 

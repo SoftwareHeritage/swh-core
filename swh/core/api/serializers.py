@@ -19,9 +19,16 @@ from typing import Any, Dict, Union, Tuple
 from requests import Response
 
 
+def encode_datetime(dt: datetime.datetime) -> str:
+    """Wrapper of datetime.datetime.isoformat() that forbids naive datetimes."""
+    if dt.tzinfo is None:
+        raise ValueError(f"{dt} is a naive datetime.")
+    return dt.isoformat()
+
+
 ENCODERS = [
     (arrow.Arrow, "arrow", arrow.Arrow.isoformat),
-    (datetime.datetime, "datetime", datetime.datetime.isoformat),
+    (datetime.datetime, "datetime", encode_datetime),
     (
         datetime.timedelta,
         "timedelta",
