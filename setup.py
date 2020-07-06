@@ -42,6 +42,7 @@ setup(
     description="Software Heritage core utilities",
     long_description=long_description,
     long_description_content_type="text/markdown",
+    python_requires=">=3.7",
     author="Software Heritage developers",
     author_email="swh-devel@inria.fr",
     url="https://forge.softwareheritage.org/diffusion/DCORE/",
@@ -82,5 +83,6 @@ setup(
         "Bug Reports": "https://forge.softwareheritage.org/maniphest",
         "Funding": "https://www.softwareheritage.org/donate",
         "Source": "https://forge.softwareheritage.org/source/swh-core",
+        "Documentation": "https://docs.softwareheritage.org/devel/swh-core/",
     },
 )

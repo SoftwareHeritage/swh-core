@@ -53,7 +53,6 @@ class Serializers(unittest.TestCase):
 
         self.data = {
             "bytes": b"123456789\x99\xaf\xff\x00\x12",
-            "datetime_naive": datetime.datetime(2015, 1, 1, 12, 4, 42, 231455),
             "datetime_tz": datetime.datetime(
                 2015, 3, 4, 18, 25, 13, 1234, tzinfo=self.tz
             ),
@@ -70,10 +69,6 @@ class Serializers(unittest.TestCase):
 
         self.encoded_data = {
             "bytes": {"swhtype": "bytes", "d": "F)}kWH8wXmIhn8j01^"},
-            "datetime_naive": {
-                "swhtype": "datetime",
-                "d": "2015-01-01T12:04:42.231455",
-            },
             "datetime_tz": {
                 "swhtype": "datetime",
                 "d": "2015-03-04T18:25:13.001234+01:58",
@@ -95,10 +90,6 @@ class Serializers(unittest.TestCase):
 
         self.legacy_msgpack = {
             "bytes": b"\xc4\x0e123456789\x99\xaf\xff\x00\x12",
-            "datetime_naive": (
-                b"\x82\xc4\x0c__datetime__\xc3\xc4\x01s\xba"
-                b"2015-01-01T12:04:42.231455"
-            ),
             "datetime_tz": (
                 b"\x82\xc4\x0c__datetime__\xc3\xc4\x01s\xd9 "
                 b"2015-03-04T18:25:13.001234+01:58"
@@ -184,3 +175,29 @@ class Serializers(unittest.TestCase):
     def test_decode_legacy_msgpack(self):
         for k, v in self.legacy_msgpack.items():
             assert msgpack_loads(v) == self.data[k]
+
+    def test_encode_native_datetime(self):
+        dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
+        with self.assertRaises(ValueError, matches="naive datetime"):
+            msgpack_dumps(dt)
+
+    def test_decode_naive_datetime(self):
+        expected_dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
+
+        # Current encoding
+        assert (
+            msgpack_loads(
+                b"\x82\xc4\x07swhtype\xa8datetime\xc4\x01d\xba"
+                b"2015-01-01T12:04:42.231455"
+            )
+            == expected_dt
+        )
+
+        # Legacy encoding
+        assert (
+            msgpack_loads(
+                b"\x82\xc4\x0c__datetime__\xc3\xc4\x01s\xba"
+                b"2015-01-01T12:04:42.231455"
+            )
+            == expected_dt
+        )

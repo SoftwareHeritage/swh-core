@@ -28,6 +28,7 @@ hypothesis>=3.11.0
 pre-commit
 pytz
 pytest-postgresql
+typing-extensions
 psycopg2
 aiohttp
 aiohttp_utils>=3.1.1
@@ -50,3 +51,4 @@ pytz
 
 [testing-db]
 pytest-postgresql
+typing-extensions
