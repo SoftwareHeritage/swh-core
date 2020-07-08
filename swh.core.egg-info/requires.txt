@@ -5,6 +5,7 @@ sentry-sdk
 
 [db]
 psycopg2
+typing-extensions
 
 [http]
 aiohttp
@@ -29,6 +30,7 @@ pre-commit
 pytz
 pytest-postgresql
 psycopg2
+typing-extensions
 aiohttp
 aiohttp_utils>=3.1.1
 arrow
