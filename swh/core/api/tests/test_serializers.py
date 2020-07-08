@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2018  The Software Heritage developers
+# Copyright (C) 2015-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -9,6 +9,7 @@ from typing import Any, Callable, List, Tuple
 import unittest
 from uuid import UUID
 
+import pytest
 import arrow
 import requests
 import requests_mock
@@ -178,7 +179,7 @@ class Serializers(unittest.TestCase):
 
     def test_encode_native_datetime(self):
         dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
-        with self.assertRaises(ValueError, match="naive datetime"):
+        with pytest.raises(ValueError, match="naive datetime"):
             msgpack_dumps(dt)
 
     def test_decode_naive_datetime(self):
