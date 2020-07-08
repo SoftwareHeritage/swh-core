@@ -178,7 +178,7 @@ class Serializers(unittest.TestCase):
 
     def test_encode_native_datetime(self):
         dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
-        with self.assertRaises(ValueError, matches="naive datetime"):
+        with self.assertRaises(ValueError, match="naive datetime"):
             msgpack_dumps(dt)
 
     def test_decode_naive_datetime(self):
