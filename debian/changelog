@@ -1,3 +1,14 @@
+swh-core (0.1.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.1.1     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-07-08 13:03:52
+    +0200)
+  * Upstream changes:     - v0.1.1     - api.tests: Fix unsupported
+    matches keyword to match     - requirements-db: Move typing-
+    extension from test to runtime deps
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 08 Jul 2020 11:07:55 +0000
+
 swh-core (0.1.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.1.0     - (tagged by David Douard
