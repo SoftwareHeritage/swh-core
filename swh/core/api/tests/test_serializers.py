@@ -6,13 +6,16 @@
 import datetime
 import json
 
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, List, Tuple, Union
+
+from arrow import Arrow
 from uuid import UUID
 
 import pytest
 import arrow
 import requests
 
+from swh.core.api.classes import PagedResult
 from swh.core.api.serializers import (
     SWHJSONDecoder,
     SWHJSONEncoder,
@@ -48,33 +51,87 @@ extra_decoders = {
 
 TZ = datetime.timezone(datetime.timedelta(minutes=118))
 
+DATA_BYTES = b"123456789\x99\xaf\xff\x00\x12"
+ENCODED_DATA_BYTES = {"swhtype": "bytes", "d": "F)}kWH8wXmIhn8j01^"}
+
+DATA_DATETIME = datetime.datetime(2015, 3, 4, 18, 25, 13, 1234, tzinfo=TZ,)
+ENCODED_DATA_DATETIME = {
+    "swhtype": "datetime",
+    "d": "2015-03-04T18:25:13.001234+01:58",
+}
+
+DATA_TIMEDELTA = datetime.timedelta(64)
+ENCODED_DATA_TIMEDELTA = {
+    "swhtype": "timedelta",
+    "d": {"days": 64, "seconds": 0, "microseconds": 0},
+}
+
+DATA_ARROW = arrow.get("2018-04-25T16:17:53.533672+00:00")
+ENCODED_DATA_ARROW = {"swhtype": "arrow", "d": "2018-04-25T16:17:53.533672+00:00"}
+
+DATA_UUID = UUID("cdd8f804-9db6-40c3-93ab-5955d3836234")
+ENCODED_DATA_UUID = {"swhtype": "uuid", "d": "cdd8f804-9db6-40c3-93ab-5955d3836234"}
+
+# For test demonstration purposes
+TestPagedResultStr = PagedResult[
+    Union[UUID, datetime.datetime, datetime.timedelta], str
+]
+
+DATA_PAGED_RESULT = TestPagedResultStr(
+    results=[DATA_UUID, DATA_DATETIME, DATA_TIMEDELTA], next_page_token="10",
+)
+
+ENCODED_DATA_PAGED_RESULT = {
+    "d": {
+        "results": [ENCODED_DATA_UUID, ENCODED_DATA_DATETIME, ENCODED_DATA_TIMEDELTA,],
+        "next_page_token": "10",
+    },
+    "swhtype": "paged_result",
+}
+
+TestPagedResultTuple = PagedResult[Union[str, bytes, Arrow], List[Union[str, UUID]]]
+
+
+DATA_PAGED_RESULT2 = TestPagedResultTuple(
+    results=["data0", DATA_BYTES, DATA_ARROW], next_page_token=["10", DATA_UUID],
+)
+
+ENCODED_DATA_PAGED_RESULT2 = {
+    "d": {
+        "results": ["data0", ENCODED_DATA_BYTES, ENCODED_DATA_ARROW,],
+        "next_page_token": ["10", ENCODED_DATA_UUID],
+    },
+    "swhtype": "paged_result",
+}
+
 DATA = {
-    "bytes": b"123456789\x99\xaf\xff\x00\x12",
-    "datetime_tz": datetime.datetime(2015, 3, 4, 18, 25, 13, 1234, tzinfo=TZ,),
+    "bytes": DATA_BYTES,
+    "datetime_tz": DATA_DATETIME,
     "datetime_utc": datetime.datetime(
         2015, 3, 4, 18, 25, 13, 1234, tzinfo=datetime.timezone.utc
     ),
-    "datetime_delta": datetime.timedelta(64),
-    "arrow_date": arrow.get("2018-04-25T16:17:53.533672+00:00"),
+    "datetime_delta": DATA_TIMEDELTA,
+    "arrow_date": DATA_ARROW,
     "swhtype": "fake",
     "swh_dict": {"swhtype": 42, "d": "test"},
     "random_dict": {"swhtype": 43},
-    "uuid": UUID("cdd8f804-9db6-40c3-93ab-5955d3836234"),
+    "uuid": DATA_UUID,
+    "paged-result": DATA_PAGED_RESULT,
+    "paged-result2": DATA_PAGED_RESULT2,
 }
 
 ENCODED_DATA = {
-    "bytes": {"swhtype": "bytes", "d": "F)}kWH8wXmIhn8j01^"},
-    "datetime_tz": {"swhtype": "datetime", "d": "2015-03-04T18:25:13.001234+01:58",},
+    "bytes": ENCODED_DATA_BYTES,
+    "datetime_tz": ENCODED_DATA_DATETIME,
     "datetime_utc": {"swhtype": "datetime", "d": "2015-03-04T18:25:13.001234+00:00",},
-    "datetime_delta": {
-        "swhtype": "timedelta",
-        "d": {"days": 64, "seconds": 0, "microseconds": 0},
-    },
-    "arrow_date": {"swhtype": "arrow", "d": "2018-04-25T16:17:53.533672+00:00"},
+    "datetime_delta": ENCODED_DATA_TIMEDELTA,
+    "arrow_date": ENCODED_DATA_ARROW,
     "swhtype": "fake",
     "swh_dict": {"swhtype": 42, "d": "test"},
     "random_dict": {"swhtype": 43},
-    "uuid": {"swhtype": "uuid", "d": "cdd8f804-9db6-40c3-93ab-5955d3836234"},
+    "uuid": ENCODED_DATA_UUID,
+    "paged-result": ENCODED_DATA_PAGED_RESULT,
+    "paged-result2": ENCODED_DATA_PAGED_RESULT2,
 }
 
 
