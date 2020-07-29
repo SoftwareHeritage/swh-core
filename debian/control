@@ -24,8 +24,8 @@ Build-Depends: debhelper (>= 9),
                python3-requests-mock,
                python3-sentry-sdk,
                python3-setuptools,
+               python3-setuptools-scm,
                python3-systemd,
-               python3-vcversioner,
                python3-yaml,
                python3-hypothesis (>= 3.11.0~)
 Standards-Version: 3.9.6
