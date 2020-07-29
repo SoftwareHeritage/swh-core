@@ -18,12 +18,27 @@ import msgpack
 from typing import Any, Dict, Union, Tuple
 from requests import Response
 
+from swh.core.api.classes import PagedResult
+
 
 def encode_datetime(dt: datetime.datetime) -> str:
     """Wrapper of datetime.datetime.isoformat() that forbids naive datetimes."""
     if dt.tzinfo is None:
         raise ValueError(f"{dt} is a naive datetime.")
     return dt.isoformat()
+
+
+def _encode_paged_result(obj: PagedResult) -> Dict[str, Any]:
+    """Serialize PagedResult to a Dict."""
+    return {
+        "results": obj.results,
+        "next_page_token": obj.next_page_token,
+    }
+
+
+def _decode_paged_result(obj: Dict[str, Any]) -> PagedResult:
+    """Deserialize Dict into PagedResult"""
+    return PagedResult(results=obj["results"], next_page_token=obj["next_page_token"],)
 
 
 ENCODERS = [
@@ -39,6 +54,7 @@ ENCODERS = [
         },
     ),
     (UUID, "uuid", str),
+    (PagedResult, "paged_result", _encode_paged_result),
     # Only for JSON:
     (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
 ]
@@ -48,6 +64,7 @@ DECODERS = {
     "datetime": lambda d: iso8601.parse_date(d, default_timezone=None),
     "timedelta": lambda d: datetime.timedelta(**d),
     "uuid": UUID,
+    "paged_result": _decode_paged_result,
     # Only for JSON:
     "bytes": base64.b85decode,
 }

@@ -50,7 +50,8 @@ setup(
     py_modules=["pytest_swh_core"],
     scripts=[],
     install_requires=parse_requirements(None, "swh"),
-    setup_requires=["vcversioner"],
+    setup_requires=["setuptools-scm"],
+    use_scm_version=True,
     extras_require={
         "testing-core": parse_requirements("test"),
         "logging": parse_requirements("logging"),
@@ -60,7 +61,6 @@ setup(
         # kitchen sink, please do not use
         "testing": parse_requirements("test", "test-db", "db", "http", "logging"),
     },
-    vcversioner={},
     include_package_data=True,
     entry_points="""
         [console_scripts]
