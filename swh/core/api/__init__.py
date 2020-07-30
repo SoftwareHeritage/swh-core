@@ -19,6 +19,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 
@@ -124,9 +125,12 @@ class RemoteException(Exception):
             return super().__str__()
 
 
-def remote_api_endpoint(path):
-    def dec(f):
-        f._endpoint_path = path
+F = TypeVar("F", bound=Callable)
+
+
+def remote_api_endpoint(path) -> Callable[[F], F]:
+    def dec(f: F) -> F:
+        f._endpoint_path = path  # type: ignore
         return f
 
     return dec
