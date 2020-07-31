@@ -1,8 +1,12 @@
-swh-core (0.2.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.2.2-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.2.2     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-07-31 13:41:19
+    +0200)
+  * Upstream changes:     - v0.2.2     - api.classes: Open
+    swh.core.api.classes.stream_results
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 30 Jul 2020 17:22:29 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 31 Jul 2020 11:44:33 +0000
 
 swh-core (0.2.1-1~swh1) unstable-swh; urgency=medium
 
