@@ -55,6 +55,7 @@ swh/core/api/serializers.py
 swh/core/api/tests/__init__.py
 swh/core/api/tests/server_testing.py
 swh/core/api/tests/test_async.py
+swh/core/api/tests/test_classes.py
 swh/core/api/tests/test_gunicorn.py
 swh/core/api/tests/test_rpc_client.py
 swh/core/api/tests/test_rpc_client_server.py

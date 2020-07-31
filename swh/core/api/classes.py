@@ -6,7 +6,9 @@
 from dataclasses import dataclass, field
 
 from typing import (
+    Callable,
     Generic,
+    Iterable,
     List,
     Optional,
     TypeVar,
@@ -23,3 +25,20 @@ class PagedResult(Generic[TResult, TToken]):
 
     results: List[TResult] = field(default_factory=list)
     next_page_token: Optional[TToken] = field(default=None)
+
+
+def stream_results(
+    f: Callable[..., PagedResult[TResult, TToken]], *args, **kwargs
+) -> Iterable[TResult]:
+    """Consume the paginated result and stream the page results
+
+    """
+    if "page_token" in kwargs:
+        raise TypeError('stream_results has no argument "page_token".')
+    page_token = None
+    while True:
+        page_result = f(*args, page_token=page_token, **kwargs)
+        yield from page_result.results
+        page_token = page_result.next_page_token
+        if page_token is None:
+            break
