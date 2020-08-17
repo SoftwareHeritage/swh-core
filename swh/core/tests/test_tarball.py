@@ -44,6 +44,35 @@ def test_compress_uncompress_zip(tmp_path):
     assert ["file%s.txt" % i for i in range(10)] == lsdir
 
 
+@pytest.mark.xfail(
+    reason=(
+        "Python's zipfile library doesn't support Info-ZIP's "
+        "extension for file permissions."
+    )
+)
+def test_compress_uncompress_zip_modes(tmp_path):
+    tocompress = tmp_path / "compressme"
+    tocompress.mkdir()
+
+    fpath = tocompress / "text.txt"
+    fpath.write_text("echo foo")
+    fpath.chmod(0o644)
+
+    fpath = tocompress / "executable.sh"
+    fpath.write_text("echo foo")
+    fpath.chmod(0o755)
+
+    zipfile = tmp_path / "archive.zip"
+    tarball.compress(str(zipfile), "zip", str(tocompress))
+
+    destdir = tmp_path / "destdir"
+    tarball.uncompress(str(zipfile), str(destdir))
+
+    (executable_path, text_path) = sorted(destdir.iterdir())
+    assert text_path.stat().st_mode == 0o100644  # succeeds, it's the default
+    assert executable_path.stat().st_mode == 0o100755  # fails
+
+
 def test_compress_uncompress_tar(tmp_path):
     tocompress = tmp_path / "compressme"
     tocompress.mkdir()
@@ -60,6 +89,29 @@ def test_compress_uncompress_tar(tmp_path):
 
     lsdir = sorted(x.name for x in destdir.iterdir())
     assert ["file%s.txt" % i for i in range(10)] == lsdir
+
+
+def test_compress_uncompress_tar_modes(tmp_path):
+    tocompress = tmp_path / "compressme"
+    tocompress.mkdir()
+
+    fpath = tocompress / "text.txt"
+    fpath.write_text("echo foo")
+    fpath.chmod(0o644)
+
+    fpath = tocompress / "executable.sh"
+    fpath.write_text("echo foo")
+    fpath.chmod(0o755)
+
+    tarfile = tmp_path / "archive.tar"
+    tarball.compress(str(tarfile), "tar", str(tocompress))
+
+    destdir = tmp_path / "destdir"
+    tarball.uncompress(str(tarfile), str(destdir))
+
+    (executable_path, text_path) = sorted(destdir.iterdir())
+    assert text_path.stat().st_mode == 0o100644
+    assert executable_path.stat().st_mode == 0o100755
 
 
 def test__unpack_tar_failure(tmp_path, datadir):
