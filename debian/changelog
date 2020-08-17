@@ -1,8 +1,11 @@
-swh-core (0.2.2-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.2.3-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.2.3     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-08-17 13:55:41 +0200)
+  * Upstream changes:     - v0.2.3     - * tarball: add test for
+    permissions.     - * Move SortedList from swh-storage.
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 31 Jul 2020 11:46:52 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 17 Aug 2020 11:57:43 +0000
 
 swh-core (0.2.2-1~swh1) unstable-swh; urgency=medium
 
