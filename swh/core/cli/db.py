@@ -4,16 +4,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import glob
 import logging
 from os import path, environ
-import subprocess
 import warnings
 
 import click
 
 from swh.core.cli import CONTEXT_SETTINGS
-from swh.core.config import read as config_read
 
 
 warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
@@ -34,6 +31,8 @@ logger = logging.getLogger(__name__)
 def db(ctx, config_file):
     """Software Heritage database generic tools.
     """
+    from swh.core.config import read as config_read
+
     ctx.ensure_object(dict)
     if config_file is None:
         config_file = environ.get("SWH_CONFIG_FILENAME")
@@ -73,6 +72,7 @@ def init(ctx):
     will initialize the database for the `storage` section using initialization
     scripts from the `swh.storage` package.
     """
+    import subprocess
 
     for modname, cfg in ctx.obj["config"].items():
         if cfg.get("cls") == "local" and cfg.get("args"):
@@ -172,6 +172,7 @@ def db_init(module, db_name, create_db):
 
 
 def get_sql_for_package(modname):
+    import glob
     from importlib import import_module
     from swh.core.utils import numfile_sortkey as sortkey
 

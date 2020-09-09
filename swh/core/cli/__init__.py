@@ -5,13 +5,9 @@
 
 import logging
 import logging.config
-import signal
 
 import click
 import pkg_resources
-import yaml
-
-from ..sentry import init_sentry
 
 LOG_LEVEL_NAMES = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -88,6 +84,10 @@ documented at https://docs.python.org/3/library/logging.config.html.
 def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
     """Command line interface for Software Heritage.
     """
+    import signal
+    import yaml
+    from ..sentry import init_sentry
+
     signal.signal(signal.SIGTERM, clean_exit_on_signal)
     signal.signal(signal.SIGINT, clean_exit_on_signal)
 
