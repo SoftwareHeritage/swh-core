@@ -115,7 +115,8 @@ def main():
     for entry_point in pkg_resources.iter_entry_points("swh.cli.subcommands"):
         try:
             cmd = entry_point.load()
-            swh.add_command(cmd, name=entry_point.name)
+            if swh.get_command(None, cmd.name) is not cmd:
+                swh.add_command(cmd, name=entry_point.name)
         except Exception as e:
             logger.warning("Could not load subcommand %s: %s", entry_point.name, str(e))
 
