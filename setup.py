@@ -67,8 +67,7 @@ setup(
         swh=swh.core.cli:main
         swh-db-init=swh.core.cli.db:db_init
         [swh.cli.subcommands]
-        db=swh.core.cli.db:db
-        db-init=swh.core.cli.db:db_init
+        db=swh.core.cli.db
         [pytest11]
         pytest_swh_core = swh.core.pytest_plugin
     """,
