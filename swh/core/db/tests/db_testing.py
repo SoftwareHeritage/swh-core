@@ -42,7 +42,11 @@ def swh_db_version(dbname_or_service):
 
     try:
         r = subprocess.run(
-            cmd, check=True, stdout=subprocess.PIPE, universal_newlines=True
+            cmd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
         )
         result = int(r.stdout.strip())
     except Exception:  # db not initialized
