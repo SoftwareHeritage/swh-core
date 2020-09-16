@@ -9,7 +9,7 @@ import yaml
 from itertools import chain
 from copy import deepcopy
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ _map_check_fn: Dict[str, Callable] = {
 }
 
 
-def exists_accessible(file):
+def exists_accessible(filepath: str) -> bool:
     """Check whether a file exists, and is accessible.
 
     Returns:
@@ -59,16 +59,16 @@ def exists_accessible(file):
     """
 
     try:
-        os.stat(file)
+        os.stat(filepath)
     except PermissionError:
         raise
     except FileNotFoundError:
         return False
     else:
-        if os.access(file, os.R_OK):
+        if os.access(filepath, os.R_OK):
             return True
         else:
-            raise PermissionError("Permission denied: %r" % file)
+            raise PermissionError("Permission denied: {filepath!r}")
 
 
 def config_basepath(config_path: str) -> str:
@@ -142,7 +142,9 @@ def read(
     return conf
 
 
-def priority_read(conf_filenames, default_conf=None):
+def priority_read(
+    conf_filenames: List[str], default_conf: Optional[Dict[str, Tuple[str, Any]]] = None
+):
     """Try reading the configuration files from conf_filenames, in order,
        and return the configuration from the first one that exists.
 
@@ -169,7 +171,7 @@ def merge_default_configs(base_config, *other_configs):
     return full_config
 
 
-def merge_configs(base, other):
+def merge_configs(base: Optional[Dict[str, Any]], other: Optional[Dict[str, Any]]):
     """Merge two config dictionaries
 
     This does merge config dicts recursively, with the rules, for every value
@@ -240,7 +242,7 @@ def merge_configs(base, other):
     return output
 
 
-def swh_config_paths(base_filename):
+def swh_config_paths(base_filename: str) -> List[str]:
     """Return the Software Heritage specific configuration paths for the given
        filename."""
 
