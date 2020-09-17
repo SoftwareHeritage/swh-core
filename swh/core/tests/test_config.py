@@ -4,10 +4,10 @@
 # See top-level LICENSE file for more information
 
 import os
-import pytest
 import shutil
-import pkg_resources.extern.packaging.version
 
+import pkg_resources.extern.packaging.version
+import pytest
 import yaml
 
 from swh.core import config
@@ -17,8 +17,8 @@ if pytest_v < pkg_resources.extern.packaging.version.parse("3.9"):
 
     @pytest.fixture
     def tmp_path(request):
-        import tempfile
         import pathlib
+        import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             yield pathlib.Path(tmpdir)

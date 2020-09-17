@@ -3,10 +3,10 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import requests
-
 from os import path
 from urllib.parse import unquote
+
+import requests
 
 from swh.core.pytest_plugin import requests_mock_datadir_factory
 

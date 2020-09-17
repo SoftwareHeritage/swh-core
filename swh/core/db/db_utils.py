@@ -13,8 +13,8 @@
 # later version.
 
 
-import re
 import functools
+import re
 
 import psycopg2.extensions
 

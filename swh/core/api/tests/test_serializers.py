@@ -5,23 +5,21 @@
 
 import datetime
 import json
-
 from typing import Any, Callable, List, Tuple, Union
-
-from arrow import Arrow
 from uuid import UUID
 
-import pytest
 import arrow
+from arrow import Arrow
+import pytest
 import requests
 
 from swh.core.api.classes import PagedResult
 from swh.core.api.serializers import (
     SWHJSONDecoder,
     SWHJSONEncoder,
+    decode_response,
     msgpack_dumps,
     msgpack_loads,
-    decode_response,
 )
 
 

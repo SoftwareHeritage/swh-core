@@ -4,8 +4,9 @@
 # See top-level LICENSE file for more information
 
 import os
-import pytest
 import shutil
+
+import pytest
 
 from swh.core import tarball
 

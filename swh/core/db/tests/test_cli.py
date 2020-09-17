@@ -4,7 +4,6 @@ from click.testing import CliRunner
 
 from swh.core.cli.db import db as swhdb
 
-
 help_msg = """Usage: swh [OPTIONS] COMMAND [ARGS]...
 
   Command line interface for Software Heritage.

@@ -3,15 +3,21 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import pytest
 import json
-import msgpack
 
 from flask import url_for
+import msgpack
+import pytest
 
-from swh.core.api import remote_api_endpoint, RPCServerApp
-from swh.core.api import negotiate, JSONFormatter, MsgpackFormatter
-from .test_serializers import ExtraType, extra_encoders, extra_decoders
+from swh.core.api import (
+    JSONFormatter,
+    MsgpackFormatter,
+    RPCServerApp,
+    negotiate,
+    remote_api_endpoint,
+)
+
+from .test_serializers import ExtraType, extra_decoders, extra_encoders
 
 
 class MyRPCServerApp(RPCServerApp):

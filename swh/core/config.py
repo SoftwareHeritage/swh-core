@@ -3,14 +3,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from copy import deepcopy
+from itertools import chain
 import logging
 import os
-import yaml
-from itertools import chain
-from copy import deepcopy
-
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import yaml
 
 logger = logging.getLogger(__name__)
 

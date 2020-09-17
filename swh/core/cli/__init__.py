@@ -85,7 +85,9 @@ def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
     """Command line interface for Software Heritage.
     """
     import signal
+
     import yaml
+
     from ..sentry import init_sentry
 
     signal.signal(signal.SIGTERM, clean_exit_on_signal)

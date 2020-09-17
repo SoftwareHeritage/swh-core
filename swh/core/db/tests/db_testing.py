@@ -3,16 +3,14 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import os
 import glob
+import os
 import subprocess
+from typing import Dict, Iterable, Optional, Tuple, Union
 
 import psycopg2
 
-from typing import Dict, Iterable, Optional, Tuple, Union
-
 from swh.core.utils import numfile_sortkey as sortkey
-
 
 DB_DUMP_TYPES = {".sql": "psql", ".dump": "pg_dump"}  # type: Dict[str, str]
 

@@ -5,15 +5,13 @@
 # See top-level LICENSE file for more information
 
 import logging
-from os import path, environ
+from os import environ, path
 from typing import Tuple
-
 import warnings
 
 import click
 
 from swh.core.cli import CONTEXT_SETTINGS
-
 
 warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
 
@@ -152,6 +150,7 @@ def db_init(module, db_name, create_db):
 def get_sql_for_package(modname):
     import glob
     from importlib import import_module
+
     from swh.core.utils import numfile_sortkey as sortkey
 
     if not modname.startswith("swh."):
@@ -181,6 +180,7 @@ def populate_database_for_package(modname: str, conninfo: str) -> Tuple[bool, in
       version of the database.
     """
     import subprocess
+
     from swh.core.db.tests.db_testing import swh_db_version
 
     current_version = swh_db_version(conninfo)

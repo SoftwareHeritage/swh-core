@@ -24,11 +24,10 @@
 #
 
 from collections import defaultdict
-from decorator import decorator
 from inspect import getcallargs
+from typing import Any, Callable, DefaultDict, List, NoReturn, Optional, Type
 
-from typing import Any, List, Optional, Callable, Type, NoReturn, DefaultDict
-
+from decorator import decorator
 from requests import Response
 
 
