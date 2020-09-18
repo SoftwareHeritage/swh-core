@@ -4,9 +4,14 @@
 # See top-level LICENSE file for more information
 
 import functools
+import logging
 import re
+from typing import Optional, Union
 
+import psycopg2
 import psycopg2.extensions
+
+logger = logging.getLogger(__name__)
 
 
 def stored_procedure(stored_proc):
@@ -35,6 +40,46 @@ def jsonize(value):
         return psycopg2.extras.Json(value)
 
     return value
+
+
+def swh_db_version(
+    db_or_conninfo: Union[str, psycopg2.extensions.connection]
+) -> Optional[int]:
+    """Retrieve the swh version if any. In case of the db not initialized,
+    this returns None. Otherwise, this returns the db's version.
+
+    Args:
+        db_or_conninfo: A database connection, or a database connection info string
+
+    Returns:
+        Optional[Int]: Either the db's version or None
+
+    """
+
+    if isinstance(db_or_conninfo, psycopg2.extensions.connection):
+        db = db_or_conninfo
+    else:
+        try:
+            if "=" not in db_or_conninfo:
+                # Database name
+                db_or_conninfo = f"dbname={db_or_conninfo}"
+            db = psycopg2.connect(db_or_conninfo)
+        except psycopg2.Error:
+            logger.exception("Failed to connect to `%s`", db_or_conninfo)
+            # Database not initialized
+            return None
+
+    try:
+        with db.cursor() as c:
+            query = "select version from dbversion order by dbversion desc limit 1"
+            try:
+                c.execute(query)
+                return c.fetchone()[0]
+            except psycopg2.errors.UndefinedTable:
+                return None
+    except Exception:
+        logger.exception("Could not get version from `%s`", db_or_conninfo)
+        return None
 
 
 # The following code has been imported from psycopg2, version 2.7.4,

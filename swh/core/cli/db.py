@@ -181,7 +181,7 @@ def populate_database_for_package(modname: str, conninfo: str) -> Tuple[bool, in
     """
     import subprocess
 
-    from swh.core.db.tests.db_testing import swh_db_version
+    from swh.core.db.db_utils import swh_db_version
 
     current_version = swh_db_version(conninfo)
     if current_version is not None:
@@ -205,4 +205,5 @@ def populate_database_for_package(modname: str, conninfo: str) -> Tuple[bool, in
         )
 
     current_version = swh_db_version(conninfo)
+    assert current_version is not None
     return True, current_version

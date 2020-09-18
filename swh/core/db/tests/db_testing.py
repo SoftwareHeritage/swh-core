@@ -15,43 +15,6 @@ from swh.core.utils import numfile_sortkey as sortkey
 DB_DUMP_TYPES = {".sql": "psql", ".dump": "pg_dump"}  # type: Dict[str, str]
 
 
-def swh_db_version(dbname_or_service):
-    """Retrieve the swh version if any. In case of the db not initialized,
-    this returns None. Otherwise, this returns the db's version.
-
-    Args:
-        dbname_or_service (str): The db's name or service
-
-    Returns:
-        Optional[Int]: Either the db's version or None
-
-    """
-    query = "select version from dbversion order by dbversion desc limit 1"
-    cmd = [
-        "psql",
-        "--tuples-only",
-        "--no-psqlrc",
-        "--quiet",
-        "-v",
-        "ON_ERROR_STOP=1",
-        "--command=%s" % query,
-        dbname_or_service,
-    ]
-
-    try:
-        r = subprocess.run(
-            cmd,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        )
-        result = int(r.stdout.strip())
-    except Exception:  # db not initialized
-        result = None
-    return result
-
-
 def pg_restore(dbname, dumpfile, dumptype="pg_dump"):
     """
     Args:
