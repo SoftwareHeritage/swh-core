@@ -1,17 +1,7 @@
 # Copyright (C) 2015-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
-#
-# This code has been imported from psycopg2, version 2.7.4,
-# https://github.com/psycopg/psycopg2/tree/5afb2ce803debea9533e293eef73c92ffce95bcd
-# and modified by Software Heritage.
-#
-# Original file: lib/extras.py
-#
-# psycopg2 is free software: you can redistribute it and/or modify it under the
-# terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
-
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
 
 import functools
 import re
@@ -45,6 +35,18 @@ def jsonize(value):
         return psycopg2.extras.Json(value)
 
     return value
+
+
+# The following code has been imported from psycopg2, version 2.7.4,
+# https://github.com/psycopg/psycopg2/tree/5afb2ce803debea9533e293eef73c92ffce95bcd
+# and modified by Software Heritage.
+#
+# Original file: lib/extras.py
+#
+# psycopg2 is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
 
 
 def _paginate(seq, page_size):
