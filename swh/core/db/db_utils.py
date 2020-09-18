@@ -42,32 +42,51 @@ def jsonize(value):
     return value
 
 
-def swh_db_version(
+def connect_to_conninfo(
     db_or_conninfo: Union[str, psycopg2.extensions.connection]
-) -> Optional[int]:
-    """Retrieve the swh version if any. In case of the db not initialized,
-    this returns None. Otherwise, this returns the db's version.
+) -> psycopg2.extensions.connection:
+    """Connect to the database passed in argument
 
     Args:
         db_or_conninfo: A database connection, or a database connection info string
 
     Returns:
-        Optional[Int]: Either the db's version or None
+        a connected database handle
 
+    Raises:
+        psycopg2.Error if the database doesn't exist
     """
-
     if isinstance(db_or_conninfo, psycopg2.extensions.connection):
-        db = db_or_conninfo
-    else:
-        try:
-            if "=" not in db_or_conninfo:
-                # Database name
-                db_or_conninfo = f"dbname={db_or_conninfo}"
-            db = psycopg2.connect(db_or_conninfo)
-        except psycopg2.Error:
-            logger.exception("Failed to connect to `%s`", db_or_conninfo)
-            # Database not initialized
-            return None
+        return db_or_conninfo
+
+    if "=" not in db_or_conninfo and "//" not in db_or_conninfo:
+        # Database name
+        db_or_conninfo = f"dbname={db_or_conninfo}"
+
+    db = psycopg2.connect(db_or_conninfo)
+
+    return db
+
+
+def swh_db_version(
+    db_or_conninfo: Union[str, psycopg2.extensions.connection]
+) -> Optional[int]:
+    """Retrieve the swh version of the database.
+
+    If the database is not initialized, this logs a warning and returns None.
+
+    Args:
+      db_or_conninfo: A database connection, or a database connection info string
+
+    Returns:
+        Either the version of the database, or None if it couldn't be detected
+    """
+    try:
+        db = connect_to_conninfo(db_or_conninfo)
+    except psycopg2.Error:
+        logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        # Database not initialized
+        return None
 
     try:
         with db.cursor() as c:
@@ -79,6 +98,41 @@ def swh_db_version(
                 return None
     except Exception:
         logger.exception("Could not get version from `%s`", db_or_conninfo)
+        return None
+
+
+def swh_db_flavor(
+    db_or_conninfo: Union[str, psycopg2.extensions.connection]
+) -> Optional[str]:
+    """Retrieve the swh flavor of the database.
+
+    If the database is not initialized, or the database doesn't support
+    flavors, this returns None.
+
+    Args:
+      db_or_conninfo: A database connection, or a database connection info string
+
+    Returns:
+        The flavor of the database, or None if it could not be detected.
+    """
+    try:
+        db = connect_to_conninfo(db_or_conninfo)
+    except psycopg2.Error:
+        logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        # Database not initialized
+        return None
+
+    try:
+        with db.cursor() as c:
+            query = "select swh_get_dbflavor()"
+            try:
+                c.execute(query)
+                return c.fetchone()[0]
+            except psycopg2.errors.UndefinedFunction:
+                # function not found: no flavor
+                return None
+    except Exception:
+        logger.exception("Could not get flavor from `%s`", db_or_conninfo)
         return None
 
 

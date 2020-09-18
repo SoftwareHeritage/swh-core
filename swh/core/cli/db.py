@@ -6,7 +6,7 @@
 
 import logging
 from os import environ, path
-from typing import Collection, Tuple
+from typing import Collection, Optional, Tuple
 import warnings
 
 import click
@@ -92,7 +92,10 @@ def db_create(module, db_name, template):
     default="softwareheritage-dev",
     show_default=True,
 )
-def db_init(module, db_name):
+@click.option(
+    "--flavor", help="Database flavor.", default=None,
+)
+def db_init(module, db_name, flavor):
     """Initialize a database for the Software Heritage <module>.
 
     Example:
@@ -103,27 +106,40 @@ def db_init(module, db_name):
     please provide them using standard environment variables.
     See psql(1) man page (section ENVIRONMENTS) for details.
 
-    Example:
+    Examples:
 
-      PGPORT=5434 swh db-init indexer
+      PGPORT=5434 swh db init indexer
       swh db init -d postgresql://user:passwd@pghost:5433/swh-storage storage
+      swh db init --flavor read_replica -d swh-storage storage
 
     """
 
-    logger.debug("db_init %s dn_name=%s", module, db_name)
+    logger.debug("db_init %s flavor=%s dn_name=%s", module, flavor, db_name)
 
-    initialized, dbversion = populate_database_for_package(module, db_name)
+    initialized, dbversion, dbflavor = populate_database_for_package(
+        module, db_name, flavor
+    )
 
     # TODO: Ideally migrate the version from db_version to the latest
     # db version
 
     click.secho(
-        "DONE database for {} {} at version {}".format(
-            module, "initialized" if initialized else "exists", dbversion
+        "DONE database for {} {}{} at version {}".format(
+            module,
+            "initialized" if initialized else "exists",
+            f" (flavor {dbflavor})" if dbflavor is not None else "",
+            dbversion,
         ),
         fg="green",
         bold=True,
     )
+
+    if flavor is not None and dbflavor != flavor:
+        click.secho(
+            f"WARNING requested flavor '{flavor}' != recorded flavor '{dbflavor}'",
+            fg="red",
+            bold=True,
+        )
 
 
 def get_sql_for_package(modname):
@@ -147,30 +163,35 @@ def get_sql_for_package(modname):
     return sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey)
 
 
-def populate_database_for_package(modname: str, conninfo: str) -> Tuple[bool, int]:
+def populate_database_for_package(
+    modname: str, conninfo: str, flavor: Optional[str] = None
+) -> Tuple[bool, int, Optional[str]]:
     """Populate the database, pointed at with `conninfo`, using the SQL files found in
     the package `modname`.
 
     Args:
       modname: Name of the module of which we're loading the files
       conninfo: connection info string for the SQL database
+      flavor: the module-specific flavor which we want to initialize the database under
     Returns:
-      Tuple with two elements: whether the database has been initialized; the current
-      version of the database.
+      Tuple with three elements: whether the database has been initialized; the current
+      version of the database; if it exists, the flavor of the database.
     """
-    from swh.core.db.db_utils import swh_db_version
+    from swh.core.db.db_utils import swh_db_flavor, swh_db_version
 
     current_version = swh_db_version(conninfo)
     if current_version is not None:
-        return False, current_version
+        dbflavor = swh_db_flavor(conninfo)
+        return False, current_version, dbflavor
 
     sqlfiles = get_sql_for_package(modname)
     sqlfiles = [fname for fname in sqlfiles if "-superuser-" not in fname]
-    execute_sqlfiles(sqlfiles, conninfo)
+    execute_sqlfiles(sqlfiles, conninfo, flavor)
 
     current_version = swh_db_version(conninfo)
     assert current_version is not None
-    return True, current_version
+    dbflavor = swh_db_flavor(conninfo)
+    return True, current_version, dbflavor
 
 
 def create_database_for_package(
@@ -218,27 +239,40 @@ def create_database_for_package(
     execute_sqlfiles(sqlfiles, conninfo)
 
 
-def execute_sqlfiles(sqlfiles: Collection[str], conninfo: str):
+def execute_sqlfiles(
+    sqlfiles: Collection[str], conninfo: str, flavor: Optional[str] = None
+):
     """Execute a list of SQL files on the database pointed at with `conninfo`.
 
     Args:
       sqlfiles: List of SQL files to execute
       conninfo: connection info string for the SQL database
+      flavor: the database flavor to initialize
     """
     import subprocess
 
+    psql_command = [
+        "psql",
+        "--quiet",
+        "--no-psqlrc",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-d",
+        conninfo,
+    ]
+
+    flavor_set = False
     for sqlfile in sqlfiles:
         logger.debug(f"execute SQL file {sqlfile} db_name={conninfo}")
-        subprocess.check_call(
-            [
-                "psql",
-                "--quiet",
-                "--no-psqlrc",
-                "-v",
-                "ON_ERROR_STOP=1",
-                "-d",
-                conninfo,
-                "-f",
-                sqlfile,
-            ]
+        subprocess.check_call(psql_command + ["-f", sqlfile])
+
+        if flavor is not None and not flavor_set and sqlfile.endswith("-flavor.sql"):
+            logger.debug("Setting database flavor %s", flavor)
+            query = f"insert into dbflavor (flavor) values ('{flavor}')"
+            subprocess.check_call(psql_command + ["-c", query])
+            flavor_set = True
+
+    if flavor is not None and not flavor_set:
+        logger.warn(
+            "Asked for flavor %s, but module does not support database flavors", flavor,
         )
