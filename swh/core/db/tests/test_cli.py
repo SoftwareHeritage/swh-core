@@ -44,7 +44,8 @@ Options:
   -h, --help              Show this message and exit.
 
 Commands:
-  init  Initialize the database for every Software Heritage module found in...
+  create  Create a database for the Software Heritage <module>.
+  init    Initialize a database for the Software Heritage <module>.
 """
 
 

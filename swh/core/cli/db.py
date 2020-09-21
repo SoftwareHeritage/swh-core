@@ -6,12 +6,13 @@
 
 import logging
 from os import environ, path
-from typing import Tuple
+from typing import Collection, Tuple
 import warnings
 
 import click
 
 from swh.core.cli import CONTEXT_SETTINGS
+from swh.core.cli import swh as swh_cli_group
 
 warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
 
@@ -19,7 +20,7 @@ warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
 logger = logging.getLogger(__name__)
 
 
-@click.group(name="db", context_settings=CONTEXT_SETTINGS)
+@swh_cli_group.group(name="db", context_settings=CONTEXT_SETTINGS)
 @click.option(
     "--config-file",
     "-C",
@@ -29,8 +30,7 @@ logger = logging.getLogger(__name__)
 )
 @click.pass_context
 def db(ctx, config_file):
-    """Software Heritage database generic tools.
-    """
+    """Software Heritage database generic tools."""
     from swh.core.config import read as config_read
 
     ctx.ensure_object(dict)
@@ -40,59 +40,7 @@ def db(ctx, config_file):
     ctx.obj["config"] = cfg
 
 
-@db.command(name="init", context_settings=CONTEXT_SETTINGS)
-@click.pass_context
-def init(ctx):
-    """Initialize the database for every Software Heritage module found in the
-    configuration file. For every configuration section in the config file
-    that:
-
-    1. has the name of an existing swh package,
-    2. has credentials for a local db access,
-
-    it will run the initialization scripts from the swh package against the
-    given database.
-
-    Example for the config file::
-
-    \b
-      storage:
-        cls: local
-        args:
-          db: postgresql:///?service=swh-storage
-      objstorage:
-        cls: remote
-        args:
-          url: http://swh-objstorage:5003/
-
-    the command:
-
-      swh db -C /path/to/config.yml init
-
-    will initialize the database for the `storage` section using initialization
-    scripts from the `swh.storage` package.
-    """
-    for modname, cfg in ctx.obj["config"].items():
-        if cfg.get("cls") == "local" and cfg.get("args", {}).get("db"):
-            try:
-                initialized, dbversion = populate_database_for_package(
-                    modname, cfg["args"]["db"]
-                )
-            except click.BadParameter:
-                logger.info(
-                    "Failed to load/find sql initialization files for %s", modname
-                )
-
-        click.secho(
-            "DONE database for {} {} at version {}".format(
-                modname, "initialized" if initialized else "exists", dbversion
-            ),
-            fg="green",
-            bold=True,
-        )
-
-
-@click.command(context_settings=CONTEXT_SETTINGS)
+@db.command(name="create", context_settings=CONTEXT_SETTINGS)
 @click.argument("module", required=True)
 @click.option(
     "--db-name",
@@ -102,18 +50,54 @@ def init(ctx):
     show_default=True,
 )
 @click.option(
-    "--create-db/--no-create-db",
-    "-C",
-    help="Attempt to create the database.",
-    default=False,
+    "--template",
+    "-T",
+    help="Template database from which to build this database.",
+    default="template1",
+    show_default=True,
 )
-def db_init(module, db_name, create_db):
-    """Initialize a database for the Software Heritage <module>. By
-    default, does not attempt to create the database.
+def db_create(module, db_name, template):
+    """Create a database for the Software Heritage <module>.
+
+    and potentially execute superuser-level initialization steps.
 
     Example:
 
-      swh db-init -d swh-test storage
+      swh db create -d swh-test storage
+
+    If you want to specify non-default postgresql connection parameters, please
+    provide them using standard environment variables or by the mean of a
+    properly crafted libpq connection URI. See psql(1) man page (section
+    ENVIRONMENTS) for details.
+
+    Note: this command requires a postgresql connection with superuser permissions.
+
+    Example:
+
+      PGPORT=5434 swh db create indexer
+      swh db create -d postgresql://superuser:passwd@pghost:5433/swh-storage storage
+
+    """
+
+    logger.debug("db_create %s dn_name=%s", module, db_name)
+    create_database_for_package(module, db_name, template)
+
+
+@db.command(name="init", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
+@click.option(
+    "--db-name",
+    "-d",
+    help="Database name.",
+    default="softwareheritage-dev",
+    show_default=True,
+)
+def db_init(module, db_name):
+    """Initialize a database for the Software Heritage <module>.
+
+    Example:
+
+      swh db init -d swh-test storage
 
     If you want to specify non-default postgresql connection parameters,
     please provide them using standard environment variables.
@@ -122,16 +106,11 @@ def db_init(module, db_name, create_db):
     Example:
 
       PGPORT=5434 swh db-init indexer
+      swh db init -d postgresql://user:passwd@pghost:5433/swh-storage storage
 
     """
 
     logger.debug("db_init %s dn_name=%s", module, db_name)
-
-    if create_db:
-        from swh.core.db.tests.db_testing import pg_createdb
-
-        # Create the db (or fail silently if already existing)
-        pg_createdb(db_name, check=False)
 
     initialized, dbversion = populate_database_for_package(module, db_name)
 
@@ -165,7 +144,7 @@ def get_sql_for_package(modname):
         raise click.BadParameter(
             "Module {} does not provide a db schema " "(no sql/ dir)".format(modname)
         )
-    return list(sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey))
+    return sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey)
 
 
 def populate_database_for_package(modname: str, conninfo: str) -> Tuple[bool, int]:
@@ -179,8 +158,6 @@ def populate_database_for_package(modname: str, conninfo: str) -> Tuple[bool, in
       Tuple with two elements: whether the database has been initialized; the current
       version of the database.
     """
-    import subprocess
-
     from swh.core.db.db_utils import swh_db_version
 
     current_version = swh_db_version(conninfo)
@@ -188,8 +165,70 @@ def populate_database_for_package(modname: str, conninfo: str) -> Tuple[bool, in
         return False, current_version
 
     sqlfiles = get_sql_for_package(modname)
+    sqlfiles = [fname for fname in sqlfiles if "-superuser-" not in fname]
+    execute_sqlfiles(sqlfiles, conninfo)
+
+    current_version = swh_db_version(conninfo)
+    assert current_version is not None
+    return True, current_version
+
+
+def create_database_for_package(
+    modname: str, conninfo: str, template: str = "template1"
+):
+    """Create the database pointed at with `conninfo`, and initialize it using
+    -superuser- SQL files found in the package `modname`.
+
+    Args:
+      modname: Name of the module of which we're loading the files
+      conninfo: connection info string for the SQL database
+      template: the name of the database to connect to and use as template to create
+                the new database
+
+    """
+    import subprocess
+
+    from psycopg2.extensions import make_dsn, parse_dsn
+
+    # Use the given conninfo but with dbname replaced by the template dbname
+    # for the database creation step
+    creation_dsn = parse_dsn(conninfo)
+    db_name = creation_dsn["dbname"]
+    creation_dsn["dbname"] = template
+    logger.debug("db_create db_name=%s (from %s)", db_name, template)
+    subprocess.check_call(
+        [
+            "psql",
+            "--quiet",
+            "--no-psqlrc",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-d",
+            make_dsn(**creation_dsn),
+            "-c",
+            f"CREATE DATABASE {db_name}",
+        ]
+    )
+
+    # the remaining initialization process -- running -superuser- SQL files --
+    # is done using the given conninfo, thus connecting to the newly created
+    # database
+    sqlfiles = get_sql_for_package(modname)
+    sqlfiles = [fname for fname in sqlfiles if "-superuser-" in fname]
+    execute_sqlfiles(sqlfiles, conninfo)
+
+
+def execute_sqlfiles(sqlfiles: Collection[str], conninfo: str):
+    """Execute a list of SQL files on the database pointed at with `conninfo`.
+
+    Args:
+      sqlfiles: List of SQL files to execute
+      conninfo: connection info string for the SQL database
+    """
+    import subprocess
 
     for sqlfile in sqlfiles:
+        logger.debug(f"execute SQL file {sqlfile} db_name={conninfo}")
         subprocess.check_call(
             [
                 "psql",
@@ -203,7 +242,3 @@ def populate_database_for_package(modname: str, conninfo: str) -> Tuple[bool, in
                 sqlfile,
             ]
         )
-
-    current_version = swh_db_version(conninfo)
-    assert current_version is not None
-    return True, current_version
