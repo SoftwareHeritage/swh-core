@@ -85,7 +85,7 @@ def read_raw_config(base_config_path: str) -> Dict[str, Any]:
     """
     yml_file = f"{base_config_path}.yml"
     if exists_accessible(yml_file):
-        logger.info("Loading config file %s", yml_file)
+        logger.debug("Loading config file %s", yml_file)
         with open(yml_file) as f:
             return yaml.safe_load(f)
 
