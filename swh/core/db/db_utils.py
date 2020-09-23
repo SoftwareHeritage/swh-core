@@ -1,22 +1,17 @@
 # Copyright (C) 2015-2019  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
-#
-# This code has been imported from psycopg2, version 2.7.4,
-# https://github.com/psycopg/psycopg2/tree/5afb2ce803debea9533e293eef73c92ffce95bcd
-# and modified by Software Heritage.
-#
-# Original file: lib/extras.py
-#
-# psycopg2 is free software: you can redistribute it and/or modify it under the
-# terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
 
-
-import re
 import functools
+import logging
+import re
+from typing import Optional, Union
 
+import psycopg2
 import psycopg2.extensions
+
+logger = logging.getLogger(__name__)
 
 
 def stored_procedure(stored_proc):
@@ -45,6 +40,112 @@ def jsonize(value):
         return psycopg2.extras.Json(value)
 
     return value
+
+
+def connect_to_conninfo(
+    db_or_conninfo: Union[str, psycopg2.extensions.connection]
+) -> psycopg2.extensions.connection:
+    """Connect to the database passed in argument
+
+    Args:
+        db_or_conninfo: A database connection, or a database connection info string
+
+    Returns:
+        a connected database handle
+
+    Raises:
+        psycopg2.Error if the database doesn't exist
+    """
+    if isinstance(db_or_conninfo, psycopg2.extensions.connection):
+        return db_or_conninfo
+
+    if "=" not in db_or_conninfo and "//" not in db_or_conninfo:
+        # Database name
+        db_or_conninfo = f"dbname={db_or_conninfo}"
+
+    db = psycopg2.connect(db_or_conninfo)
+
+    return db
+
+
+def swh_db_version(
+    db_or_conninfo: Union[str, psycopg2.extensions.connection]
+) -> Optional[int]:
+    """Retrieve the swh version of the database.
+
+    If the database is not initialized, this logs a warning and returns None.
+
+    Args:
+      db_or_conninfo: A database connection, or a database connection info string
+
+    Returns:
+        Either the version of the database, or None if it couldn't be detected
+    """
+    try:
+        db = connect_to_conninfo(db_or_conninfo)
+    except psycopg2.Error:
+        logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        # Database not initialized
+        return None
+
+    try:
+        with db.cursor() as c:
+            query = "select version from dbversion order by dbversion desc limit 1"
+            try:
+                c.execute(query)
+                return c.fetchone()[0]
+            except psycopg2.errors.UndefinedTable:
+                return None
+    except Exception:
+        logger.exception("Could not get version from `%s`", db_or_conninfo)
+        return None
+
+
+def swh_db_flavor(
+    db_or_conninfo: Union[str, psycopg2.extensions.connection]
+) -> Optional[str]:
+    """Retrieve the swh flavor of the database.
+
+    If the database is not initialized, or the database doesn't support
+    flavors, this returns None.
+
+    Args:
+      db_or_conninfo: A database connection, or a database connection info string
+
+    Returns:
+        The flavor of the database, or None if it could not be detected.
+    """
+    try:
+        db = connect_to_conninfo(db_or_conninfo)
+    except psycopg2.Error:
+        logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        # Database not initialized
+        return None
+
+    try:
+        with db.cursor() as c:
+            query = "select swh_get_dbflavor()"
+            try:
+                c.execute(query)
+                return c.fetchone()[0]
+            except psycopg2.errors.UndefinedFunction:
+                # function not found: no flavor
+                return None
+    except Exception:
+        logger.exception("Could not get flavor from `%s`", db_or_conninfo)
+        return None
+
+
+# The following code has been imported from psycopg2, version 2.7.4,
+# https://github.com/psycopg/psycopg2/tree/5afb2ce803debea9533e293eef73c92ffce95bcd
+# and modified by Software Heritage.
+#
+# Original file: lib/extras.py
+#
+# psycopg2 is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
 
 
 def _paginate(seq, page_size):

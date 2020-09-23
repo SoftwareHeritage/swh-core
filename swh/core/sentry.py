@@ -3,8 +3,9 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import pkg_resources
 import os
+
+import pkg_resources
 
 
 def get_sentry_release():

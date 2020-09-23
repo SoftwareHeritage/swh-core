@@ -7,7 +7,8 @@ import datetime
 import logging
 from typing import Any, Generator, List, Tuple
 
-from systemd.journal import JournalHandler as _JournalHandler, send
+from systemd.journal import JournalHandler as _JournalHandler
+from systemd.journal import send
 
 try:
     from celery import current_task

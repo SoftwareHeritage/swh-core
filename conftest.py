@@ -1,5 +1,5 @@
-import pytest
 from hypothesis import settings
+import pytest
 
 from swh.core.cli import swh as _swhmain
 

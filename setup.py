@@ -4,11 +4,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import os
-from setuptools import setup, find_packages
-
-from os import path
 from io import open
+import os
+from os import path
+
+from setuptools import find_packages, setup
 
 here = path.abspath(path.dirname(__file__))
 
@@ -67,8 +67,7 @@ setup(
         swh=swh.core.cli:main
         swh-db-init=swh.core.cli.db:db_init
         [swh.cli.subcommands]
-        db=swh.core.cli.db:db
-        db-init=swh.core.cli.db:db_init
+        db=swh.core.cli.db
         [pytest11]
         pytest_swh_core = swh.core.pytest_plugin
     """,

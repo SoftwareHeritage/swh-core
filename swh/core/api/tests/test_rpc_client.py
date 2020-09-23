@@ -4,11 +4,12 @@
 # See top-level LICENSE file for more information
 
 import re
+
 import pytest
 
-from swh.core.api import remote_api_endpoint, RPCClient
+from swh.core.api import RPCClient, remote_api_endpoint
 
-from .test_serializers import ExtraType, extra_encoders, extra_decoders
+from .test_serializers import ExtraType, extra_decoders, extra_encoders
 
 
 @pytest.fixture

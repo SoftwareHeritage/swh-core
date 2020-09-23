@@ -5,13 +5,10 @@
 
 import logging
 import logging.config
-import signal
+import warnings
 
 import click
 import pkg_resources
-import yaml
-
-from ..sentry import init_sentry
 
 LOG_LEVEL_NAMES = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -88,6 +85,12 @@ documented at https://docs.python.org/3/library/logging.config.html.
 def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
     """Command line interface for Software Heritage.
     """
+    import signal
+
+    import yaml
+
+    from ..sentry import init_sentry
+
     signal.signal(signal.SIGTERM, clean_exit_on_signal)
     signal.signal(signal.SIGINT, clean_exit_on_signal)
 
@@ -115,7 +118,17 @@ def main():
     for entry_point in pkg_resources.iter_entry_points("swh.cli.subcommands"):
         try:
             cmd = entry_point.load()
-            swh.add_command(cmd, name=entry_point.name)
+            if isinstance(cmd, click.BaseCommand):
+                # for BW compat, auto add click commands
+                warnings.warn(
+                    f"{entry_point.name}: automagic addition of click commands "
+                    f"to the main swh group is deprecated",
+                    DeprecationWarning,
+                )
+                swh.add_command(cmd, name=entry_point.name)
+            # otherwise it's expected to be a module which has been loaded
+            # it's the responsibility of the click commands/groups in this
+            # module to transitively have the main swh group as parent.
         except Exception as e:
             logger.warning("Could not load subcommand %s: %s", entry_point.name, str(e))
 

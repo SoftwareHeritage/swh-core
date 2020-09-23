@@ -53,15 +53,14 @@
 
 from asyncio import iscoroutinefunction
 from functools import wraps
-from random import random
-from time import monotonic
 import itertools
 import logging
 import os
+from random import random
 import socket
 import threading
+from time import monotonic
 import warnings
-
 
 log = logging.getLogger("swh.core.statsd")
 

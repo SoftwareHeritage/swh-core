@@ -3,10 +3,10 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from swh.core.api.classes import PagedResult as CorePagedResult, stream_results
-
 from typing import TypeVar
 
+from swh.core.api.classes import PagedResult as CorePagedResult
+from swh.core.api.classes import stream_results
 
 T = TypeVar("T")
 TestPagedResult = CorePagedResult[T, bytes]

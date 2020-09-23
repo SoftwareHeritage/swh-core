@@ -4,16 +4,18 @@
 # See top-level LICENSE file for more information
 
 import datetime
-import msgpack
 import json
 
+import msgpack
 import pytest
 
-from swh.core.api.asynchronous import RPCServerApp, Response
-from swh.core.api.asynchronous import encode_msgpack, decode_request
-
-from swh.core.api.serializers import msgpack_dumps, SWHJSONEncoder
-
+from swh.core.api.asynchronous import (
+    Response,
+    RPCServerApp,
+    decode_request,
+    encode_msgpack,
+)
+from swh.core.api.serializers import SWHJSONEncoder, msgpack_dumps
 
 pytest_plugins = ["aiohttp.pytest_plugin", "pytester"]
 

@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from contextlib import contextmanager
 import datetime
 import enum
 import json
@@ -12,12 +13,9 @@ import sys
 import threading
 from typing import Any, Callable, Iterable, Iterator, Mapping, Optional, Type, TypeVar
 
-from contextlib import contextmanager
-
 import psycopg2
 import psycopg2.extras
 import psycopg2.pool
-
 
 logger = logging.getLogger(__name__)
 

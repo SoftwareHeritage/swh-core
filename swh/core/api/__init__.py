@@ -8,8 +8,6 @@ import functools
 import inspect
 import logging
 import pickle
-import requests
-
 from typing import (
     Any,
     Callable,
@@ -23,25 +21,22 @@ from typing import (
     Union,
 )
 
-from flask import Flask, Request, Response, request, abort
+from flask import Flask, Request, Response, abort, request
+import requests
 from werkzeug.exceptions import HTTPException
 
+from .negotiation import Formatter as FormatterBase
+from .negotiation import Negotiator as NegotiatorBase
+from .negotiation import negotiate as _negotiate
 from .serializers import (
-    decode_response,
-    encode_data_client as encode_data,
-    msgpack_dumps,
-    msgpack_loads,
+    exception_to_dict,
     json_dumps,
     json_loads,
-    exception_to_dict,
+    msgpack_dumps,
+    msgpack_loads,
 )
-
-from .negotiation import (
-    Formatter as FormatterBase,
-    Negotiator as NegotiatorBase,
-    negotiate as _negotiate,
-)
-
+from .serializers import decode_response
+from .serializers import encode_data_client as encode_data
 
 logger = logging.getLogger(__name__)
 

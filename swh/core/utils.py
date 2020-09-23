@@ -3,12 +3,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import os
-import itertools
 import codecs
-import re
-
 from contextlib import contextmanager
+import itertools
+import os
+import re
 
 
 @contextmanager
