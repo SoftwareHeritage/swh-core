@@ -6,10 +6,9 @@
 import os
 import shutil
 import stat
+from subprocess import run
 import tarfile
 import zipfile
-
-from subprocess import run
 
 from . import utils
 

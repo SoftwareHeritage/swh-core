@@ -11,24 +11,20 @@ import os.path
 from string import printable
 import tempfile
 from typing import Any
-from typing_extensions import Protocol
 import unittest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock, Mock
 import uuid
 
-from hypothesis import strategies, given
+from hypothesis import given, strategies
 from hypothesis.extra.pytz import timezones
 import psycopg2
 import pytest
+from typing_extensions import Protocol
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction, db_transaction_generator
-from .db_testing import (
-    SingleDbTestFixture,
-    db_create,
-    db_destroy,
-    db_close,
-)
+
+from .db_testing import SingleDbTestFixture, db_close, db_create, db_destroy
 
 
 # workaround mypy bug https://github.com/python/mypy/issues/5485

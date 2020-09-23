@@ -6,6 +6,7 @@ CONTRIBUTORS
 LICENSE
 MANIFEST.in
 Makefile
+Makefile.local
 README.md
 conftest.py
 mypy.ini
@@ -21,7 +22,6 @@ requirements.txt
 setup.cfg
 setup.py
 tox.ini
-version.txt
 docs/.gitignore
 docs/Makefile
 docs/cli.rst

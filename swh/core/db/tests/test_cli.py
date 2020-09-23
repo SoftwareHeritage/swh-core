@@ -4,7 +4,6 @@ from click.testing import CliRunner
 
 from swh.core.cli.db import db as swhdb
 
-
 help_msg = """Usage: swh [OPTIONS] COMMAND [ARGS]...
 
   Command line interface for Software Heritage.
@@ -45,7 +44,8 @@ Options:
   -h, --help              Show this message and exit.
 
 Commands:
-  init  Initialize the database for every Software Heritage module found in...
+  create  Create a database for the Software Heritage <module>.
+  init    Initialize a database for the Software Heritage <module>.
 """
 
 

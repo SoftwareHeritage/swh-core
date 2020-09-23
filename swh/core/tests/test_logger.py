@@ -4,11 +4,11 @@
 # See top-level LICENSE file for more information
 
 from datetime import datetime
-import logging
-import pytz
 import inspect
-
+import logging
 from unittest.mock import patch
+
+import pytz
 
 from swh.core import logger
 

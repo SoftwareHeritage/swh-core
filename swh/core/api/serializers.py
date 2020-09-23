@@ -9,13 +9,12 @@ from enum import Enum
 import json
 import traceback
 import types
+from typing import Any, Dict, Tuple, Union
 from uuid import UUID
 
 import arrow
 import iso8601
 import msgpack
-
-from typing import Any, Dict, Union, Tuple
 from requests import Response
 
 from swh.core.api.classes import PagedResult

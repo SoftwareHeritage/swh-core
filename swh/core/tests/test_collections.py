@@ -5,9 +5,7 @@
 
 import pytest
 
-
 from swh.core.collections import SortedList
-
 
 parametrize = pytest.mark.parametrize(
     "items",

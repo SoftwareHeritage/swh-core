@@ -4,8 +4,9 @@
 # See top-level LICENSE file for more information
 
 import os
-import pkg_resources
 from unittest.mock import patch
+
+import pkg_resources
 
 import swh.core.api.gunicorn_config as gunicorn_config
 

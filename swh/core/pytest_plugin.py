@@ -3,20 +3,18 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from functools import partial
 import logging
+from os import path
 import re
+from typing import Dict, List, Optional
+from urllib.parse import unquote, urlparse
+
 import pytest
 import requests
-
-from functools import partial
-from os import path
-from typing import Dict, List, Optional
-from urllib.parse import urlparse, unquote
-
 from requests.adapters import BaseAdapter
 from requests.structures import CaseInsensitiveDict
 from requests.utils import get_encoding_from_headers
-
 
 logger = logging.getLogger(__name__)
 
