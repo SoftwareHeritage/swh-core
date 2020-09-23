@@ -3,10 +3,9 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import pytest
-
 from os import path
 
+import pytest
 
 DATADIR = path.join(path.abspath(path.dirname(__file__)), "data")
 

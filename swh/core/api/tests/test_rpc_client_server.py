@@ -5,8 +5,14 @@
 
 import pytest
 
-from swh.core.api import remote_api_endpoint, RPCServerApp, RPCClient
-from swh.core.api import error_handler, encode_data_server, RemoteException
+from swh.core.api import (
+    RemoteException,
+    RPCClient,
+    RPCServerApp,
+    encode_data_server,
+    error_handler,
+    remote_api_endpoint,
+)
 
 
 # this class is used on the server part

@@ -4,16 +4,7 @@
 # See top-level LICENSE file for more information
 
 from dataclasses import dataclass, field
-
-from typing import (
-    Callable,
-    Generic,
-    Iterable,
-    List,
-    Optional,
-    TypeVar,
-)
-
+from typing import Callable, Generic, Iterable, List, Optional, TypeVar
 
 TResult = TypeVar("TResult")
 TToken = TypeVar("TToken")

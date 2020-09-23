@@ -8,14 +8,17 @@ import logging
 from typing import Tuple, Type
 
 import aiohttp.web
+from aiohttp_utils import Response, negotiation
 from deprecated import deprecated
 import multidict
 
-from .serializers import msgpack_dumps, msgpack_loads
-from .serializers import json_dumps, json_loads
-from .serializers import exception_to_dict
-
-from aiohttp_utils import negotiation, Response
+from .serializers import (
+    exception_to_dict,
+    json_dumps,
+    json_loads,
+    msgpack_dumps,
+    msgpack_loads,
+)
 
 
 def encode_msgpack(data, **kwargs):

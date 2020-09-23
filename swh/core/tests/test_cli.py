@@ -4,14 +4,13 @@
 # See top-level LICENSE file for more information
 
 import logging
-import pkg_resources
 import textwrap
 from unittest.mock import patch
 
 import click
 from click.testing import CliRunner
+import pkg_resources
 import pytest
-
 
 help_msg = """Usage: swh [OPTIONS] COMMAND [ARGS]...
 

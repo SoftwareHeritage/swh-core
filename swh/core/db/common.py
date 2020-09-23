@@ -3,8 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import inspect
 import functools
+import inspect
 
 
 def remove_kwargs(names):

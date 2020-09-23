@@ -1,17 +1,15 @@
-# Copyright (C) 2015  The Software Heritage developers
+# Copyright (C) 2015-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import configparser
+from copy import deepcopy
+from itertools import chain
 import logging
 import os
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
 import yaml
-from itertools import chain
-from copy import deepcopy
-
-from typing import Any, Dict, Optional, Tuple
-
 
 logger = logging.getLogger(__name__)
 
@@ -22,27 +20,25 @@ SWH_CONFIG_DIRECTORIES = [
     "/etc/softwareheritage",
 ]
 
-SWH_GLOBAL_CONFIG = "global.ini"
+SWH_GLOBAL_CONFIG = "global.yml"
 
 SWH_DEFAULT_GLOBAL_CONFIG = {
     "max_content_size": ("int", 100 * 1024 * 1024),
-    "log_db": ("str", "dbname=softwareheritage-log"),
 }
 
 SWH_CONFIG_EXTENSIONS = [
     ".yml",
-    ".ini",
 ]
 
 # conversion per type
-_map_convert_fn = {
+_map_convert_fn: Dict[str, Callable] = {
     "int": int,
     "bool": lambda x: x.lower() == "true",
     "list[str]": lambda x: [value.strip() for value in x.split(",")],
     "list[int]": lambda x: [int(value.strip()) for value in x.split(",")],
 }
 
-_map_check_fn = {
+_map_check_fn: Dict[str, Callable] = {
     "int": lambda x: isinstance(x, int),
     "bool": lambda x: isinstance(x, bool),
     "list[str]": lambda x: (isinstance(x, list) and all(isinstance(y, str) for y in x)),
@@ -50,7 +46,7 @@ _map_check_fn = {
 }
 
 
-def exists_accessible(file):
+def exists_accessible(filepath: str) -> bool:
     """Check whether a file exists, and is accessible.
 
     Returns:
@@ -62,46 +58,36 @@ def exists_accessible(file):
     """
 
     try:
-        os.stat(file)
+        os.stat(filepath)
     except PermissionError:
         raise
     except FileNotFoundError:
         return False
     else:
-        if os.access(file, os.R_OK):
+        if os.access(filepath, os.R_OK):
             return True
         else:
-            raise PermissionError("Permission denied: %r" % file)
+            raise PermissionError("Permission denied: {filepath!r}")
 
 
-def config_basepath(config_path):
+def config_basepath(config_path: str) -> str:
     """Return the base path of a configuration file"""
-    if config_path.endswith((".ini", ".yml")):
+    if config_path.endswith(".yml"):
         return config_path[:-4]
 
     return config_path
 
 
-def read_raw_config(base_config_path):
+def read_raw_config(base_config_path: str) -> Dict[str, Any]:
     """Read the raw config corresponding to base_config_path.
 
-    Can read yml or ini files.
+    Can read yml files.
     """
-    yml_file = base_config_path + ".yml"
+    yml_file = f"{base_config_path}.yml"
     if exists_accessible(yml_file):
-        logger.info("Loading config file %s", yml_file)
+        logger.debug("Loading config file %s", yml_file)
         with open(yml_file) as f:
             return yaml.safe_load(f)
-
-    ini_file = base_config_path + ".ini"
-    if exists_accessible(ini_file):
-        config = configparser.ConfigParser()
-        config.read(ini_file)
-        if "main" in config._sections:
-            logger.info("Loading config file %s", ini_file)
-            return config._sections["main"]
-        else:
-            logger.warning("Ignoring config file %s (no [main] section)", ini_file)
 
     return {}
 
@@ -114,7 +100,10 @@ def config_exists(config_path):
     )
 
 
-def read(conf_file=None, default_conf=None):
+def read(
+    conf_file: Optional[str] = None,
+    default_conf: Optional[Dict[str, Tuple[str, Any]]] = None,
+) -> Dict[str, Any]:
     """Read the user's configuration file.
 
     Fill in the gap using `default_conf`.  `default_conf` is similar to this::
@@ -130,19 +119,18 @@ def read(conf_file=None, default_conf=None):
     If conf_file is None, return the default config.
 
     """
-    conf = {}
+    conf: Dict[str, Any] = {}
 
     if conf_file:
         base_config_path = config_basepath(os.path.expanduser(conf_file))
-        conf = read_raw_config(base_config_path)
+        conf = read_raw_config(base_config_path) or {}
 
     if not default_conf:
-        default_conf = {}
+        return conf
 
     # remaining missing default configuration key are set
     # also type conversion is enforced for underneath layer
-    for key in default_conf:
-        nature_type, default_value = default_conf[key]
+    for key, (nature_type, default_value) in default_conf.items():
         val = conf.get(key, None)
         if val is None:  # fallback to default value
             conf[key] = default_value
@@ -153,7 +141,9 @@ def read(conf_file=None, default_conf=None):
     return conf
 
 
-def priority_read(conf_filenames, default_conf=None):
+def priority_read(
+    conf_filenames: List[str], default_conf: Optional[Dict[str, Tuple[str, Any]]] = None
+):
     """Try reading the configuration files from conf_filenames, in order,
        and return the configuration from the first one that exists.
 
@@ -180,7 +170,7 @@ def merge_default_configs(base_config, *other_configs):
     return full_config
 
 
-def merge_configs(base, other):
+def merge_configs(base: Optional[Dict[str, Any]], other: Optional[Dict[str, Any]]):
     """Merge two config dictionaries
 
     This does merge config dicts recursively, with the rules, for every value
@@ -251,7 +241,7 @@ def merge_configs(base, other):
     return output
 
 
-def swh_config_paths(base_filename):
+def swh_config_paths(base_filename: str) -> List[str]:
     """Return the Software Heritage specific configuration paths for the given
        filename."""
 

@@ -4,17 +4,15 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import glob
 import logging
-from os import path, environ
-import subprocess
+from os import environ, path
+from typing import Collection, Dict, Optional, Tuple
 import warnings
 
 import click
 
 from swh.core.cli import CONTEXT_SETTINGS
-from swh.core.config import read as config_read
-
+from swh.core.cli import swh as swh_cli_group
 
 warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
 
@@ -22,7 +20,7 @@ warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
 logger = logging.getLogger(__name__)
 
 
-@click.group(name="db", context_settings=CONTEXT_SETTINGS)
+@swh_cli_group.group(name="db", context_settings=CONTEXT_SETTINGS)
 @click.option(
     "--config-file",
     "-C",
@@ -32,8 +30,9 @@ logger = logging.getLogger(__name__)
 )
 @click.pass_context
 def db(ctx, config_file):
-    """Software Heritage database generic tools.
-    """
+    """Software Heritage database generic tools."""
+    from swh.core.config import read as config_read
+
     ctx.ensure_object(dict)
     if config_file is None:
         config_file = environ.get("SWH_CONFIG_FILENAME")
@@ -41,68 +40,8 @@ def db(ctx, config_file):
     ctx.obj["config"] = cfg
 
 
-@db.command(name="init", context_settings=CONTEXT_SETTINGS)
-@click.pass_context
-def init(ctx):
-    """Initialize the database for every Software Heritage module found in the
-    configuration file. For every configuration section in the config file
-    that:
-
-    1. has the name of an existing swh package,
-    2. has credentials for a local db access,
-
-    it will run the initialization scripts from the swh package against the
-    given database.
-
-    Example for the config file::
-
-    \b
-      storage:
-        cls: local
-        args:
-          db: postgresql:///?service=swh-storage
-      objstorage:
-        cls: remote
-        args:
-          url: http://swh-objstorage:5003/
-
-    the command:
-
-      swh db -C /path/to/config.yml init
-
-    will initialize the database for the `storage` section using initialization
-    scripts from the `swh.storage` package.
-    """
-
-    for modname, cfg in ctx.obj["config"].items():
-        if cfg.get("cls") == "local" and cfg.get("args"):
-            try:
-                sqlfiles = get_sql_for_package(modname)
-            except click.BadParameter:
-                logger.info(
-                    "Failed to load/find sql initialization files for %s", modname
-                )
-
-            if sqlfiles:
-                conninfo = cfg["args"]["db"]
-                for sqlfile in sqlfiles:
-                    subprocess.check_call(
-                        [
-                            "psql",
-                            "--quiet",
-                            "--no-psqlrc",
-                            "-v",
-                            "ON_ERROR_STOP=1",
-                            "-d",
-                            conninfo,
-                            "-f",
-                            sqlfile,
-                        ]
-                    )
-
-
-@click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument("module", nargs=-1, required=True)
+@db.command(name="create", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
 @click.option(
     "--db-name",
     "-d",
@@ -111,68 +50,102 @@ def init(ctx):
     show_default=True,
 )
 @click.option(
-    "--create-db/--no-create-db",
-    "-C",
-    help="Attempt to create the database.",
-    default=False,
+    "--template",
+    "-T",
+    help="Template database from which to build this database.",
+    default="template1",
+    show_default=True,
 )
-def db_init(module, db_name, create_db):
-    """Initialise a database for the Software Heritage <module>.  By
-    default, does not attempt to create the database.
+def db_create(module, db_name, template):
+    """Create a database for the Software Heritage <module>.
+
+    and potentially execute superuser-level initialization steps.
 
     Example:
 
-      swh db-init -d swh-test storage
+      swh db create -d swh-test storage
+
+    If you want to specify non-default postgresql connection parameters, please
+    provide them using standard environment variables or by the mean of a
+    properly crafted libpq connection URI. See psql(1) man page (section
+    ENVIRONMENTS) for details.
+
+    Note: this command requires a postgresql connection with superuser permissions.
+
+    Example:
+
+      PGPORT=5434 swh db create indexer
+      swh db create -d postgresql://superuser:passwd@pghost:5433/swh-storage storage
+
+    """
+
+    logger.debug("db_create %s dn_name=%s", module, db_name)
+    create_database_for_package(module, db_name, template)
+
+
+@db.command(name="init", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
+@click.option(
+    "--db-name",
+    "-d",
+    help="Database name.",
+    default="softwareheritage-dev",
+    show_default=True,
+)
+@click.option(
+    "--flavor", help="Database flavor.", default=None,
+)
+def db_init(module, db_name, flavor):
+    """Initialize a database for the Software Heritage <module>.
+
+    Example:
+
+      swh db init -d swh-test storage
 
     If you want to specify non-default postgresql connection parameters,
     please provide them using standard environment variables.
     See psql(1) man page (section ENVIRONMENTS) for details.
 
-    Example:
+    Examples:
 
-      PGPORT=5434 swh db-init indexer
+      PGPORT=5434 swh db init indexer
+      swh db init -d postgresql://user:passwd@pghost:5433/swh-storage storage
+      swh db init --flavor read_replica -d swh-storage storage
 
     """
-    # put import statements here so we can keep startup time of the main swh
-    # command as short as possible
-    from swh.core.db.tests.db_testing import (
-        pg_createdb,
-        pg_restore,
-        DB_DUMP_TYPES,
-        swh_db_version,
+
+    logger.debug("db_init %s flavor=%s dn_name=%s", module, flavor, db_name)
+
+    initialized, dbversion, dbflavor = populate_database_for_package(
+        module, db_name, flavor
     )
-
-    logger.debug("db_init %s dn_name=%s", module, db_name)
-    dump_files = []
-
-    for modname in module:
-        dump_files.extend(get_sql_for_package(modname))
-
-    if create_db:
-        # Create the db (or fail silently if already existing)
-        pg_createdb(db_name, check=False)
-    # Try to retrieve the db version if any
-    db_version = swh_db_version(db_name)
-    if not db_version:  # Initialize the db
-        dump_files = [(x, DB_DUMP_TYPES[path.splitext(x)[1]]) for x in dump_files]
-        for dump, dtype in dump_files:
-            click.secho("Loading {}".format(dump), fg="yellow")
-            pg_restore(db_name, dump, dtype)
-
-        db_version = swh_db_version(db_name)
 
     # TODO: Ideally migrate the version from db_version to the latest
     # db version
 
     click.secho(
-        "DONE database is {} version {}".format(db_name, db_version),
+        "DONE database for {} {}{} at version {}".format(
+            module,
+            "initialized" if initialized else "exists",
+            f" (flavor {dbflavor})" if dbflavor is not None else "",
+            dbversion,
+        ),
         fg="green",
         bold=True,
     )
 
+    if flavor is not None and dbflavor != flavor:
+        click.secho(
+            f"WARNING requested flavor '{flavor}' != recorded flavor '{dbflavor}'",
+            fg="red",
+            bold=True,
+        )
+
 
 def get_sql_for_package(modname):
+    import glob
     from importlib import import_module
+
     from swh.core.utils import numfile_sortkey as sortkey
 
     if not modname.startswith("swh."):
@@ -187,4 +160,132 @@ def get_sql_for_package(modname):
         raise click.BadParameter(
             "Module {} does not provide a db schema " "(no sql/ dir)".format(modname)
         )
-    return list(sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey))
+    return sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey)
+
+
+def populate_database_for_package(
+    modname: str, conninfo: str, flavor: Optional[str] = None
+) -> Tuple[bool, int, Optional[str]]:
+    """Populate the database, pointed at with `conninfo`, using the SQL files found in
+    the package `modname`.
+
+    Args:
+      modname: Name of the module of which we're loading the files
+      conninfo: connection info string for the SQL database
+      flavor: the module-specific flavor which we want to initialize the database under
+    Returns:
+      Tuple with three elements: whether the database has been initialized; the current
+      version of the database; if it exists, the flavor of the database.
+    """
+    from swh.core.db.db_utils import swh_db_flavor, swh_db_version
+
+    current_version = swh_db_version(conninfo)
+    if current_version is not None:
+        dbflavor = swh_db_flavor(conninfo)
+        return False, current_version, dbflavor
+
+    sqlfiles = get_sql_for_package(modname)
+    sqlfiles = [fname for fname in sqlfiles if "-superuser-" not in fname]
+    execute_sqlfiles(sqlfiles, conninfo, flavor)
+
+    current_version = swh_db_version(conninfo)
+    assert current_version is not None
+    dbflavor = swh_db_flavor(conninfo)
+    return True, current_version, dbflavor
+
+
+def parse_dsn_or_dbname(dsn_or_dbname: str) -> Dict[str, str]:
+    """Parse a psycopg2 dsn, falling back to supporting plain database names as well"""
+    import psycopg2
+    from psycopg2.extensions import parse_dsn as _parse_dsn
+
+    try:
+        return _parse_dsn(dsn_or_dbname)
+    except psycopg2.ProgrammingError:
+        # psycopg2 failed to parse the DSN; it's probably a database name,
+        # handle it as such
+        return _parse_dsn(f"dbname={dsn_or_dbname}")
+
+
+def create_database_for_package(
+    modname: str, conninfo: str, template: str = "template1"
+):
+    """Create the database pointed at with `conninfo`, and initialize it using
+    -superuser- SQL files found in the package `modname`.
+
+    Args:
+      modname: Name of the module of which we're loading the files
+      conninfo: connection info string or plain database name for the SQL database
+      template: the name of the database to connect to and use as template to create
+                the new database
+
+    """
+    import subprocess
+
+    from psycopg2.extensions import make_dsn
+
+    # Use the given conninfo string, but with dbname replaced by the template dbname
+    # for the database creation step
+    creation_dsn = parse_dsn_or_dbname(conninfo)
+    db_name = creation_dsn["dbname"]
+    creation_dsn["dbname"] = template
+    logger.debug("db_create db_name=%s (from %s)", db_name, template)
+    subprocess.check_call(
+        [
+            "psql",
+            "--quiet",
+            "--no-psqlrc",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-d",
+            make_dsn(**creation_dsn),
+            "-c",
+            f'CREATE DATABASE "{db_name}"',
+        ]
+    )
+
+    # the remaining initialization process -- running -superuser- SQL files --
+    # is done using the given conninfo, thus connecting to the newly created
+    # database
+    sqlfiles = get_sql_for_package(modname)
+    sqlfiles = [fname for fname in sqlfiles if "-superuser-" in fname]
+    execute_sqlfiles(sqlfiles, conninfo)
+
+
+def execute_sqlfiles(
+    sqlfiles: Collection[str], conninfo: str, flavor: Optional[str] = None
+):
+    """Execute a list of SQL files on the database pointed at with `conninfo`.
+
+    Args:
+      sqlfiles: List of SQL files to execute
+      conninfo: connection info string for the SQL database
+      flavor: the database flavor to initialize
+    """
+    import subprocess
+
+    psql_command = [
+        "psql",
+        "--quiet",
+        "--no-psqlrc",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-d",
+        conninfo,
+    ]
+
+    flavor_set = False
+    for sqlfile in sqlfiles:
+        logger.debug(f"execute SQL file {sqlfile} db_name={conninfo}")
+        subprocess.check_call(psql_command + ["-f", sqlfile])
+
+        if flavor is not None and not flavor_set and sqlfile.endswith("-flavor.sql"):
+            logger.debug("Setting database flavor %s", flavor)
+            query = f"insert into dbflavor (flavor) values ('{flavor}')"
+            subprocess.check_call(psql_command + ["-c", query])
+            flavor_set = True
+
+    if flavor is not None and not flavor_set:
+        logger.warn(
+            "Asked for flavor %s, but module does not support database flavors", flavor,
+        )
