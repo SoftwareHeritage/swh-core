@@ -240,7 +240,7 @@ def create_database_for_package(
             "-d",
             make_dsn(**creation_dsn),
             "-c",
-            f"CREATE DATABASE {db_name}",
+            f'CREATE DATABASE "{db_name}"',
         ]
     )
 
