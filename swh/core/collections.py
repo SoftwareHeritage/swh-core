@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 import bisect
-import collections
 import itertools
 from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple, TypeVar
 
@@ -12,7 +11,7 @@ SortedListItem = TypeVar("SortedListItem")
 SortedListKey = TypeVar("SortedListKey")
 
 
-class SortedList(collections.UserList, Generic[SortedListKey, SortedListItem]):
+class SortedList(Generic[SortedListKey, SortedListItem]):
     data: List[Tuple[SortedListKey, SortedListItem]]
 
     # https://github.com/python/mypy/issues/708
@@ -29,7 +28,7 @@ class SortedList(collections.UserList, Generic[SortedListKey, SortedListItem]):
                 return item
 
         assert key is not None  # for mypy
-        super().__init__(sorted((key(x), x) for x in data or []))
+        self.data = sorted((key(x), x) for x in data or [])
 
         self.key: Callable[[SortedListItem], SortedListKey] = key
 
