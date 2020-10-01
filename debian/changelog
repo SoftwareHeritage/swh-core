@@ -1,3 +1,13 @@
+swh-core (0.3.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.3.1     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2020-10-01 12:38:08 +0200)
+  * Upstream changes:     - v0.3.1     - * Add specific celery task
+    arguments to metadata sent to systemd-journald     - * SortedList:
+    Don't inherit from UserList.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 01 Oct 2020 10:40:27 +0000
+
 swh-core (0.3.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.3.0     - (tagged by David Douard
