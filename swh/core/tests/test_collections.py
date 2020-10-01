@@ -69,3 +69,18 @@ def test_sorted_list_iter_after__key(items):
     for split in items:
         expected = reversed(sorted(item for item in items if item < split))
         assert list(list_.iter_after(-split)) == list(expected), f"split: {split}"
+
+
+@parametrize
+def test_contains(items):
+    list_ = SortedList()
+    for i in range(len(items)):
+        for item in items[0:i]:
+            assert item in list_
+        for item in items[i:]:
+            assert item not in list_
+
+        list_.add(items[i])
+
+    for item in items:
+        assert item in list_
