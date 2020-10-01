@@ -5,7 +5,7 @@
 
 import datetime
 import logging
-from typing import Any, Generator, List, Tuple
+from typing import Any, Dict, Generator, List, Tuple
 
 from systemd.journal import JournalHandler as _JournalHandler
 from systemd.journal import send
@@ -17,6 +17,7 @@ except ImportError:
 
 
 EXTRA_LOGDATA_PREFIX = "swh_"
+LOGGED_TASK_KWARGS = ("url", "instance")
 
 
 def db_level_of_py_level(lvl):
@@ -27,8 +28,18 @@ def db_level_of_py_level(lvl):
     return logging.getLevelName(lvl).lower()
 
 
-def get_extra_data(record, task_args=True):
-    """Get the extra data to insert to the database from the logging record"""
+def get_extra_data(record: logging.LogRecord) -> Dict[str, Any]:
+    """Get the extra data to send to the log handler from the logging record.
+
+    This gets the following data:
+      - all fields in the record data starting with `EXTRA_LOGDATA_PREFIX`
+      - arguments to the logging call (which can either be a tuple, or a dict
+        if the arguments were named)
+      - if this is called within a celery task, the following data:
+        - the (uu)id of the task
+        - the name of the task
+        - any task keyword arguments named for values in `LOGGED_TASK_KWARGS`
+    """
     log_data = record.__dict__
 
     extra_data = {
@@ -47,13 +58,15 @@ def get_extra_data(record, task_args=True):
             "id": current_task.request.id,
             "name": current_task.name,
         }
-        if task_args:
-            extra_data["task"].update(
-                {
-                    "kwargs": current_task.request.kwargs,
-                    "args": current_task.request.args,
-                }
-            )
+
+        for task_arg in LOGGED_TASK_KWARGS:
+            if task_arg in current_task.request.kwargs:
+                try:
+                    value = stringify(current_task.request.kwargs[task_arg])
+                except Exception:
+                    continue
+
+                extra_data["task"][f"kwarg_{task_arg}"] = value
 
     return extra_data
 
@@ -80,7 +93,7 @@ def flatten(data: Any, separator: str = "_") -> Generator[Tuple[str, Any], None,
         yield separator.join(path), value
 
 
-def stringify(value):
+def stringify(value: Any) -> str:
     """Convert value to string"""
     if isinstance(value, datetime.datetime):
         return value.isoformat()
@@ -95,9 +108,11 @@ class JournalHandler(_JournalHandler):
         MESSAGE is taken from the message provided by the user, and PRIORITY,
         LOGGER, THREAD_NAME, CODE_{FILE,LINE,FUNC} fields are appended
         automatically. In addition, record.MESSAGE_ID will be used if present.
+
+        This also records all the extra data fetched by `get_extra_data`.
         """
         try:
-            extra_data = flatten(get_extra_data(record, task_args=False))
+            extra_data = flatten(get_extra_data(record))
             extra_data = {
                 (EXTRA_LOGDATA_PREFIX + key).upper(): stringify(value)
                 for key, value in extra_data
