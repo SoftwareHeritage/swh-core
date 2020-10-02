@@ -9,6 +9,7 @@ import logging
 import os
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from deprecated import deprecated
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -286,6 +287,29 @@ def load_named_config(name, default_conf=None, global_conf=True):
     return conf
 
 
+def load_from_envvar(default_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Load configuration yaml file from the environment variable SWH_CONFIG_FILENAME,
+    eventually enriched with default configuration key/value from the default_config
+    dict if provided.
+
+    Returns:
+        Configuration dict
+
+    Raises:
+        AssertionError if SWH_CONFIG_FILENAME is undefined
+
+    """
+    assert (
+        "SWH_CONFIG_FILENAME" in os.environ
+    ), "SWH_CONFIG_FILENAME environment variable is undefined."
+
+    cfg_path = os.environ["SWH_CONFIG_FILENAME"]
+    cfg = read_raw_config(config_basepath(cfg_path))
+    cfg = merge_configs(default_config or {}, cfg)
+    return cfg
+
+
+@deprecated(version="0.3.2", reason="Use swh.core.config.load_from_envvar instead")
 class SWHConfig:
     """Mixin to add configuration parsing abilities to classes
 

@@ -326,3 +326,39 @@ def test_merge_config_type_error():
             config.merge_configs({"a": v}, {"a": {}})
         with pytest.raises(TypeError):
             config.merge_configs({"a": {}}, {"a": v})
+
+
+def test_load_from_envvar_no_environment_var_swh_config_filename_set():
+    """Without SWH_CONFIG_FILENAME set, load_from_envvar raises"""
+
+    with pytest.raises(AssertionError, match="SWH_CONFIG_FILENAME environment"):
+        config.load_from_envvar()
+
+
+def test_load_from_envvar_no_default_config(swh_config, monkeypatch):
+    config_path = str(swh_config)
+    monkeypatch.setenv("SWH_CONFIG_FILENAME", config_path)
+
+    actual_config = config.load_from_envvar()
+
+    expected_config = config.read(config_path)
+    assert actual_config == expected_config
+
+
+def test_load_from_envvar_with_default_config(swh_config, monkeypatch):
+    default_config = {
+        "number": 666,
+        "something-cool": ["something", "cool"],
+    }
+
+    config_path = str(swh_config)
+    monkeypatch.setenv("SWH_CONFIG_FILENAME", config_path)
+
+    actual_config = config.load_from_envvar(default_config)
+
+    expected_config = config.read(config_path)
+    expected_config.update(
+        {"number": 666, "something-cool": ["something", "cool"],}
+    )
+
+    assert actual_config == expected_config
