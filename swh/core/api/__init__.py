@@ -123,9 +123,10 @@ class RemoteException(Exception):
 F = TypeVar("F", bound=Callable)
 
 
-def remote_api_endpoint(path) -> Callable[[F], F]:
+def remote_api_endpoint(path: str, method: str = "POST") -> Callable[[F], F]:
     def dec(f: F) -> F:
         f._endpoint_path = path  # type: ignore
+        f._method = method  # type: ignore
         return f
 
     return dec
