@@ -59,6 +59,7 @@ swh/core/api/tests/server_testing.py
 swh/core/api/tests/test_async.py
 swh/core/api/tests/test_classes.py
 swh/core/api/tests/test_gunicorn.py
+swh/core/api/tests/test_init.py
 swh/core/api/tests/test_rpc_client.py
 swh/core/api/tests/test_rpc_client_server.py
 swh/core/api/tests/test_rpc_server.py
