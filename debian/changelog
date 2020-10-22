@@ -1,3 +1,13 @@
+swh-core (0.7.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.7.1     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-10-22 18:51:16
+    +0200)
+  * Upstream changes:     - v0.7.1     - Move SWHDatabaseJanitor to
+    db.pytest_plugin module
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 22 Oct 2020 16:51:59 +0000
+
 swh-core (0.7.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.7.0     - (tagged by Antoine R. Dumont
