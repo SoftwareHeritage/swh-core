@@ -25,24 +25,43 @@ class MyRPCServerApp(RPCServerApp):
     extra_type_decoders = extra_decoders
 
 
+class TestStorage:
+    @remote_api_endpoint("test_endpoint_url")
+    def endpoint_test(self, test_data, db=None, cur=None):
+        assert test_data == "spam"
+        return "egg"
+
+    @remote_api_endpoint("path/to/endpoint")
+    def something(self, data, db=None, cur=None):
+        return data
+
+    @remote_api_endpoint("serializer_test")
+    def serializer_test(self, data, db=None, cur=None):
+        assert data == ["foo", ExtraType("bar", b"baz")]
+        return ExtraType({"spam": "egg"}, "qux")
+
+
 @pytest.fixture
 def app():
-    class TestStorage:
-        @remote_api_endpoint("test_endpoint_url")
-        def test_endpoint(self, test_data, db=None, cur=None):
-            assert test_data == "spam"
-            return "egg"
-
-        @remote_api_endpoint("path/to/endpoint")
-        def something(self, data, db=None, cur=None):
-            return data
-
-        @remote_api_endpoint("serializer_test")
-        def serializer_test(self, data, db=None, cur=None):
-            assert data == ["foo", ExtraType("bar", b"baz")]
-            return ExtraType({"spam": "egg"}, "qux")
-
     return MyRPCServerApp("testapp", backend_class=TestStorage)
+
+
+def test_api_rpc_server_app_ok(app):
+    assert isinstance(app, MyRPCServerApp)
+
+    actual_rpc_server2 = MyRPCServerApp(
+        "app2", backend_class=TestStorage, backend_factory=TestStorage
+    )
+    assert isinstance(actual_rpc_server2, MyRPCServerApp)
+
+    actual_rpc_server3 = MyRPCServerApp("app3")
+    assert isinstance(actual_rpc_server3, MyRPCServerApp)
+
+
+def test_api_rpc_server_app_misconfigured():
+    expected_error = "backend_factory should only be provided if backend_class is"
+    with pytest.raises(ValueError, match=expected_error):
+        MyRPCServerApp("failed-app", backend_factory="something-to-make-it-raise")
 
 
 def test_api_endpoint(flask_app_client):
@@ -82,7 +101,7 @@ def test_api_nego_accept(flask_app_client):
 
 def test_rpc_server(flask_app_client):
     res = flask_app_client.post(
-        url_for("test_endpoint"),
+        url_for("endpoint_test"),
         headers=[
             ("Content-Type", "application/x-msgpack"),
             ("Accept", "application/x-msgpack"),
