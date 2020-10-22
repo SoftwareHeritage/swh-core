@@ -67,11 +67,15 @@ swh/core/cli/db.py
 swh/core/db/__init__.py
 swh/core/db/common.py
 swh/core/db/db_utils.py
+swh/core/db/pytest_plugin.py
 swh/core/db/tests/__init__.py
 swh/core/db/tests/conftest.py
 swh/core/db/tests/db_testing.py
 swh/core/db/tests/test_cli.py
 swh/core/db/tests/test_db.py
+swh/core/db/tests/test_db_utils.py
+swh/core/db/tests/data/0-schema.sql
+swh/core/db/tests/data/1-data.sql
 swh/core/sql/log-schema.sql
 swh/core/tests/__init__.py
 swh/core/tests/test_cli.py
