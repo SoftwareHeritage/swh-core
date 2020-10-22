@@ -1,3 +1,9 @@
+swh-core (0.5.0-1~swh2~bpo10+1) buster-swh; urgency=medium
+
+  * Rebuild for buster-swh
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 22 Oct 2020 09:31:00 +0000
+
 swh-core (0.5.0-1~swh2) unstable-swh; urgency=medium
 
   * Bump new release with dependency updated
