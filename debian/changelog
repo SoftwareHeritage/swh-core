@@ -1,3 +1,14 @@
+swh-core (0.7.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.7.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-10-22 18:31:18
+    +0200)
+  * Upstream changes:     - v0.7.0     - remote_api_endpoint: Allow to
+    declare what http method to use     - api.RPCServerApp: Adapt sync
+    rpc server with async rpc server
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 22 Oct 2020 16:32:04 +0000
+
 swh-core (0.6.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.6.1     - (tagged by Antoine R. Dumont
