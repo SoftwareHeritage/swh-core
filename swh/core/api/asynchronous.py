@@ -133,9 +133,12 @@ class RPCServerApp(aiohttp.web.Application):
             for (meth_name, meth) in backend_class.__dict__.items():
                 if hasattr(meth, "_endpoint_path"):
                     path = meth._endpoint_path
+                    http_method = meth._method
                     path = path if path.startswith("/") else f"/{path}"
                     self.router.add_route(
-                        "POST", path, self._endpoint(meth_name, meth, backend_factory)
+                        http_method,
+                        path,
+                        self._endpoint(meth_name, meth, backend_factory),
                     )
 
     def _renderers(self):

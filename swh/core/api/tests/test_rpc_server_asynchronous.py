@@ -20,7 +20,7 @@ class MyRPCServerApp(RPCServerApp):
 class BackendStorageTest:
     """Backend Storage to use as backend class of the rpc server (test only)"""
 
-    @remote_api_endpoint("test_endpoint_url")
+    @remote_api_endpoint("test_endpoint_url", method="GET")
     def test_endpoint(self, test_data, db=None, cur=None):
         assert test_data == "spam"
         return "egg"
@@ -119,7 +119,7 @@ async def test_api_async_nego_accept(cli):
 
 
 async def test_api_async_rpc_server(cli):
-    res = await cli.post(
+    res = await cli.get(
         "/test_endpoint_url",
         headers=[
             ("Content-Type", "application/x-msgpack"),

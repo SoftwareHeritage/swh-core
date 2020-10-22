@@ -123,9 +123,10 @@ class RemoteException(Exception):
 F = TypeVar("F", bound=Callable)
 
 
-def remote_api_endpoint(path) -> Callable[[F], F]:
+def remote_api_endpoint(path: str, method: str = "POST") -> Callable[[F], F]:
     def dec(f: F) -> F:
         f._endpoint_path = path  # type: ignore
+        f._method = method  # type: ignore
         return f
 
     return dec
@@ -429,11 +430,14 @@ class RPCServerApp(Flask):
 
     def __init__(self, *args, backend_class=None, backend_factory=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if backend_class is None and backend_factory is not None:
+            raise ValueError(
+                "backend_factory should only be provided if backend_class is"
+            )
 
         self.backend_class = backend_class
         if backend_class is not None:
-            if backend_factory is None:
-                backend_factory = backend_class
+            backend_factory = backend_factory or backend_class
             for (meth_name, meth) in backend_class.__dict__.items():
                 if hasattr(meth, "_endpoint_path"):
                     self.__add_endpoint(meth_name, meth, backend_factory)
