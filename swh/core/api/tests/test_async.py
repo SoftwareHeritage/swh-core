@@ -12,10 +12,11 @@ import pytest
 from swh.core.api.asynchronous import (
     Response,
     RPCServerApp,
+    decode_data,
     decode_request,
     encode_msgpack,
 )
-from swh.core.api.serializers import SWHJSONEncoder, msgpack_dumps
+from swh.core.api.serializers import SWHJSONEncoder, json_dumps, msgpack_dumps
 
 pytest_plugins = ["aiohttp.pytest_plugin", "pytester"]
 
@@ -231,3 +232,25 @@ async def test_post_struct_no_nego(cli) -> None:
         assert resp.status == 200
         check_mimetype(resp.headers["Content-Type"], "application/x-msgpack")
         assert (await decode_request(resp)) == STRUCT
+
+
+def test_async_decode_data_failure():
+    with pytest.raises(ValueError, match="Wrong content type"):
+        decode_data("some-data", "unknown-content-type")
+
+
+@pytest.mark.parametrize("data", [None, "", {}, []])
+def test_async_decode_data_empty_cases(data):
+    assert decode_data(data, "unknown-content-type") == {}
+
+
+@pytest.mark.parametrize(
+    "data,content_type,encode_data_fn",
+    [
+        ({"a": 1}, "application/json", json_dumps),
+        ({"a": 1}, "application/x-msgpack", msgpack_dumps),
+    ],
+)
+def test_async_decode_data_nominal(data, content_type, encode_data_fn):
+    actual_data = decode_data(encode_data_fn(data), content_type)
+    assert actual_data == data
