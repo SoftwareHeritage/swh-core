@@ -1,8 +1,22 @@
-swh-core (0.5.0-1~swh2~bpo10+1) buster-swh; urgency=medium
+swh-core (0.6.1-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.6.1     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-10-22 13:53:41
+    +0200)
+  * Upstream changes:     - v0.6.1     - Move pytest_plugin declaration
+    to top-level conftest
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 22 Oct 2020 09:31:00 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 22 Oct 2020 11:54:49 +0000
+
+swh-core (0.6.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.6.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-10-22 13:24:55
+    +0200)
+  * Upstream changes:     - v0.6.0     - asynchronous.RPCServerApp:
+    Align implementation with api.RPCServerApp
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 22 Oct 2020 11:25:29 +0000
 
 swh-core (0.5.0-1~swh2) unstable-swh; urgency=medium
 

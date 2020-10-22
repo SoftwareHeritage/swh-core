@@ -18,3 +18,8 @@ def swhmain():
     yield _swhmain
     _swhmain.commands = commands
     _swhmain.aliases = aliases
+
+
+# This is coming from the aiohttp library directly. Beware the desynchronized
+# https://github.com/aio-libs/pytest-aiohttp module which wraps that library...
+pytest_plugins = ["aiohttp.pytest_plugin"]
