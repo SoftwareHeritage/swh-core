@@ -9,7 +9,6 @@ import logging
 import os
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from deprecated import deprecated
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -307,72 +306,3 @@ def load_from_envvar(default_config: Optional[Dict[str, Any]] = None) -> Dict[st
     cfg = read_raw_config(config_basepath(cfg_path))
     cfg = merge_configs(default_config or {}, cfg)
     return cfg
-
-
-@deprecated(version="0.3.2", reason="Use swh.core.config.load_from_envvar instead")
-class SWHConfig:
-    """Mixin to add configuration parsing abilities to classes
-
-    The class should override the class attributes:
-        - DEFAULT_CONFIG (default configuration to be parsed)
-        - CONFIG_BASE_FILENAME (the filename of the configuration to be used)
-
-    This class defines one classmethod, parse_config_file, which
-    parses a configuration file using the default config as set in the
-    class attribute.
-
-    """
-
-    DEFAULT_CONFIG = {}  # type: Dict[str, Tuple[str, Any]]
-    CONFIG_BASE_FILENAME = ""  # type: Optional[str]
-
-    @classmethod
-    def parse_config_file(
-        cls,
-        base_filename=None,
-        config_filename=None,
-        additional_configs=None,
-        global_config=True,
-    ):
-        """Parse the configuration file associated to the current class.
-
-        By default, parse_config_file will load the configuration
-        cls.CONFIG_BASE_FILENAME from one of the Software Heritage
-        configuration directories, in order, unless it is overridden
-        by base_filename or config_filename (which shortcuts the file
-        lookup completely).
-
-        Args:
-            - base_filename (str): overrides the default
-              cls.CONFIG_BASE_FILENAME
-            - config_filename (str): sets the file to parse instead of
-              the defaults set from cls.CONFIG_BASE_FILENAME
-            - additional_configs: (list of default configuration dicts)
-              allows to override or extend the configuration set in
-              cls.DEFAULT_CONFIG.
-            - global_config (bool): Load the global configuration (default:
-              True)
-        """
-
-        if config_filename:
-            config_filenames = [config_filename]
-        elif "SWH_CONFIG_FILENAME" in os.environ:
-            config_filenames = [os.environ["SWH_CONFIG_FILENAME"]]
-        else:
-            if not base_filename:
-                base_filename = cls.CONFIG_BASE_FILENAME
-            config_filenames = swh_config_paths(base_filename)
-        if not additional_configs:
-            additional_configs = []
-
-        full_default_config = merge_default_configs(
-            cls.DEFAULT_CONFIG, *additional_configs
-        )
-
-        config = {}
-        if global_config:
-            config = load_global_config()
-
-        config.update(priority_read(config_filenames, full_default_config))
-
-        return config

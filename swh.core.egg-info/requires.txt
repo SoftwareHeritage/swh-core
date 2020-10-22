@@ -6,6 +6,7 @@ sentry-sdk
 [db]
 psycopg2
 typing-extensions
+pytest-postgresql
 
 [http]
 aiohttp
@@ -28,9 +29,9 @@ requests-mock
 hypothesis>=3.11.0
 pre-commit
 pytz
-pytest-postgresql
 psycopg2
 typing-extensions
+pytest-postgresql
 aiohttp
 aiohttp_utils>=3.1.1
 arrow
@@ -51,4 +52,3 @@ pre-commit
 pytz
 
 [testing-db]
-pytest-postgresql
