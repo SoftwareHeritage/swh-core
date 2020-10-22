@@ -54,6 +54,7 @@ swh/core/api/gunicorn_config.py
 swh/core/api/negotiation.py
 swh/core/api/serializers.py
 swh/core/api/tests/__init__.py
+swh/core/api/tests/conftest.py
 swh/core/api/tests/server_testing.py
 swh/core/api/tests/test_async.py
 swh/core/api/tests/test_classes.py
@@ -61,6 +62,7 @@ swh/core/api/tests/test_gunicorn.py
 swh/core/api/tests/test_rpc_client.py
 swh/core/api/tests/test_rpc_client_server.py
 swh/core/api/tests/test_rpc_server.py
+swh/core/api/tests/test_rpc_server_asynchronous.py
 swh/core/api/tests/test_serializers.py
 swh/core/cli/__init__.py
 swh/core/cli/db.py
