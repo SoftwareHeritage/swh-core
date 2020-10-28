@@ -83,6 +83,42 @@ def db_create(module, db_name, template):
     create_database_for_package(module, db_name, template)
 
 
+@db.command(name="init-admin", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
+@click.option(
+    "--db-name",
+    "-d",
+    help="Database name.",
+    default="softwareheritage-dev",
+    show_default=True,
+)
+def db_init_admin(module: str, db_name: str) -> None:
+    """Execute superuser-level initialization steps (e.g pg extensions, admin functions,
+    ...)
+
+    Example:
+
+      PGPASSWORD=... swh db init-admin -d swh-test scheduler
+
+    If you want to specify non-default postgresql connection parameters, please
+    provide them using standard environment variables or by the mean of a
+    properly crafted libpq connection URI. See psql(1) man page (section
+    ENVIRONMENTS) for details.
+
+    Note: this command requires a postgresql connection with superuser permissions (e.g
+    postgres, swh-admin, ...)
+
+    Example:
+
+      PGPORT=5434 swh db init-admin scheduler
+      swh db init-admin -d postgresql://superuser:passwd@pghost:5433/swh-scheduler \
+        scheduler
+
+    """
+    logger.debug("db_init_admin %s db_name=%s", module, db_name)
+    init_admin_extensions(module, db_name)
+
+
 @db.command(name="init", context_settings=CONTEXT_SETTINGS)
 @click.argument("module", required=True)
 @click.option(
@@ -207,6 +243,16 @@ def parse_dsn_or_dbname(dsn_or_dbname: str) -> Dict[str, str]:
         return _parse_dsn(f"dbname={dsn_or_dbname}")
 
 
+def init_admin_extensions(modname: str, conninfo: str) -> None:
+    """The remaining initialization process -- running -superuser- SQL files -- is done
+    using the given conninfo, thus connecting to the newly created database
+
+    """
+    sqlfiles = get_sql_for_package(modname)
+    sqlfiles = [fname for fname in sqlfiles if "-superuser-" in fname]
+    execute_sqlfiles(sqlfiles, conninfo)
+
+
 def create_database_for_package(
     modname: str, conninfo: str, template: str = "template1"
 ):
@@ -243,13 +289,7 @@ def create_database_for_package(
             f'CREATE DATABASE "{db_name}"',
         ]
     )
-
-    # the remaining initialization process -- running -superuser- SQL files --
-    # is done using the given conninfo, thus connecting to the newly created
-    # database
-    sqlfiles = get_sql_for_package(modname)
-    sqlfiles = [fname for fname in sqlfiles if "-superuser-" in fname]
-    execute_sqlfiles(sqlfiles, conninfo)
+    init_admin_extensions(modname, conninfo)
 
 
 def execute_sqlfiles(

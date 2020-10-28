@@ -44,8 +44,10 @@ Options:
   -h, --help              Show this message and exit.
 
 Commands:
-  create  Create a database for the Software Heritage <module>.
-  init    Initialize a database for the Software Heritage <module>.
+  create      Create a database for the Software Heritage <module>.
+  init        Initialize a database for the Software Heritage <module>.
+  init-admin  Execute superuser-level initialization steps (e.g pg
+              extensions,...
 """
 
 
