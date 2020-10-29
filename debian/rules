@@ -8,3 +8,11 @@ export PYBUILD_TEST_ARGS=-m 'not db'
 
 override_dh_python3:
 	dh_python3 --requires=requirements-db.txt --requires=requirements-http.txt
+
+override_dh_install:
+	dh_install
+	for pyvers in $(shell py3versions -vr); do \
+		mkdir -p $(CURDIR)/debian/python3-swh.core.db.pytestplugin/usr/lib/python$$pyvers/dist-packages/swh/core/db ; \
+		mv $(CURDIR)/debian/python3-swh.core/usr/lib/python$$pyvers/dist-packages/swh/core/db/pytest_plugin.py \
+	       $(CURDIR)/debian/python3-swh.core.db.pytestplugin/usr/lib/python$$pyvers/dist-packages/swh/core/db/pytest_plugin.py ; \
+	done

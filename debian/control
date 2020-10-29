@@ -36,3 +36,13 @@ Package: python3-swh.core
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends}, python3-systemd
 Description: Software Heritage core utilities
+
+Package: python3-swh.core.db.pytestplugin
+Architecture: all
+Depends: python3-pytest-postgresql,
+         python3-swh.core (= ${binary:Version}),
+         ${misc:Depends},
+         ${python3:Depends}
+Breaks: python3-swh.core (<< 0.9.0-1~swh2~)
+Replaces: python3-swh.core (<< 0.9.0-1~swh2~)
+Description: Software Heritage Core Db Pytest Utilities
