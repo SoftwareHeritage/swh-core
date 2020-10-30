@@ -1,8 +1,12 @@
-swh-core (0.7.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.8.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.8.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-10-30 09:12:17
+    +0100)
+  * Upstream changes:     - v0.8.0     - cli.db: Open init-admin subcmd
+    to initialize superuser-level scripts
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 22 Oct 2020 16:53:21 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 30 Oct 2020 08:13:02 +0000
 
 swh-core (0.7.1-1~swh1) unstable-swh; urgency=medium
 
