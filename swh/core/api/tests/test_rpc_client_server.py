@@ -30,6 +30,10 @@ class RPCTest:
     def raise_typeerror(self):
         raise TypeError("Did I pass through?")
 
+    @remote_api_endpoint("raise_exception_exc_arg")
+    def raise_exception_exc_arg(self):
+        raise Exception(Exception("error"))
+
 
 # this class is used on the client part. We cannot inherit from RPCTest
 # because the automagic metaclass based code that generates the RPCClient
@@ -115,3 +119,12 @@ def test_api_typeerror(swh_rpc_client):
         str(exc_info.value)
         == "<RemoteException 500 TypeError: ['Did I pass through?']>"
     )
+
+
+def test_api_raise_exception_exc_arg(swh_rpc_client):
+    with pytest.raises(RemoteException) as exc_info:
+        swh_rpc_client.post("raise_exception_exc_arg", data={})
+
+    assert exc_info.value.args[0]["type"] == "Exception"
+    assert type(exc_info.value.args[0]["args"][0]) == Exception
+    assert str(exc_info.value.args[0]["args"][0]) == "error"
