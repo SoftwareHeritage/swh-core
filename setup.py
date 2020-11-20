@@ -55,11 +55,13 @@ setup(
     extras_require={
         "testing-core": parse_requirements("test"),
         "logging": parse_requirements("logging"),
-        "db": parse_requirements("db"),
+        "db": parse_requirements("db", "db-pytestplugin"),
         "testing-db": parse_requirements("test-db"),
         "http": parse_requirements("http"),
         # kitchen sink, please do not use
-        "testing": parse_requirements("test", "test-db", "db", "http", "logging"),
+        "testing": parse_requirements(
+            "test", "test-db", "db", "db-pytestplugin", "http", "logging"
+        ),
     },
     include_package_data=True,
     entry_points="""
