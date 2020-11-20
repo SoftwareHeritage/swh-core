@@ -1,0 +1,2 @@
+# requirements for swh.core.db.pytest_plugin
+pytest-postgresql

@@ -316,13 +316,18 @@ class RPCClient(metaclass=MetaRPCClient):
                 data = self._decode_response(response, check_status=False)
                 if isinstance(data, dict):
                     for exc_type in self.reraise_exceptions:
-                        if exc_type.__name__ == data["exception"]["type"]:
-                            exception = exc_type(*data["exception"]["args"])
+                        if exc_type.__name__ == data["type"]:
+                            exception = exc_type(*data["args"])
                             break
                     else:
-                        exception = RemoteException(
-                            payload=data["exception"], response=response
-                        )
+                        # old dict encoded exception schema
+                        # TODO: Remove that code once all servers are using new schema
+                        if "exception" in data:
+                            exception = RemoteException(
+                                payload=data["exception"], response=response
+                            )
+                        else:
+                            exception = RemoteException(payload=data, response=response)
                 else:
                     exception = pickle.loads(data)
 
@@ -330,10 +335,14 @@ class RPCClient(metaclass=MetaRPCClient):
                 data = self._decode_response(response, check_status=False)
                 if "exception_pickled" in data:
                     exception = pickle.loads(data["exception_pickled"])
-                else:
+                # old dict encoded exception schema
+                # TODO: Remove that code once all servers are using new schema
+                elif "exception" in data:
                     exception = RemoteException(
                         payload=data["exception"], response=response
                     )
+                else:
+                    exception = RemoteException(payload=data, response=response)
 
         except (TypeError, pickle.UnpicklingError):
             raise RemoteException(payload=data, response=response)

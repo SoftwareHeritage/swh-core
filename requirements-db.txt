@@ -1,4 +1,3 @@
 # requirements for swh.core.db
 psycopg2
 typing-extensions
-pytest-postgresql
