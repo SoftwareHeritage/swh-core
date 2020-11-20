@@ -319,14 +319,15 @@ class RPCClient(metaclass=MetaRPCClient):
                         if exc_type.__name__ == data["type"]:
                             exception = exc_type(*data["args"])
                             break
-                    # old dict encoded exception schema
-                    # TODO: Remove that code once all servers are using new schema
-                    if "exception" in data:
-                        exception = RemoteException(
-                            payload=data["exception"], response=response
-                        )
                     else:
-                        exception = RemoteException(payload=data, response=response)
+                        # old dict encoded exception schema
+                        # TODO: Remove that code once all servers are using new schema
+                        if "exception" in data:
+                            exception = RemoteException(
+                                payload=data["exception"], response=response
+                            )
+                        else:
+                            exception = RemoteException(payload=data, response=response)
                 else:
                     exception = pickle.loads(data)
 
