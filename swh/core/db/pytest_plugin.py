@@ -8,6 +8,7 @@ import logging
 import subprocess
 from typing import Optional, Set, Union
 
+from _pytest.fixtures import FixtureRequest
 import psycopg2
 import pytest
 from pytest_postgresql import factories
@@ -137,7 +138,7 @@ def postgresql_fact(
     no_truncate_tables: Set[str] = {"dbversion"},
 ):
     @pytest.fixture
-    def postgresql_factory(request):
+    def postgresql_factory(request: FixtureRequest):
         """Fixture factory for PostgreSQL.
 
         :param FixtureRequest request: fixture request object

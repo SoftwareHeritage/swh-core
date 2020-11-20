@@ -1,8 +1,18 @@
-swh-core (0.8.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.9.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.9.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2020-11-20 15:35:53
+    +0100)
+  * Upstream changes:     - v0.9.0     - Clarify names around the
+    swh.core.db.pytest_plugin tests     - setup: Separate pytest-
+    postgresql dependency and declare it when needed     - RPCClient:
+    Fix reraise_exceptions regression     - api/serializers: Add
+    Exception type encoder and decoder     - Makefile.local: Ensure all
+    tests are executed when invoking make test     - core.db.cli: Add
+    coverage and ensure `swh db *` works as expected     - core tests:
+    disambiguate arg 'request' through typing
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 30 Oct 2020 08:14:18 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 20 Nov 2020 14:37:00 +0000
 
 swh-core (0.8.0-1~swh1) unstable-swh; urgency=medium
 

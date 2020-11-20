@@ -116,7 +116,7 @@ async def test_get_server_exception(cli) -> None:
     assert resp.status == 500
     data = await resp.read()
     data = msgpack.unpackb(data, raw=False)
-    assert data["exception"]["type"] == "TestServerException"
+    assert data["type"] == "TestServerException"
 
 
 async def test_get_client_error(cli) -> None:
@@ -124,7 +124,7 @@ async def test_get_client_error(cli) -> None:
     assert resp.status == 400
     data = await resp.read()
     data = msgpack.unpackb(data, raw=False)
-    assert data["exception"]["type"] == "TestClientError"
+    assert data["type"] == "TestClientError"
 
 
 async def test_get_simple_nego(cli) -> None:
