@@ -315,7 +315,7 @@ class RPCClient(metaclass=MetaRPCClient):
             if status_class == 4:
                 data = self._decode_response(response, check_status=False)
                 if isinstance(data, dict):
-                    # TODO: remove "exception" field check once all servers
+                    # TODO: remove "exception" key check once all servers
                     # are using new schema
                     exc_data = data["exception"] if "exception" in data else data
                     for exc_type in self.reraise_exceptions:
@@ -332,7 +332,7 @@ class RPCClient(metaclass=MetaRPCClient):
                 if "exception_pickled" in data:
                     exception = pickle.loads(data["exception_pickled"])
                 else:
-                    # TODO: remove "exception" field check once all servers
+                    # TODO: remove "exception" key check once all servers
                     # are using new schema
                     exc_data = data["exception"] if "exception" in data else data
                     exception = RemoteException(payload=exc_data, response=response)
