@@ -40,6 +40,23 @@ def _decode_paged_result(obj: Dict[str, Any]) -> PagedResult:
     return PagedResult(results=obj["results"], next_page_token=obj["next_page_token"],)
 
 
+def exception_to_dict(exception: Exception) -> Dict[str, Any]:
+    tb = traceback.format_exception(None, exception, exception.__traceback__)
+    exc_type = type(exception)
+    return {
+        "type": exc_type.__name__,
+        "module": exc_type.__module__,
+        "args": exception.args,
+        "message": str(exception),
+        "traceback": tb,
+    }
+
+
+def dict_to_exception(exc_dict: Dict[str, Any]) -> Exception:
+    temp = __import__(exc_dict["module"], fromlist=[exc_dict["type"]])
+    return getattr(temp, exc_dict["type"])(*exc_dict["args"])
+
+
 ENCODERS = [
     (arrow.Arrow, "arrow", arrow.Arrow.isoformat),
     (datetime.datetime, "datetime", encode_datetime),
@@ -56,6 +73,7 @@ ENCODERS = [
     (PagedResult, "paged_result", _encode_paged_result),
     # Only for JSON:
     (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
+    (Exception, "exception", exception_to_dict),
 ]
 
 DECODERS = {
@@ -66,6 +84,7 @@ DECODERS = {
     "paged_result": _decode_paged_result,
     # Only for JSON:
     "bytes": base64.b85decode,
+    "exception": dict_to_exception,
 }
 
 
@@ -279,15 +298,3 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
         return msgpack.unpackb(
             data, encoding="utf-8", object_hook=decode_types, ext_hook=ext_hook
         )
-
-
-def exception_to_dict(exception):
-    tb = traceback.format_exception(None, exception, exception.__traceback__)
-    return {
-        "exception": {
-            "type": type(exception).__name__,
-            "args": exception.args,
-            "message": str(exception),
-            "traceback": tb,
-        }
-    }

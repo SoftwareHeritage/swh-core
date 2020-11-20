@@ -12,6 +12,7 @@ import arrow
 from arrow import Arrow
 import pytest
 import requests
+from requests.exceptions import ConnectionError
 
 from swh.core.api.classes import PagedResult
 from swh.core.api.serializers import (
@@ -148,6 +149,17 @@ def test_serializers_round_trip_json_extra_types():
     assert actual_data == expected_original_data
 
 
+def test_exception_serializer_round_trip_json():
+    error_message = "unreachable host"
+    json_data = json.dumps(
+        {"exception": ConnectionError(error_message)}, cls=SWHJSONEncoder
+    )
+    actual_data = json.loads(json_data, cls=SWHJSONDecoder)
+    assert "exception" in actual_data
+    assert type(actual_data["exception"]) == ConnectionError
+    assert str(actual_data["exception"]) == error_message
+
+
 def test_serializers_encode_swh_json():
     json_str = json.dumps(DATA, cls=SWHJSONEncoder)
     actual_data = json.loads(json_str)
@@ -170,6 +182,15 @@ def test_serializers_round_trip_msgpack_extra_types():
     data = msgpack_dumps(original_data, extra_encoders=extra_encoders)
     actual_data = msgpack_loads(data, extra_decoders=extra_decoders)
     assert actual_data == original_data
+
+
+def test_exception_serializer_round_trip_msgpack():
+    error_message = "unreachable host"
+    data = msgpack_dumps({"exception": ConnectionError(error_message)})
+    actual_data = msgpack_loads(data)
+    assert "exception" in actual_data
+    assert type(actual_data["exception"]) == ConnectionError
+    assert str(actual_data["exception"]) == error_message
 
 
 def test_serializers_generator_json():

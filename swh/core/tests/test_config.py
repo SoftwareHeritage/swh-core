@@ -16,7 +16,7 @@ pytest_v = pkg_resources.get_distribution("pytest").parsed_version
 if pytest_v < pkg_resources.extern.packaging.version.parse("3.9"):
 
     @pytest.fixture
-    def tmp_path(request):
+    def tmp_path():
         import pathlib
         import tempfile
 
