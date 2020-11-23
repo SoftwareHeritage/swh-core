@@ -171,6 +171,7 @@ def test_serializers_round_trip_msgpack():
         **DATA,
         "none_dict_key": {None: 42},
         "long_int_is_loooong": 10000000000000000000000000000000,
+        "long_negative_int_is_loooong": -10000000000000000000000000000000,
     }
     data = msgpack_dumps(expected_original_data)
     actual_data = msgpack_loads(data)

@@ -90,6 +90,7 @@ DECODERS = {
 
 class MsgpackExtTypeCodes(Enum):
     LONG_INT = 1
+    LONG_NEG_INT = 2
 
 
 def encode_data_client(data: Any, extra_encoders=None) -> bytes:
@@ -224,12 +225,15 @@ def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
     def encode_types(obj):
         if isinstance(obj, int):
             # integer overflowed while packing. Handle it as an extended type
+            if obj > 0:
+                code = MsgpackExtTypeCodes.LONG_INT.value
+            else:
+                code = MsgpackExtTypeCodes.LONG_NEG_INT.value
+                obj = -obj
             length, rem = divmod(obj.bit_length(), 8)
             if rem:
                 length += 1
-            return msgpack.ExtType(
-                MsgpackExtTypeCodes.LONG_INT.value, int.to_bytes(obj, length, "big")
-            )
+            return msgpack.ExtType(code, int.to_bytes(obj, length, "big"))
 
         if isinstance(obj, types.GeneratorType):
             return list(obj)
@@ -259,6 +263,8 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
     def ext_hook(code, data):
         if code == MsgpackExtTypeCodes.LONG_INT.value:
             return int.from_bytes(data, "big")
+        elif code == MsgpackExtTypeCodes.LONG_NEG_INT.value:
+            return -int.from_bytes(data, "big")
         raise ValueError("Unknown msgpack extended code %s" % code)
 
     def decode_types(obj):
