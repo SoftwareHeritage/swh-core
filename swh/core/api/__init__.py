@@ -315,19 +315,15 @@ class RPCClient(metaclass=MetaRPCClient):
             if status_class == 4:
                 data = self._decode_response(response, check_status=False)
                 if isinstance(data, dict):
+                    # TODO: remove "exception" key check once all servers
+                    # are using new schema
+                    exc_data = data["exception"] if "exception" in data else data
                     for exc_type in self.reraise_exceptions:
-                        if exc_type.__name__ == data["type"]:
-                            exception = exc_type(*data["args"])
+                        if exc_type.__name__ == exc_data["type"]:
+                            exception = exc_type(*exc_data["args"])
                             break
                     else:
-                        # old dict encoded exception schema
-                        # TODO: Remove that code once all servers are using new schema
-                        if "exception" in data:
-                            exception = RemoteException(
-                                payload=data["exception"], response=response
-                            )
-                        else:
-                            exception = RemoteException(payload=data, response=response)
+                        exception = RemoteException(payload=exc_data, response=response)
                 else:
                     exception = pickle.loads(data)
 
@@ -335,14 +331,11 @@ class RPCClient(metaclass=MetaRPCClient):
                 data = self._decode_response(response, check_status=False)
                 if "exception_pickled" in data:
                     exception = pickle.loads(data["exception_pickled"])
-                # old dict encoded exception schema
-                # TODO: Remove that code once all servers are using new schema
-                elif "exception" in data:
-                    exception = RemoteException(
-                        payload=data["exception"], response=response
-                    )
                 else:
-                    exception = RemoteException(payload=data, response=response)
+                    # TODO: remove "exception" key check once all servers
+                    # are using new schema
+                    exc_data = data["exception"] if "exception" in data else data
+                    exception = RemoteException(payload=exc_data, response=response)
 
         except (TypeError, pickle.UnpicklingError):
             raise RemoteException(payload=data, response=response)
