@@ -5,6 +5,7 @@
 
 import logging
 import logging.config
+from typing import Optional
 import warnings
 
 import click
@@ -48,12 +49,43 @@ def clean_exit_on_signal(signal, frame):
     raise SystemExit(0)
 
 
+def validate_loglevel_params(ctx, param, value):
+    """Validate the --log-level parameters, with multiple values"""
+    if value is None:
+        return None
+    return [validate_loglevel(ctx, param, v) for v in value]
+
+
+def validate_loglevel(ctx, param, value):
+    """Validate a single loglevel specification, of the form LOGLEVEL or
+    module:LOGLEVEL."""
+    if ":" in value:
+        try:
+            module, log_level = value.split(":")
+        except ValueError:
+            raise click.BadParameter(
+                "Invalid log level specification `%s`, "
+                "needs to be in format `module:LOGLEVEL`" % value
+            )
+    else:
+        module = None
+        log_level = value
+
+    if log_level not in LOG_LEVEL_NAMES:
+        raise click.BadParameter(
+            "Log level %s unknown (in `%s`) needs to be one of %s"
+            % (log_level, value, ", ".join(LOG_LEVEL_NAMES))
+        )
+
+    return (module, log_level)
+
+
 @click.group(
     context_settings=CONTEXT_SETTINGS,
     cls=AliasedGroup,
     option_notes="""\
-If both options are present, --log-level will override the root logger
-configuration set in --log-config.
+If both options are present, --log-level values will override the configuration
+in --log-config.
 
 The --log-config YAML must conform to the logging.config.dictConfig schema
 documented at https://docs.python.org/3/library/logging.config.html.
@@ -62,9 +94,16 @@ documented at https://docs.python.org/3/library/logging.config.html.
 @click.option(
     "--log-level",
     "-l",
+    "log_levels",
     default=None,
-    type=click.Choice(LOG_LEVEL_NAMES),
-    help="Log level (defaults to INFO).",
+    callback=validate_loglevel_params,
+    multiple=True,
+    help=(
+        "Log level (defaults to INFO). "
+        "Can override the log level for a specific module, by using the "
+        "`specific.module:LOGLEVEL` syntax (e.g. `--log-level swh.core:DEBUG` "
+        "will enable DEBUG logging for swh.core)."
+    ),
 )
 @click.option(
     "--log-config",
@@ -82,7 +121,7 @@ documented at https://docs.python.org/3/library/logging.config.html.
     help="Enable debugging of sentry",
 )
 @click.pass_context
-def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
+def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
     """Command line interface for Software Heritage.
     """
     import signal
@@ -96,18 +135,29 @@ def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
 
     init_sentry(sentry_dsn, debug=sentry_debug)
 
-    if log_level is None and log_config is None:
-        log_level = "INFO"
+    set_default_loglevel: Optional[str] = None
 
     if log_config:
         logging.config.dictConfig(yaml.safe_load(log_config.read()))
+        set_default_loglevel = logging.root.getEffectiveLevel()
 
-    if log_level:
+    if not log_levels:
+        log_levels = []
+
+    for module, log_level in log_levels:
+        logger = logging.getLogger(module)
         log_level = logging.getLevelName(log_level)
-        logging.root.setLevel(log_level)
+        logger.setLevel(log_level)
+
+        if module is None:
+            set_default_loglevel = log_level
+
+    if not set_default_loglevel:
+        logging.root.setLevel("INFO")
+        set_default_loglevel = "INFO"
 
     ctx.ensure_object(dict)
-    ctx.obj["log_level"] = log_level
+    ctx.obj["log_level"] = set_default_loglevel
 
 
 def main():

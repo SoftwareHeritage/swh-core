@@ -242,7 +242,7 @@ def log_config_path(tmp_path):
     yield str(tmp_path / "log_config.yml")
 
 
-def test_log_config(caplog, log_config_path, swhmain):
+def test_log_config(log_config_path, swhmain):
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
@@ -264,7 +264,7 @@ def test_log_config(caplog, log_config_path, swhmain):
     )
 
 
-def test_log_config_log_level_interaction(caplog, log_config_path, swhmain):
+def test_log_config_log_level_interaction(log_config_path, swhmain):
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
@@ -285,6 +285,36 @@ def test_log_config_log_level_interaction(caplog, log_config_path, swhmain):
             "custom format:dontshowdebug:INFO:Shown",
         ]
     )
+
+
+def test_multiple_log_level_behavior(swhmain):
+    @swhmain.command(name="test")
+    @click.pass_context
+    def swhtest(ctx):
+        assert logging.getLevelName(logging.root.level) == "DEBUG"
+        assert logging.getLevelName(logging.getLogger("dontshowdebug").level) == "INFO"
+        return 0
+
+    runner = CliRunner()
+    result = runner.invoke(
+        swhmain, ["--log-level", "DEBUG", "--log-level", "dontshowdebug:INFO", "test",]
+    )
+
+    assert result.exit_code == 0, result.output
+
+
+def test_invalid_log_level(swhmain):
+    runner = CliRunner()
+    result = runner.invoke(swhmain, ["--log-level", "broken:broken:DEBUG"])
+
+    assert result.exit_code != 0
+    assert "Invalid log level specification" in result.output
+
+    runner = CliRunner()
+    result = runner.invoke(swhmain, ["--log-level", "UNKNOWN"])
+
+    assert result.exit_code != 0
+    assert "Log level UNKNOWN unknown" in result.output
 
 
 def test_aliased_command(swhmain):
