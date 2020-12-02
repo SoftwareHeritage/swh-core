@@ -1,3 +1,5 @@
+.. _swh-core-cli:
+
 Command-line interface
 ======================
 

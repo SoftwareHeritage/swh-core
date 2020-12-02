@@ -13,6 +13,7 @@ import pytest
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
 from swh.core.db.pytest_plugin import postgresql_fact
+from swh.core.tests.test_cli import assert_section_contains
 
 
 @pytest.fixture
@@ -20,57 +21,41 @@ def cli_runner():
     return CliRunner()
 
 
-help_msg = """Usage: swh [OPTIONS] COMMAND [ARGS]...
-
-  Command line interface for Software Heritage.
-
-Options:
-  -l, --log-level [NOTSET|DEBUG|INFO|WARNING|ERROR|CRITICAL]
-                                  Log level (defaults to INFO).
-  --log-config FILENAME           Python yaml logging configuration file.
-  --sentry-dsn TEXT               DSN of the Sentry instance to report to
-  -h, --help                      Show this message and exit.
-
-Notes:
-  If both options are present, --log-level will override the root logger
-  configuration set in --log-config.
-
-  The --log-config YAML must conform to the logging.config.dictConfig schema
-  documented at https://docs.python.org/3/library/logging.config.html.
-
-Commands:
-  db  Software Heritage database generic tools.
-"""
-
-
 def test_cli_swh_help(swhmain, cli_runner):
     swhmain.add_command(swhdb)
     result = cli_runner.invoke(swhmain, ["-h"])
     assert result.exit_code == 0
-    assert result.output == help_msg
+    assert_section_contains(
+        result.output, "Commands", "db  Software Heritage database generic tools."
+    )
 
 
-help_db_msg = """Usage: swh db [OPTIONS] COMMAND [ARGS]...
-
-  Software Heritage database generic tools.
-
-Options:
-  -C, --config-file FILE  Configuration file.
-  -h, --help              Show this message and exit.
-
-Commands:
-  create      Create a database for the Software Heritage <module>.
-  init        Initialize a database for the Software Heritage <module>.
-  init-admin  Execute superuser-level initialization steps (e.g pg
-              extensions,...
-"""
+help_db_snippets = (
+    (
+        "Usage",
+        (
+            "Usage: swh db [OPTIONS] COMMAND [ARGS]...",
+            "Software Heritage database generic tools.",
+        ),
+    ),
+    (
+        "Commands",
+        (
+            "create      Create a database for the Software Heritage <module>.",
+            "init        Initialize a database for the Software Heritage <module>.",
+            "init-admin  Execute superuser-level initialization steps",
+        ),
+    ),
+)
 
 
 def test_cli_swh_db_help(swhmain, cli_runner):
     swhmain.add_command(swhdb)
     result = cli_runner.invoke(swhmain, ["db", "-h"])
     assert result.exit_code == 0
-    assert result.output == help_db_msg
+    for section, snippets in help_db_snippets:
+        for snippet in snippets:
+            assert_section_contains(result.output, section, snippet)
 
 
 @pytest.fixture()

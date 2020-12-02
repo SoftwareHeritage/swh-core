@@ -16,6 +16,7 @@ from requests.exceptions import ConnectionError
 
 from swh.core.api.classes import PagedResult
 from swh.core.api.serializers import (
+    ENCODERS,
     SWHJSONDecoder,
     SWHJSONEncoder,
     decode_response,
@@ -171,6 +172,7 @@ def test_serializers_round_trip_msgpack():
         **DATA,
         "none_dict_key": {None: 42},
         "long_int_is_loooong": 10000000000000000000000000000000,
+        "long_negative_int_is_loooong": -10000000000000000000000000000000,
     }
     data = msgpack_dumps(expected_original_data)
     actual_data = msgpack_loads(data)
@@ -269,3 +271,15 @@ def test_serializers_decode_naive_datetime():
         )
         == expected_dt
     )
+
+
+def test_msgpack_extra_encoders_mutation():
+    data = msgpack_dumps({}, extra_encoders=extra_encoders)
+    assert data is not None
+    assert ENCODERS[-1][0] != ExtraType
+
+
+def test_json_extra_encoders_mutation():
+    data = json.dumps({}, cls=SWHJSONEncoder, extra_encoders=extra_encoders)
+    assert data is not None
+    assert ENCODERS[-1][0] != ExtraType

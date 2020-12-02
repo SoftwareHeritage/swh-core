@@ -1,4 +1,4 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -7,11 +7,8 @@ from dataclasses import dataclass
 import datetime
 from enum import IntEnum
 import inspect
-import os.path
 from string import printable
-import tempfile
 from typing import Any
-import unittest
 from unittest.mock import MagicMock, Mock
 import uuid
 
@@ -23,8 +20,7 @@ from typing_extensions import Protocol
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction, db_transaction_generator
-
-from .db_testing import SingleDbTestFixture, db_close, db_create, db_destroy
+from swh.core.db.pytest_plugin import postgresql_fact
 
 
 # workaround mypy bug https://github.com/python/mypy/issues/5485
@@ -238,44 +234,26 @@ def convert_lines(cur):
     ]
 
 
-@pytest.mark.db
-def test_connect():
-    db_name = db_create("test-db2", dumps=[])
-    try:
-        db = BaseDb.connect("dbname=%s" % db_name)
-        with db.cursor() as cur:
-            psycopg2.extras.register_default_jsonb(cur)
-            cur.execute(INIT_SQL)
-            cur.execute(INSERT_SQL, STATIC_ROW_IN)
-            cur.execute("select * from test_table;")
-            output = convert_lines(cur)
-            assert len(output) == 1
-            assert EXPECTED_ROW_OUT == output[0]
-    finally:
-        db_close(db.conn)
-        db_destroy(db_name)
+test_db = postgresql_fact("postgresql_proc", db_name="test-db2")
+
+
+@pytest.fixture
+def db_with_data(test_db, request):
+    """Fixture to initialize a db with some data out of the "INIT_SQL above
+
+    """
+    db = BaseDb.connect(test_db.dsn)
+    with db.cursor() as cur:
+        psycopg2.extras.register_default_jsonb(cur)
+        cur.execute(INIT_SQL)
+    yield db
+    db.conn.rollback()
+    db.conn.close()
 
 
 @pytest.mark.db
-class TestDb(SingleDbTestFixture, unittest.TestCase):
-    TEST_DB_NAME = "test-db"
-
-    @classmethod
-    def setUpClass(cls):
-        with tempfile.TemporaryDirectory() as td:
-            with open(os.path.join(td, "init.sql"), "a") as fd:
-                fd.write(INIT_SQL)
-
-            cls.TEST_DB_DUMP = os.path.join(td, "*.sql")
-
-            super().setUpClass()
-
-    def setUp(self):
-        super().setUp()
-        self.db = BaseDb(self.conn)
-
-    def test_initialized(self):
-        cur = self.db.cursor()
+def test_db_connect(db_with_data):
+    with db_with_data.cursor() as cur:
         psycopg2.extras.register_default_jsonb(cur)
         cur.execute(INSERT_SQL, STATIC_ROW_IN)
         cur.execute("select * from test_table;")
@@ -283,44 +261,47 @@ class TestDb(SingleDbTestFixture, unittest.TestCase):
         assert len(output) == 1
         assert EXPECTED_ROW_OUT == output[0]
 
-    def test_reset_tables(self):
-        cur = self.db.cursor()
+
+def test_db_initialized(db_with_data):
+    with db_with_data.cursor() as cur:
+        psycopg2.extras.register_default_jsonb(cur)
         cur.execute(INSERT_SQL, STATIC_ROW_IN)
-        self.reset_db_tables("test-db")
-        cur.execute("select * from test_table;")
-        assert convert_lines(cur) == []
-
-    def test_copy_to_static(self):
-        items = [{field.name: field.example for field in FIELDS}]
-        self.db.copy_to(items, "test_table", COLUMNS)
-
-        cur = self.db.cursor()
         cur.execute("select * from test_table;")
         output = convert_lines(cur)
         assert len(output) == 1
         assert EXPECTED_ROW_OUT == output[0]
 
-    @given(db_rows)
-    def test_copy_to(self, data):
-        try:
-            # the table is not reset between runs by hypothesis
-            self.reset_db_tables("test-db")
 
-            items = [dict(zip(COLUMNS, item)) for item in data]
-            self.db.copy_to(items, "test_table", COLUMNS)
+def test_db_copy_to_static(db_with_data):
+    items = [{field.name: field.example for field in FIELDS}]
+    db_with_data.copy_to(items, "test_table", COLUMNS)
+    with db_with_data.cursor() as cur:
+        cur.execute("select * from test_table;")
+        output = convert_lines(cur)
+        assert len(output) == 1
+        assert EXPECTED_ROW_OUT == output[0]
 
-            cur = self.db.cursor()
-            cur.execute("select * from test_table;")
-            assert convert_lines(cur) == data
-        finally:
-            self.db.conn.rollback()
 
-    def test_copy_to_thread_exception(self):
-        data = [(2 ** 65, "foo", b"bar")]
+@given(db_rows)
+def test_db_copy_to(db_with_data, data):
+    items = [dict(zip(COLUMNS, item)) for item in data]
+    with db_with_data.cursor() as cur:
+        cur.execute("TRUNCATE TABLE test_table CASCADE")
 
-        items = [dict(zip(COLUMNS, item)) for item in data]
-        with self.assertRaises(psycopg2.errors.NumericValueOutOfRange):
-            self.db.copy_to(items, "test_table", COLUMNS)
+    db_with_data.copy_to(items, "test_table", COLUMNS)
+
+    with db_with_data.cursor() as cur:
+        cur.execute("select * from test_table;")
+        converted_lines = convert_lines(cur)
+        assert converted_lines == data
+
+
+def test_db_copy_to_thread_exception(db_with_data):
+    data = [(2 ** 65, "foo", b"bar")]
+
+    items = [dict(zip(COLUMNS, item)) for item in data]
+    with pytest.raises(psycopg2.errors.NumericValueOutOfRange):
+        db_with_data.copy_to(items, "test_table", COLUMNS)
 
 
 def test_db_transaction(mocker):
