@@ -9,7 +9,7 @@ from enum import Enum
 import json
 import traceback
 import types
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from uuid import UUID
 
 import arrow
@@ -88,8 +88,25 @@ DECODERS = {
 }
 
 
+def get_encoders(
+    extra_encoders: Optional[List[Tuple[Type, str, Callable]]]
+) -> List[Tuple[Type, str, Callable]]:
+    if extra_encoders is not None:
+        return [*ENCODERS, *extra_encoders]
+    else:
+        return ENCODERS
+
+
+def get_decoders(extra_decoders: Optional[Dict[str, Callable]]) -> Dict[str, Callable]:
+    if extra_decoders is not None:
+        return {**DECODERS, **extra_decoders}
+    else:
+        return DECODERS
+
+
 class MsgpackExtTypeCodes(Enum):
     LONG_INT = 1
+    LONG_NEG_INT = 2
 
 
 def encode_data_client(data: Any, extra_encoders=None) -> bytes:
@@ -140,9 +157,7 @@ class SWHJSONEncoder(json.JSONEncoder):
 
     def __init__(self, extra_encoders=None, **kwargs):
         super().__init__(**kwargs)
-        self.encoders = ENCODERS
-        if extra_encoders:
-            self.encoders += extra_encoders
+        self.encoders = get_encoders(extra_encoders)
 
     def default(self, o: Any) -> Union[Dict[str, Union[Dict[str, int], str]], list]:
         for (type_, type_name, encoder) in self.encoders:
@@ -184,9 +199,7 @@ class SWHJSONDecoder(json.JSONDecoder):
 
     def __init__(self, extra_decoders=None, **kwargs):
         super().__init__(**kwargs)
-        self.decoders = DECODERS
-        if extra_decoders:
-            self.decoders = {**self.decoders, **extra_decoders}
+        self.decoders = get_decoders(extra_decoders)
 
     def decode_data(self, o: Any) -> Any:
         if isinstance(o, dict):
@@ -217,19 +230,20 @@ def json_loads(data: str, extra_decoders=None) -> Any:
 
 def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
     """Write data as a msgpack stream"""
-    encoders = ENCODERS
-    if extra_encoders:
-        encoders += extra_encoders
+    encoders = get_encoders(extra_encoders)
 
     def encode_types(obj):
         if isinstance(obj, int):
             # integer overflowed while packing. Handle it as an extended type
+            if obj > 0:
+                code = MsgpackExtTypeCodes.LONG_INT.value
+            else:
+                code = MsgpackExtTypeCodes.LONG_NEG_INT.value
+                obj = -obj
             length, rem = divmod(obj.bit_length(), 8)
             if rem:
                 length += 1
-            return msgpack.ExtType(
-                MsgpackExtTypeCodes.LONG_INT.value, int.to_bytes(obj, length, "big")
-            )
+            return msgpack.ExtType(code, int.to_bytes(obj, length, "big"))
 
         if isinstance(obj, types.GeneratorType):
             return list(obj)
@@ -252,13 +266,13 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
        This function is used by swh.journal to decode the contents of the
        journal. This function **must** be kept backwards-compatible.
     """
-    decoders = DECODERS
-    if extra_decoders:
-        decoders = {**decoders, **extra_decoders}
+    decoders = get_decoders(extra_decoders)
 
     def ext_hook(code, data):
         if code == MsgpackExtTypeCodes.LONG_INT.value:
             return int.from_bytes(data, "big")
+        elif code == MsgpackExtTypeCodes.LONG_NEG_INT.value:
+            return -int.from_bytes(data, "big")
         raise ValueError("Unknown msgpack extended code %s" % code)
 
     def decode_types(obj):
