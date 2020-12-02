@@ -74,7 +74,6 @@ swh/core/db/db_utils.py
 swh/core/db/pytest_plugin.py
 swh/core/db/tests/__init__.py
 swh/core/db/tests/conftest.py
-swh/core/db/tests/db_testing.py
 swh/core/db/tests/test_cli.py
 swh/core/db/tests/test_db.py
 swh/core/db/tests/data/cli/0-superuser-init.sql

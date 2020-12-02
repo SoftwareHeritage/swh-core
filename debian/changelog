@@ -1,8 +1,15 @@
-swh-core (0.9.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.10.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.10.0     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2020-12-02 11:46:38 +0100)
+  * Upstream changes:     - Release swh.core 0.10.0     -
+    db.tests.db_testing: Drop unused database test utilities.     -
+    api.serializers: Add support for serializing large negative integers
+    with     - msgpack.     - Do not mutate api.serializers.ENCODERS or
+    DECODERS.     - swh cli: Add support for setting up the log level of
+    multiple loggers.
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 23 Nov 2020 10:30:33 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 02 Dec 2020 10:50:35 +0000
 
 swh-core (0.9.1-1~swh1) unstable-swh; urgency=medium
 
