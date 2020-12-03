@@ -107,6 +107,36 @@ def get_decoders(extra_decoders: Optional[Dict[str, Callable]]) -> Dict[str, Cal
 class MsgpackExtTypeCodes(Enum):
     LONG_INT = 1
     LONG_NEG_INT = 2
+    DATETIME = 3
+    TIMEDELTA = 4
+    UUID = 5
+
+
+def _msgpack_encode_int(v):
+    # needed because msgpack will not handle long integers with more than 64 bits
+    # which we unfortunately happen to have to deal with from time to time
+    if obj > 0:
+        code = MsgpackExtTypeCodes.LONG_INT.value
+    else:
+        code = MsgpackExtTypeCodes.LONG_NEG_INT.value
+        obj = -obj
+    length, rem = divmod(obj.bit_length(), 8)
+    if rem:
+        length += 1
+    return msgpack.ExtType(code, int.to_bytes(obj, length, "big"))
+
+
+MSGPACK_ENCODERS = [
+    (int, _msgpack_encode_int)
+    (datetime.datetime,
+     lambda d: msgpack.ExtType(MsgpackExtTypeCodes.DATETIME,
+                               encode_datetime(d).encode())),
+    (datetime.timedelta,
+     lambda o: msgpack.ExtType(MsgpackExtTypeCodes.TIMEDELTA,
+                               msgpack.dumps((o.days, o.seconds, o.microseconds)))),
+    (UUID,
+     lambda o: msgpack.ExtType(MsgpackExtTypeCodes.UUID, o.bytes)),
+]
 
 
 def encode_data_client(data: Any, extra_encoders=None) -> bytes:
