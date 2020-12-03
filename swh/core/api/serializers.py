@@ -127,15 +127,20 @@ def _msgpack_encode_int(v):
 
 
 MSGPACK_ENCODERS = [
-    (int, _msgpack_encode_int)
-    (datetime.datetime,
-     lambda d: msgpack.ExtType(MsgpackExtTypeCodes.DATETIME,
-                               encode_datetime(d).encode())),
-    (datetime.timedelta,
-     lambda o: msgpack.ExtType(MsgpackExtTypeCodes.TIMEDELTA,
-                               msgpack.dumps((o.days, o.seconds, o.microseconds)))),
-    (UUID,
-     lambda o: msgpack.ExtType(MsgpackExtTypeCodes.UUID, o.bytes)),
+    (int, _msgpack_encode_int)(
+        datetime.datetime,
+        lambda d: msgpack.ExtType(
+            MsgpackExtTypeCodes.DATETIME, encode_datetime(d).encode()
+        ),
+    ),
+    (
+        datetime.timedelta,
+        lambda o: msgpack.ExtType(
+            MsgpackExtTypeCodes.TIMEDELTA,
+            msgpack.dumps((o.days, o.seconds, o.microseconds)),
+        ),
+    ),
+    (UUID, lambda o: msgpack.ExtType(MsgpackExtTypeCodes.UUID, o.bytes)),
 ]
 
 
