@@ -8,8 +8,6 @@ import json
 from typing import Any, Callable, List, Tuple, Union
 from uuid import UUID
 
-import arrow
-from arrow import Arrow
 import pytest
 import requests
 from requests.exceptions import ConnectionError
@@ -66,9 +64,6 @@ ENCODED_DATA_TIMEDELTA = {
     "d": {"days": 64, "seconds": 0, "microseconds": 0},
 }
 
-DATA_ARROW = arrow.get("2018-04-25T16:17:53.533672+00:00")
-ENCODED_DATA_ARROW = {"swhtype": "arrow", "d": "2018-04-25T16:17:53.533672+00:00"}
-
 DATA_UUID = UUID("cdd8f804-9db6-40c3-93ab-5955d3836234")
 ENCODED_DATA_UUID = {"swhtype": "uuid", "d": "cdd8f804-9db6-40c3-93ab-5955d3836234"}
 
@@ -89,16 +84,18 @@ ENCODED_DATA_PAGED_RESULT = {
     "swhtype": "paged_result",
 }
 
-TestPagedResultTuple = PagedResult[Union[str, bytes, Arrow], List[Union[str, UUID]]]
+TestPagedResultTuple = PagedResult[
+    Union[str, bytes, datetime.datetime], List[Union[str, UUID]]
+]
 
 
 DATA_PAGED_RESULT2 = TestPagedResultTuple(
-    results=["data0", DATA_BYTES, DATA_ARROW], next_page_token=["10", DATA_UUID],
+    results=["data0", DATA_BYTES, DATA_DATETIME], next_page_token=["10", DATA_UUID],
 )
 
 ENCODED_DATA_PAGED_RESULT2 = {
     "d": {
-        "results": ["data0", ENCODED_DATA_BYTES, ENCODED_DATA_ARROW,],
+        "results": ["data0", ENCODED_DATA_BYTES, ENCODED_DATA_DATETIME,],
         "next_page_token": ["10", ENCODED_DATA_UUID],
     },
     "swhtype": "paged_result",
@@ -111,7 +108,6 @@ DATA = {
         2015, 3, 4, 18, 25, 13, 1234, tzinfo=datetime.timezone.utc
     ),
     "datetime_delta": DATA_TIMEDELTA,
-    "arrow_date": DATA_ARROW,
     "swhtype": "fake",
     "swh_dict": {"swhtype": 42, "d": "test"},
     "random_dict": {"swhtype": 43},
@@ -125,7 +121,6 @@ ENCODED_DATA = {
     "datetime_tz": ENCODED_DATA_DATETIME,
     "datetime_utc": {"swhtype": "datetime", "d": "2015-03-04T18:25:13.001234+00:00",},
     "datetime_delta": ENCODED_DATA_TIMEDELTA,
-    "arrow_date": ENCODED_DATA_ARROW,
     "swhtype": "fake",
     "swh_dict": {"swhtype": 42, "d": "test"},
     "random_dict": {"swhtype": 43},
