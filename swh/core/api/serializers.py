@@ -12,7 +12,6 @@ import types
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from uuid import UUID
 
-import arrow
 import iso8601
 import msgpack
 from requests import Response
@@ -57,27 +56,25 @@ def dict_to_exception(exc_dict: Dict[str, Any]) -> Exception:
     return getattr(temp, exc_dict["type"])(*exc_dict["args"])
 
 
-ENCODERS = [
-    (arrow.Arrow, "arrow", arrow.Arrow.isoformat),
+def encode_timedelta(td: datetime.timedelta) -> Dict[str, int]:
+    return {
+        "days": td.days,
+        "seconds": td.seconds,
+        "microseconds": td.microseconds,
+    }
+
+
+ENCODERS: List[Tuple[type, str, Callable]] = [
     (datetime.datetime, "datetime", encode_datetime),
-    (
-        datetime.timedelta,
-        "timedelta",
-        lambda o: {
-            "days": o.days,
-            "seconds": o.seconds,
-            "microseconds": o.microseconds,
-        },
-    ),
     (UUID, "uuid", str),
+    (datetime.timedelta, "timedelta", encode_timedelta),
     (PagedResult, "paged_result", _encode_paged_result),
     # Only for JSON:
     (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
     (Exception, "exception", exception_to_dict),
 ]
 
-DECODERS = {
-    "arrow": arrow.get,
+DECODERS: Dict[str, Callable] = {
     "datetime": lambda d: iso8601.parse_date(d, default_timezone=None),
     "timedelta": lambda d: datetime.timedelta(**d),
     "uuid": UUID,
@@ -281,16 +278,6 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
             decoder = decoders.get(obj[b"swhtype"])
             if decoder:
                 return decoder(obj[b"d"])
-
-        # Support for legacy encodings
-        if b"__datetime__" in obj and obj[b"__datetime__"]:
-            return iso8601.parse_date(obj[b"s"], default_timezone=None)
-        if b"__uuid__" in obj and obj[b"__uuid__"]:
-            return UUID(obj[b"s"])
-        if b"__timedelta__" in obj and obj[b"__timedelta__"]:
-            return datetime.timedelta(**obj[b"s"])
-        if b"__arrow__" in obj and obj[b"__arrow__"]:
-            return arrow.get(obj[b"s"])
 
         # Fallthrough
         return obj
