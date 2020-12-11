@@ -13,4 +13,5 @@ Reference Documentation
    :maxdepth: 2
 
    cli
+   config
    /apidoc/swh.core
