@@ -131,6 +131,12 @@ ENCODED_DATA = {
 }
 
 
+class ComplexExceptionType(Exception):
+    def __init__(self, error_type, message):
+        self.error_type = error_type
+        super().__init__(f"{error_type}: {message}")
+
+
 def test_serializers_round_trip_json():
     json_data = json_dumps(DATA)
     actual_data = json_loads(json_data)
@@ -151,6 +157,15 @@ def test_exception_serializer_round_trip_json():
     assert "exception" in actual_data
     assert type(actual_data["exception"]) == ConnectionError
     assert str(actual_data["exception"]) == error_message
+
+
+def test_complex_exception_serializer_round_trip_json():
+    exception = ComplexExceptionType("NotFound", "the object is missing")
+    json_data = json_dumps({"exception": exception})
+    actual_data = json_loads(json_data)
+    assert "exception" in actual_data
+    assert type(actual_data["exception"]) == Exception
+    assert str(actual_data["exception"]) == str(exception)
 
 
 def test_serializers_encode_swh_json():
@@ -185,6 +200,15 @@ def test_exception_serializer_round_trip_msgpack():
     assert "exception" in actual_data
     assert type(actual_data["exception"]) == ConnectionError
     assert str(actual_data["exception"]) == error_message
+
+
+def test_complex_exception_serializer_round_trip_msgpack():
+    exception = ComplexExceptionType("NotFound", "the object is missing")
+    data = msgpack_dumps({"exception": exception})
+    actual_data = msgpack_loads(data)
+    assert "exception" in actual_data
+    assert type(actual_data["exception"]) == Exception
+    assert str(actual_data["exception"]) == str(exception)
 
 
 def test_serializers_generator_json():

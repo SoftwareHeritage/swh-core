@@ -53,7 +53,11 @@ def exception_to_dict(exception: Exception) -> Dict[str, Any]:
 
 def dict_to_exception(exc_dict: Dict[str, Any]) -> Exception:
     temp = __import__(exc_dict["module"], fromlist=[exc_dict["type"]])
-    return getattr(temp, exc_dict["type"])(*exc_dict["args"])
+    try:
+        return getattr(temp, exc_dict["type"])(*exc_dict["args"])
+    except Exception:
+        # custom Exception type cannot be rebuilt, fallback to base Exception type
+        return Exception(exc_dict["message"])
 
 
 def encode_timedelta(td: datetime.timedelta) -> Dict[str, int]:
