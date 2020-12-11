@@ -8,6 +8,7 @@ import json
 from typing import Any, Callable, List, Tuple, Union
 from uuid import UUID
 
+import msgpack
 import pytest
 import requests
 from requests.exceptions import ConnectionError
@@ -207,10 +208,31 @@ def test_serializers_decode_response_json(requests_mock):
     assert decode_response(response) == DATA
 
 
-def test_serializers_encode_native_datetime():
+def test_serializers_encode_datetime_msgpack():
+    dt = datetime.datetime.now(tz=datetime.timezone.utc)
+    encmsg = msgpack_dumps(dt)
+    decmsg = msgpack.loads(encmsg, timestamp=0)
+    assert isinstance(decmsg, msgpack.Timestamp)
+    assert decmsg.to_datetime() == dt
+
+
+def test_serializers_decode_datetime_compat_msgpack():
+    dt = datetime.datetime.now(tz=datetime.timezone.utc)
+    encmsg = msgpack_dumps({b"swhtype": "datetime", b"d": dt.isoformat()})
+    decmsg = msgpack_loads(encmsg)
+    assert decmsg == dt
+
+
+def test_serializers_encode_native_datetime_msgpack():
     dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
-    with pytest.raises(ValueError, match="naive datetime"):
+    with pytest.raises(TypeError, match="datetime"):
         msgpack_dumps(dt)
+
+
+def test_serializers_encode_native_datetime_json():
+    dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
+    with pytest.raises(TypeError, match="datetime"):
+        json_dumps(dt)
 
 
 def test_serializers_decode_naive_datetime():

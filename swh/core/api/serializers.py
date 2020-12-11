@@ -22,7 +22,7 @@ from swh.core.api.classes import PagedResult
 def encode_datetime(dt: datetime.datetime) -> str:
     """Wrapper of datetime.datetime.isoformat() that forbids naive datetimes."""
     if dt.tzinfo is None:
-        raise ValueError(f"{dt} is a naive datetime.")
+        raise TypeError("can not serialize naive 'datetime.datetime' object")
     return dt.isoformat()
 
 
@@ -65,7 +65,6 @@ def encode_timedelta(td: datetime.timedelta) -> Dict[str, int]:
 
 
 ENCODERS: List[Tuple[type, str, Callable]] = [
-    (datetime.datetime, "datetime", encode_datetime),
     (UUID, "uuid", str),
     (datetime.timedelta, "timedelta", encode_timedelta),
     (PagedResult, "paged_result", _encode_paged_result),
@@ -73,15 +72,17 @@ ENCODERS: List[Tuple[type, str, Callable]] = [
 ]
 
 JSON_ENCODERS: List[Tuple[type, str, Callable]] = [
+    (datetime.datetime, "datetime", encode_datetime),
     (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
 ]
 
 DECODERS: Dict[str, Callable] = {
-    "datetime": lambda d: iso8601.parse_date(d, default_timezone=None),
     "timedelta": lambda d: datetime.timedelta(**d),
     "uuid": UUID,
     "paged_result": _decode_paged_result,
     "exception": dict_to_exception,
+    # for BW compat, to be moved in JSON_DECODERS ASAP
+    "datetime": lambda d: iso8601.parse_date(d, default_timezone=None),
 }
 
 JSON_DECODERS: Dict[str, Callable] = {
@@ -263,7 +264,12 @@ def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
                 }
         return obj
 
-    return msgpack.packb(data, use_bin_type=True, default=encode_types)
+    return msgpack.packb(
+        data,
+        use_bin_type=True,
+        datetime=True,  # encode datetime as msgpack.Timestamp
+        default=encode_types,
+    )
 
 
 def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
@@ -300,6 +306,7 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
                 object_hook=decode_types,
                 ext_hook=ext_hook,
                 strict_map_key=False,
+                timestamp=3,  # convert Timestamp in datetime objects (tz UTC)
             )
         except TypeError:  # msgpack < 0.6.0
             return msgpack.unpackb(
