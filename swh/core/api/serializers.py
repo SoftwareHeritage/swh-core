@@ -69,9 +69,11 @@ ENCODERS: List[Tuple[type, str, Callable]] = [
     (UUID, "uuid", str),
     (datetime.timedelta, "timedelta", encode_timedelta),
     (PagedResult, "paged_result", _encode_paged_result),
-    # Only for JSON:
-    (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
     (Exception, "exception", exception_to_dict),
+]
+
+JSON_ENCODERS: List[Tuple[type, str, Callable]] = [
+    (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
 ]
 
 DECODERS: Dict[str, Callable] = {
@@ -79,26 +81,34 @@ DECODERS: Dict[str, Callable] = {
     "timedelta": lambda d: datetime.timedelta(**d),
     "uuid": UUID,
     "paged_result": _decode_paged_result,
-    # Only for JSON:
-    "bytes": base64.b85decode,
     "exception": dict_to_exception,
+}
+
+JSON_DECODERS: Dict[str, Callable] = {
+    "bytes": base64.b85decode,
 }
 
 
 def get_encoders(
-    extra_encoders: Optional[List[Tuple[Type, str, Callable]]]
+    extra_encoders: Optional[List[Tuple[Type, str, Callable]]], with_json: bool = False
 ) -> List[Tuple[Type, str, Callable]]:
-    if extra_encoders is not None:
-        return [*ENCODERS, *extra_encoders]
-    else:
-        return ENCODERS
+    encoders = ENCODERS
+    if with_json:
+        encoders = [*encoders, *JSON_ENCODERS]
+    if extra_encoders:
+        encoders = [*encoders, *extra_encoders]
+    return encoders
 
 
-def get_decoders(extra_decoders: Optional[Dict[str, Callable]]) -> Dict[str, Callable]:
+def get_decoders(
+    extra_decoders: Optional[Dict[str, Callable]], with_json: bool = False
+) -> Dict[str, Callable]:
+    decoders = DECODERS
+    if with_json:
+        decoders = {**decoders, **JSON_DECODERS}
     if extra_decoders is not None:
-        return {**DECODERS, **extra_decoders}
-    else:
-        return DECODERS
+        decoders = {**decoders, **extra_decoders}
+    return decoders
 
 
 class MsgpackExtTypeCodes(Enum):
@@ -154,7 +164,7 @@ class SWHJSONEncoder(json.JSONEncoder):
 
     def __init__(self, extra_encoders=None, **kwargs):
         super().__init__(**kwargs)
-        self.encoders = get_encoders(extra_encoders)
+        self.encoders = get_encoders(extra_encoders, with_json=True)
 
     def default(self, o: Any) -> Union[Dict[str, Union[Dict[str, int], str]], list]:
         for (type_, type_name, encoder) in self.encoders:
@@ -196,7 +206,7 @@ class SWHJSONDecoder(json.JSONDecoder):
 
     def __init__(self, extra_decoders=None, **kwargs):
         super().__init__(**kwargs)
-        self.decoders = get_decoders(extra_decoders)
+        self.decoders = get_decoders(extra_decoders, with_json=True)
 
     def decode_data(self, o: Any) -> Any:
         if isinstance(o, dict):
