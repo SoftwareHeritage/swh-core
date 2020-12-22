@@ -19,7 +19,7 @@ through an interface and has associated dependencies
 functionality specific to one or more SWH services. The closed set of SWH components
 can appear in configuration definitions.
 - SWH service: collection of SWH components. Correspond roughly to docker services
-developed by SWH. Includes API, worker, journal services.
+developed by SWH. Examples include API servers/clients, workers, journal services, etc.
 
 ## Scope
 
@@ -51,16 +51,18 @@ interactive CLI usage or REPL tinkering. However, implicit configuration loading
 debugging in production, where a good practice is to have a straightforward loading
 mechanism, preferably from environment. In the testing case, explicit is also the norm,
 and loading from environment makes automated testing harder. There is a need for an API
-complying with the requirements of each use case.
+adapted to the requirements of each use case, and a standard way to application
+environment handling.
 
-Until now, configuration handling was implemented independently for each service. This
-hetegoneneity is a maintenance burden that can be avoided by using a common framework.
-In addition, most SWH components instantiate their own dependencies, dispatching each
-part of the service configuration to the respective dependency. All the instantiation,
-validation and composition logic of components can be taken off the component using
-them, handled by the configuration system at once and at the earliest stage of the
-application run: the entrypoint. This component instantiation and injection framework
-provide uniform handling and makes testing easier and catching some bugs earlier.
+Until now, configuration loading, validating and CLI definitions has had various forms.
+This hetegoneneity is a maintenance burden that can be avoided by using a common
+framework. In addition, most SWH components instantiate their own dependencies,
+dispatching each part of the service configuration to the respective dependency. All
+the instantiation, validation and composition logic of components can be taken off the
+component using them, handled by the configuration system at once and at the earliest
+stage of the application run: the entrypoint. This component instantiation, validation
+and injection framework provide uniform handling and makes testing easier and catching
+configuration bugs earlier.
 
 Moreover, the configuration language currently lack an easy means to express both
 configuration alternatives for a particular componenent and factor out common component
@@ -78,13 +80,14 @@ A.
 automatically, useful for interactive cases but not for production cases
 - dependency on environment: must be able to instantiate component using only ad-hoc
 configuration, for testing purposes
-Need for different APIs for different use cases, all compatible.
+-> Need for different APIs for different use cases, all compatible.
 
 B.
 - composition coupling: every owner component must know about how to instantiate an
 owned component
-- heterogeneity: configuration loading and instantiating is implemented differently everywhere
-Need for dependency injection, component instantiation framework.
+- heterogeneity: configuration loading, validating and instantiating is implemented
+differently everywhere
+-> Need for dependency injection, component instantiation framework.
 
 C.
 - should be able to specify alternative configurations for one component constructed
@@ -93,7 +96,7 @@ ahead of time, and choose it at runtime/loadtime
 - uniform,complete,concise: the configuration could theoretically be centralized in one
 file which would give a clear overview of the configuration and interaction between all
 the components
-Lead to definition of instances, singletons, references to conveniently handle those cases.
+-> Lead to definition of instances, singletons, references to conveniently handle those cases.
 
 ## Language description
 
@@ -134,10 +137,11 @@ _:
 
 ### Syntactic overview
 
-Based on YAML:
-- only YAML primitive types (includes mappings and lists), like JSON
-- restriction on document structure (see grammar below)
-- addition of a reference system where we control resolution to avoid duplicated definitions
+The language is based on YAML. Specific rules are applied after YAML parsing:
+- allow only YAML primitive types (includes mappings and lists), like JSON
+- restrict document structure as specified below
+- allow YAML aliases
+- add a reference system where we control resolution to avoid duplicate definitions
 
 Structured in 3 levels of depth: type, instance, attribute
 
@@ -149,10 +153,11 @@ instances for a given type. 1 instance is associated to N attributes.
 Component type definitions are a mapping to instances, with an identifier unique among
 types for a given configuration. 1 type <-> N instances.
 
-Instances represent alternative configuration of the component: same type but different
+Instances represent alternative configurations of the component: same type but different
 constructions.
 
-Singletons are ad-hoc objects that are defined like instances but with no associated type.
+Singletons are ad-hoc objects which store configuration that is not specific to any
+component instance.
 
 Instances definitions may contain arbitrarily nested structure provided the base is a
 mapping.
@@ -163,31 +168,29 @@ target an instance.
 
 ### Grammar
 
-WARNING: hopefully consistent grammar mixup. May be offending to purists.
-Some definitions have alternatives noted with `|=`.
+The following grammar is inspired from ABNF notation.
+YAML aliases are not included for simplicity, but they follow YAML rules.
+`~=` indicates that a value should match a given regular expression pattern.
 
 ```python
-ID ~= PCRE([A-Za-z0-9_-]+)  # Could be stricter, e.g. snake_case
-ID = TID | IID | AID
-QID = TID "." IID
-ref = "<" QID ">"
-attribute_value = YAML_object | ref
-attribute_key = YAML_string
-instance = YAML_mapping(attribute_key, attribute_value)
-singleton = instance
-config_tree = YAML_mapping(TID, YAML_mapping(IID, instance))
+id ~= pcre("[A-Za-z0-9_-]+")
+id = type_id | instance_id | attribute_id
+qualified_id = type_id "." instance_id
+reference = "<" qualified_id ">"
+
+attribute_value = yaml_object | reference
+attribute_key = attribute_id
+instance = yaml_mapping(attribute_key, attribute_value)
+config_tree = yaml_mapping(type_id, yaml_mapping(instance_id, instance))
 ```
 
 ### Identifier
 
 Identifier is abbreviated ID.
-Type ID is abbreviated TID.
-Singleton ID, which is equivalent to Instance ID, is abbreviated IID.
-Attribute Key is identified by Attribute ID (), abbreviated AID.
-Qualified ID is abbreviated QID.
+Singleton ID is equivalent to instance ID.
 
-QID is a sequence of ID of the structured form (TID, IID). Its string form joins each
-field with ".".
+A qualified ID is a sequence of ID of the structured form `(type ID, instance ID)`. Its
+string form joins each field with `.`.
 
 ### Attribute
 
@@ -198,11 +201,11 @@ Attribute value is either a YAML object or a reference.
 
 A reference is synctatically defined as a qualified identifier enclosed in chevrons.
 Its source is the attribute that owns it and its target is the object identified by the
-QID it owns.
+qualified ID it owns.
 
 ### Type
 
-Python type of a component to be instantiated and configured.
+Type of a component to be instantiated and configured.
 It is referred to indirectly through a type identifier in a configuration definition,
 and through a component constructor in the component type register.
 
@@ -212,8 +215,8 @@ Specific instantiation of a component, distinguished from the others by the set 
 attributes used to initialize it. All identified instances of a type must be specified
 in the instance level of a configuration definition.
 
-An instance identified as "default" is instantiated if a TID but no IID is provided to
-the instantiation routine.
+An instance identified as "default" is instantiated if a type ID but no instance ID is
+provided to the instantiation routine.
 
 Instances may be referenced in an attribute value. When an instance containing
 references is instantiated, referenced instances are instantiated if not already and
@@ -221,10 +224,10 @@ replace their reference.
 
 ### Singleton
 
-Singletons objects are syntactically similar to instances. Unless otherwise stated, the
-same rules apply.
+Singletons objects are syntactically identical to instances. Unless otherwise stated,
+the same rules apply.
 
-They do not have a type, so they have no schema or attached semantics. For consistency,
+They are mere literals, with no associated component type. For consistency,
 they live at in a special dummy namespace, namely "_".
 
 They are instantiated as a tree whose root is a mapping, and subsequent levels may
@@ -237,10 +240,10 @@ whose first two levels are mappings, and sebsequent ones are instance definition
 
 ## Library
 
-### Register
+### Component register
 
-The component type register, abbreviated register, is a `(TID, qualified_constructor)`
-mapping, defined in the configuration library.
+The component type register is a `(type ID, qualified_constructor)` mapping, defined in
+the configuration library.
 
 It is used by the component resolution routine to resolve type identifiers to Python
 type constructors.
@@ -283,20 +286,22 @@ model and parameters. In the context of this system, a Python object is created 
 calling its constructor with the set of attributes associated to a particular instance
 in a configuration definition.
 
-The input is a QID identifying an instance and a configuration tree containing the
+The input is a qualified ID identifying an instance and a configuration tree containing the
 instance and its dependencies (reference targets). The output is a component instance
-of the base type associated with the TID contained in the QID. The process is composed
-of the following steps in order.
+of the base type associated with the type ID contained in the qualified ID. The process
+is composed of the following steps in order.
 
-1. Fetch the instance mapping by QID in the configuration.
+1. Fetch the instance mapping by qualified ID in the configuration.
 2. Resolve references to instance definitions.
 3. Recurse on referenced instances to instantiate each.
-4. Compose instances, i.e. replace references by corresponding instatiated instance in the definition.
-5. Resolve the TID contained in the QID of the instance, to a component constructor.
+4. Compose instances, i.e. replace references by the corresponding instatiated
+definition.
+5. Resolve the type ID contained in the qualified ID of the instance, to a component
+constructor.
 6. Call the component constructor, passing the updated instance mapping as arguments.
 
-An instance identified as "default" is instantiated if a TID but no IID is provided to
-the instantiation routine.
+An instance identified as "default" is instantiated if a type ID but no instance ID is
+provided to the instantiation routine.
 
 Instances must be instantiated only once and used at each reference source.
 
@@ -374,23 +379,23 @@ Example names: `get_component_from_config`, `instantiate_from_config`, `create_c
 `read_instance`, `get_from_id`
 
 ```python
-QID = (TID, IID)
+QualifiedID = (TypeID, InstanceID)
 Component = DeriveType(type)
 InstanceConfig = DeriveType(Mapping)
 ```
 
 ```python
-create_component: (Config, TID, IID) -> (Component)
+create_component: (Config, TypeID, InstanceID) -> (Component)
 ```
 
-Returns an instantiated component identified by QID. The TID must exist in the register.
-Cannot be used to get a singleton.
+Returns an instantiated component identified by qualified ID. The type ID must exist in
+the register. Cannot be used to get a singleton.
 
 ```python
-get_instance: (Config, TID, IID) -> (InstanceConfig)
+get_instance: (Config, TypeID, InstanceID) -> (InstanceConfig)
 ```
 
-Returns the instance definition (instance or singleton) identified by the QID,
+Returns the instance definition (instance or singleton) identified by the qualified ID,
 unprocessed. The output is a tree whose root is a mapping. Use it to get a singleton,
 or inspect the definition of an instance.
 
@@ -496,7 +501,7 @@ Example: scan the current directory against the archive in docker
 CLI option usage: `swh scanner --scanner-instance=docker scan .`
 Environment variable usage: `SWH_SCANNER_INSTANCE=docker swh scanner scan .`
 
-Python snippet in the cli endpoint:
+Python snippet in the CLI endpoint:
 
 ```python
 import swh.core.config as config
@@ -507,7 +512,7 @@ scanner = config.create_component(
     config_dict,
     type="scanner",
     instance=scanner_instance
-)
+)  # destructured QualifiedID definition, using type and instance keys
 
 scanner.scan(".")
 ```
@@ -525,7 +530,7 @@ def make_app_from_configfile() -> StorageServerApp:
             type="storage-rpc",
             instance=rpc_instance
         )
-        check_component(app_instance, "storage-rpc") #
+        check_component(app_instance, "storage-rpc")  # should raise or return boolean?
     return app_instance
 ```
 
@@ -559,12 +564,12 @@ def config_dict() {
 
 
 def test_config(config_dict):
-    type_ID = "objstorage"
-    instance_ID = "test_1"
+    type_id = "objstorage"
+    instance_id = "test_1"
     instance = config.create_component(
         config_dict,
-        config.QID(type=type_ID, instance=instance_ID)
-    )
+        config.QualifiedID(type=type_id, instance=instance_id)
+    )  # canonical QualifiedID definition
     ...
 
 
@@ -577,10 +582,10 @@ def test_config2(config_path):
     config_dict = config.load_from_path(config_path)
     instance = config.create_component(
         config_dict,
-        config.QID(type=type_ID, instance=instance_ID)
+        config.QualifiedID(type=type_id, instance=instance_id)
     )
     ...
-```
+`
 
 ## Environment
 
@@ -614,7 +619,7 @@ A CLI option may be passed to specify an instance ID (only at 2nd level) when se
 alternatives are provided in the configuration. Such option must be declared statically
 in CLI code.
 
-Specify the instance configuration to use for a given component, using instance ID:
+Specify the instance configuration to use for a given component, using an instance ID:
 id_part = `instance` | `id` | `iid` | `cid`
 `SWH_<COMP>_<ID_PART>` `--<comp>-<id_part>`
 
