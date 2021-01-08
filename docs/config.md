@@ -39,7 +39,7 @@ Configuration targets:
 - component: constructor/factory
 
 Configuration sources:
-- environment: CLI value, CLI path, envvar value, envvar path, IO stream
+- environment: CLI value, CLI path, envvar value, envvar path
 - code: Python objects
 
 ## Rationale
@@ -141,102 +141,81 @@ The language is based on YAML. Specific rules are applied after YAML parsing:
 - allow only YAML primitive types (includes mappings and lists), like JSON
 - restrict document structure as specified below
 - allow YAML aliases
-- add a reference system where we control resolution to avoid duplicate definitions
+- add a custom reference system where we control resolution to avoid duplicate definitions
 
-Structured in 3 levels of depth: type, instance, attribute
+The configuration tree is the complete and consistent tree of configuration definitions.
+It is structured in 3 levels of depth: type, instance, attribute
 
-Attribute is a 2-tuple (key, value), an item of a mapping.
+```
+type:
+  instance:
+    attribute
+```
 
-Instance definitions are a mapping of attributes, with an identifier unique among
-instances for a given type. 1 instance is associated to N attributes.
+Component definitions are a mapping whose items are instances, with an type identifier
+unique among types for a given configuration. 1 type is associated to N instances.
 
-Component type definitions are a mapping to instances, with an identifier unique among
-types for a given configuration. 1 type <-> N instances.
+Instance definitions are a mapping whose items are attributes. They have an identifier
+unique among instances for a given type.
 
-Instances represent alternative configurations of the component: same type but different
-constructions.
-
-Singletons are ad-hoc objects which store configuration that is not specific to any
-component instance.
-
-Instances definitions may contain arbitrarily nested structure provided the base is a
-mapping.
+Attribute is a key/value pair whose key serves as identifier. Attribute value can be any
+object allowed in JSON. Thus instance definitions may contain arbitrarily nested
+structure provided the base is a mapping.
 
 References can be made to an object defined somewhere else in the tree, using a
-qualified identifier. Specifically, its source must be an attribute value and its
-target an instance.
-
-### Grammar
-
-The following grammar is inspired from ABNF notation.
-YAML aliases are not included for simplicity, but they follow YAML rules.
-`~=` indicates that a value should match a given regular expression pattern.
-
-```python
-id ~= pcre("[A-Za-z0-9_-]+")
-id = type_id | instance_id | attribute_id
-qualified_id = type_id "." instance_id
-reference = "<" qualified_id ">"
-
-attribute_value = yaml_object | reference
-attribute_key = attribute_id
-instance = yaml_mapping(attribute_key, attribute_value)
-config_tree = yaml_mapping(type_id, yaml_mapping(instance_id, instance))
-```
+qualified identifier.
 
 ### Identifier
 
-Identifier is abbreviated ID.
-Singleton ID is equivalent to instance ID.
+An identifier is a distinguished name for either a type, an instance or an attribute. Is
+a YAML string. We recommend using the `snake_case` convention, i.e. alphanumeric
+characters and underscores.
+
+In the rest of the document, identifier is abbreviated ID.
 
 A qualified ID is a sequence of ID of the structured form `(type ID, instance ID)`. Its
-string form joins each field with `.`.
+string form joins each field with a dot.
 
-### Attribute
-
-Attribute is a (key, value) pair whose set forms an instance mapping.
-Attribute value is either a YAML object or a reference.
+```
+qualified_id = type_id "." instance_id
+```
 
 ### Reference
 
-A reference is synctatically defined as a qualified identifier enclosed in chevrons.
-Its source is the attribute that owns it and its target is the object identified by the
-qualified ID it owns.
+A reference is synctatically defined as a qualified identifier in string form enclosed
+in chevrons. It may only appear in attribute value, potentially nested. The qualified
+identifier must refer to an instance. Its source is the attribute that owns it and its
+target is the object identified by the qualified ID it owns.
+
+```
+reference = "<" qualified_id ">"
+```
 
 ### Type
 
-Type of a component to be instantiated and configured.
-It is referred to indirectly through a type identifier in a configuration definition,
-and through a component constructor in the component type register.
+Type of a component to be instantiated and configured. In the configuration definition,
+the type correspond to the identifier at the first level. It must exist as a key in the
+component type register (see below ["Library/Component register"](#component-register)).
 
 ### Instance
 
-Specific instantiation of a component, distinguished from the others by the set of
-attributes used to initialize it. All identified instances of a type must be specified
-in the instance level of a configuration definition.
+Instances represent alternative configurations of a given component: they have the same
+type but different constructions. For example, *production* or *staging* instance.
 
-An instance identified as "default" is instantiated if a type ID but no instance ID is
-provided to the instantiation routine.
+All instances of a type must be specified in the instance level of a configuration
+definition.
 
-Instances may be referenced in an attribute value. When an instance containing
-references is instantiated, referenced instances are instantiated if not already and
-replace their reference.
+For a given loaded configuration, an instance will be instantiated only once and passed
+to any instances that refer to it.
 
 ### Singleton
 
-Singletons objects are syntactically identical to instances. Unless otherwise stated,
-the same rules apply.
+Singletons are ad-hoc objects which store configuration that is not specific to any
+component instance. They are syntactically identical to instances. Unless otherwise
+stated, the same rules apply.
 
-They are mere literals, with no associated component type. For consistency,
-they live at in a special dummy namespace, namely "_".
-
-They are instantiated as a tree whose root is a mapping, and subsequent levels may
-either be a mapping or a list.
-
-### Configuration tree
-
-A complete and consistent set of type and instance definitions, structured as a tree
-whose first two levels are mappings, and sebsequent ones are instance definitions.
+They are mere literals, with no associated component type. For language consistency,
+they live under a special dummy type ID "_".
 
 ## Library
 
@@ -304,6 +283,9 @@ An instance identified as "default" is instantiated if a type ID but no instance
 provided to the instantiation routine.
 
 Instances must be instantiated only once and used at each reference source.
+
+Singletons are instantiated as a tree whose root is a mapping, and subsequent levels may
+be any JSON-like object.
 
 ### Interpretation
 
