@@ -96,7 +96,7 @@ ahead of time, and choose it at runtime/loadtime
 - uniform,complete,concise: the configuration could theoretically be centralized in one
 file which would give a clear overview of the configuration and interaction between all
 the components
--> Lead to definition of instances, singletons, references to conveniently handle those cases.
+-> Lead to definition of instances, records, references to conveniently handle those cases.
 
 ## Language description
 
@@ -205,17 +205,21 @@ type but different constructions. For example, *production* or *staging* instanc
 All instances of a type must be specified in the instance level of a configuration
 definition.
 
+Instantiating one gives a Python object of the associated type, constructed from the
+mapping of attributes.
+
 For a given loaded configuration, an instance will be instantiated only once and passed
 to any instances that refer to it.
 
-### Singleton
+### Record
 
-Singletons are ad-hoc objects which store configuration that is not specific to any
-component instance. They are syntactically identical to instances. Unless otherwise
-stated, the same rules apply.
+Records are ad-hoc objects which store configuration that is not specific to any
+component instance. They are syntactically identical to instances, with no associated
+component type.
 
-They are mere literals, with no associated component type. For language consistency,
-they live under a special dummy type ID "_".
+For language consistency, they live under a special dummy type ID "_".
+
+Instantiating one gives a Python mapping structured as in the definition.
 
 ## Library
 
@@ -284,7 +288,7 @@ provided to the instantiation routine.
 
 Instances must be instantiated only once and used at each reference source.
 
-Singletons are instantiated as a tree whose root is a mapping, and subsequent levels may
+Records are instantiated as a tree whose root is a mapping, and subsequent levels may
 be any JSON-like object.
 
 ### Interpretation
@@ -371,15 +375,15 @@ create_component: (Config, TypeID, InstanceID) -> (Component)
 ```
 
 Returns an instantiated component identified by qualified ID. The type ID must exist in
-the register. Cannot be used to get a singleton.
+the register. Cannot be used to get a record.
 
 ```python
 get_instance: (Config, TypeID, InstanceID) -> (InstanceConfig)
 ```
 
-Returns the instance definition (instance or singleton) identified by the qualified ID,
-unprocessed. The output is a tree whose root is a mapping. Use it to get a singleton,
-or inspect the definition of an instance.
+Returns the instance definition (instance or record) identified by the qualified ID,
+unprocessed. The output is a tree whose root is a mapping. Use it to get a record,
+or get the definition of an instance.
 
 ### Validation API
 
@@ -699,7 +703,7 @@ of its type. This introduces moderate complexity in library implementation and m
 less regular, but simplifies some definitions.
 Out of scope.
 
-Reference not only instances, but also attributes (in singletons or not) through our
+Reference not only instances, but also attributes (in records or not) through our
 reference system, specifying them with Attribute IDs. We chose to use YAML references
 to reference attributes.
 Alternative solution chosen.
