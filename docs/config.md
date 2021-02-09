@@ -64,39 +64,14 @@ stage of the application run: the entrypoint. This component instantiation, vali
 and injection framework provide uniform handling and makes testing easier and catching
 configuration bugs earlier.
 
-Moreover, the configuration language currently lack an easy means to express both
-configuration alternatives for a particular componenent and factor out common component
+Moreover, the configuration language currently lacks an easy means to express both
+configuration alternatives for a particular component and factor out common component
 configuration. The need for configuration alternatives comes from the fact that, first,
 for a particular service, different components may have a distinct use of a particular
 component, and second, it makes easy to switch between different but common
 configuration written ahead of time. By using a uniform, complete and compact way of
-specifying configuration, we can get a clear overview of a service in a single unit and
+specifying configurations, we can get a clear overview of a service in a single unit and
 ease maintenance.
-
-(above written up from below, kept for review)
-
-A.
-- implicit/hard to follow loading: configuration may be loaded through a number of ways
-automatically, useful for interactive cases but not for production cases
-- dependency on environment: must be able to instantiate component using only ad-hoc
-configuration, for testing purposes
--> Need for different APIs for different use cases, all compatible.
-
-B.
-- composition coupling: every owner component must know about how to instantiate an
-owned component
-- heterogeneity: configuration loading, validating and instantiating is implemented
-differently everywhere
--> Need for dependency injection, component instantiation framework.
-
-C.
-- should be able to specify alternative configurations for one component constructed
-ahead of time, and choose it at runtime/loadtime
-- should be able to factor common configuration out
-- uniform,complete,concise: the configuration could theoretically be centralized in one
-file which would give a clear overview of the configuration and interaction between all
-the components
--> Lead to definition of instances, records, references to conveniently handle those cases.
 
 ## Language description
 
@@ -141,7 +116,7 @@ The language is based on YAML. Specific rules are applied after YAML parsing:
 - allow only YAML primitive types (includes mappings and lists), like JSON
 - restrict document structure as specified below
 - allow YAML aliases
-- add a custom reference system where we control resolution to avoid duplicate definitions
+- add a custom reference system where we control resolution to avoid duplicated definitions
 
 The configuration tree is the complete and consistent tree of configuration definitions.
 It is structured in 3 levels of depth: type, instance, attribute
@@ -247,27 +222,19 @@ or external component, which is public (= has an Python object API).
 
 This section is informational.
 
-A component type may have multiple implementations. There is no specific support for it
-in this system, but as this concept may appear in configuration, related considerations
-may be worth noting.
+A component type may have multiple implementations. There is no specific handling for it
+in this system, but this concept may appear in configuration.
 
 A specific attribute of instances specifies implementation to use. It is commonly
 identified as `cls`. Components that have no such feature need no such attribute in
 their configuration. Alternatively, some polymorphic components may support being
 instantiated without `cls`, in which case a default implementation will be used.
 
-[rem] an indirection layer such as a factory may be defined for monomorphic components
-in order to keep consistency and allow polymorphism if needed later. Alternatively, for
-all components, better than a factory which is not derivable from the component type by
-user code, an abstract base class constructor would abstract this indirection layer
-away.
-
 ### Instantiation
 
-Instantiating is the process through which a concrete object is constructed from a
-model and parameters. In the context of this system, a Python object is created though
-calling its constructor with the set of attributes associated to a particular instance
-in a configuration definition.
+Instantiating is the process of constructing a component instance by calling its
+constructor with the set of attributes associated to a particular configuration instance
+definition.
 
 The input is a qualified ID identifying an instance and a configuration tree containing the
 instance and its dependencies (reference targets). The output is a component instance
@@ -277,7 +244,7 @@ is composed of the following steps in order.
 1. Fetch the instance mapping by qualified ID in the configuration.
 2. Resolve references to instance definitions.
 3. Recurse on referenced instances to instantiate each.
-4. Compose instances, i.e. replace references by the corresponding instatiated
+4. Compose instances, i.e. replace references by the corresponding instantiated
 definition.
 5. Resolve the type ID contained in the qualified ID of the instance, to a component
 constructor.
@@ -302,15 +269,14 @@ Standard Python typing available in constructors may be used to as the basis for
 validation of configuration data. Validity of structure, value and existence may be
 checked. Conversions may also be performed.
 
-To ease the validation process which can be repetitive and cubersome, the library
+To ease the validation process which can be repetitive and cumbersome, the library
 provides generic validation primitives and a validation routine based on a data model
 specification object, described at ["Library/Validation API"](#validation-api).
 
 ### Loading
 
-Loading is the process of fetching data from a data source into a memory space which is
-more easily accessible to the processing system. In the context of this system, this
-data is then read and converted into a Python object.
+Loading is the process of fetching configuration data to make it accessible as a Python
+object.
 
 Loading source may be: an I/O file abstraction (whatever its backing source), or an
 operating system path to such file abstraction, or such path resolvable from an
@@ -462,18 +428,6 @@ will only be checked by `insinstance`. This is a helper function to generate a s
 draft ahead of time, that must be corrected and stored along the corresponding
 constructor, as it is generic and one may want a different set of validators.
 
-[rem] components with multiple implementations:
-
-Operations based on function signatures like validation but also instantiation, need a
-way to map the `cls` argument to the concrete type and constructor signature. A
-solution to automatically use the good constructor is to implement single dispatch and
-overloading on the main constructor. Every method may still call the main one, but must
-have a signature compatible with the one of the concrete class constructor, based on
-`cls`.
-
-See also ["Library/Type implementations"](#type-implementations) remark about abstract
-constructors.
-
 ## Client code
 
 Demonstration of features in every use cases.
@@ -516,7 +470,7 @@ def make_app_from_configfile() -> StorageServerApp:
             type="storage-rpc",
             instance=rpc_instance
         )
-        check_component(app_instance, "storage-rpc")  # should raise or return boolean?
+        check_component(app_instance, "storage-rpc")  # assuming it raises exception
     return app_instance
 ```
 
@@ -693,7 +647,7 @@ configuration.
 Currently does not provide a canonical way to design and implement configuration
 handling, but provide a flexible framework and some recommendations, as the discussion
 was oriented more around better tooling than specific rules.
-Maybe TODO add a section about that?
+TODO add a section about that?
 
 
 ## Out of scope and rejected ideas
