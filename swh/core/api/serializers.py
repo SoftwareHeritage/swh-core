@@ -22,7 +22,7 @@ from swh.core.api.classes import PagedResult
 def encode_datetime(dt: datetime.datetime) -> str:
     """Wrapper of datetime.datetime.isoformat() that forbids naive datetimes."""
     if dt.tzinfo is None:
-        raise ValueError(f"{dt} is a naive datetime.")
+        raise TypeError("can not serialize naive 'datetime.datetime' object")
     return dt.isoformat()
 
 
@@ -53,7 +53,11 @@ def exception_to_dict(exception: Exception) -> Dict[str, Any]:
 
 def dict_to_exception(exc_dict: Dict[str, Any]) -> Exception:
     temp = __import__(exc_dict["module"], fromlist=[exc_dict["type"]])
-    return getattr(temp, exc_dict["type"])(*exc_dict["args"])
+    try:
+        return getattr(temp, exc_dict["type"])(*exc_dict["args"])
+    except Exception:
+        # custom Exception type cannot be rebuilt, fallback to base Exception type
+        return Exception(exc_dict["message"])
 
 
 def encode_timedelta(td: datetime.timedelta) -> Dict[str, int]:
@@ -65,40 +69,51 @@ def encode_timedelta(td: datetime.timedelta) -> Dict[str, int]:
 
 
 ENCODERS: List[Tuple[type, str, Callable]] = [
-    (datetime.datetime, "datetime", encode_datetime),
     (UUID, "uuid", str),
     (datetime.timedelta, "timedelta", encode_timedelta),
     (PagedResult, "paged_result", _encode_paged_result),
-    # Only for JSON:
-    (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
     (Exception, "exception", exception_to_dict),
 ]
 
+JSON_ENCODERS: List[Tuple[type, str, Callable]] = [
+    (datetime.datetime, "datetime", encode_datetime),
+    (bytes, "bytes", lambda o: base64.b85encode(o).decode("ascii")),
+]
+
 DECODERS: Dict[str, Callable] = {
-    "datetime": lambda d: iso8601.parse_date(d, default_timezone=None),
     "timedelta": lambda d: datetime.timedelta(**d),
     "uuid": UUID,
     "paged_result": _decode_paged_result,
-    # Only for JSON:
-    "bytes": base64.b85decode,
     "exception": dict_to_exception,
+    # for BW compat, to be moved in JSON_DECODERS ASAP
+    "datetime": lambda d: iso8601.parse_date(d, default_timezone=None),
+}
+
+JSON_DECODERS: Dict[str, Callable] = {
+    "bytes": base64.b85decode,
 }
 
 
 def get_encoders(
-    extra_encoders: Optional[List[Tuple[Type, str, Callable]]]
+    extra_encoders: Optional[List[Tuple[Type, str, Callable]]], with_json: bool = False
 ) -> List[Tuple[Type, str, Callable]]:
-    if extra_encoders is not None:
-        return [*ENCODERS, *extra_encoders]
-    else:
-        return ENCODERS
+    encoders = ENCODERS
+    if with_json:
+        encoders = [*encoders, *JSON_ENCODERS]
+    if extra_encoders:
+        encoders = [*encoders, *extra_encoders]
+    return encoders
 
 
-def get_decoders(extra_decoders: Optional[Dict[str, Callable]]) -> Dict[str, Callable]:
+def get_decoders(
+    extra_decoders: Optional[Dict[str, Callable]], with_json: bool = False
+) -> Dict[str, Callable]:
+    decoders = DECODERS
+    if with_json:
+        decoders = {**decoders, **JSON_DECODERS}
     if extra_decoders is not None:
-        return {**DECODERS, **extra_decoders}
-    else:
-        return DECODERS
+        decoders = {**decoders, **extra_decoders}
+    return decoders
 
 
 class MsgpackExtTypeCodes(Enum):
@@ -154,7 +169,7 @@ class SWHJSONEncoder(json.JSONEncoder):
 
     def __init__(self, extra_encoders=None, **kwargs):
         super().__init__(**kwargs)
-        self.encoders = get_encoders(extra_encoders)
+        self.encoders = get_encoders(extra_encoders, with_json=True)
 
     def default(self, o: Any) -> Union[Dict[str, Union[Dict[str, int], str]], list]:
         for (type_, type_name, encoder) in self.encoders:
@@ -196,7 +211,7 @@ class SWHJSONDecoder(json.JSONDecoder):
 
     def __init__(self, extra_decoders=None, **kwargs):
         super().__init__(**kwargs)
-        self.decoders = get_decoders(extra_decoders)
+        self.decoders = get_decoders(extra_decoders, with_json=True)
 
     def decode_data(self, o: Any) -> Any:
         if isinstance(o, dict):
@@ -253,7 +268,12 @@ def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
                 }
         return obj
 
-    return msgpack.packb(data, use_bin_type=True, default=encode_types)
+    return msgpack.packb(
+        data,
+        use_bin_type=True,
+        datetime=True,  # encode datetime as msgpack.Timestamp
+        default=encode_types,
+    )
 
 
 def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
@@ -290,6 +310,7 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
                 object_hook=decode_types,
                 ext_hook=ext_hook,
                 strict_map_key=False,
+                timestamp=3,  # convert Timestamp in datetime objects (tz UTC)
             )
         except TypeError:  # msgpack < 0.6.0
             return msgpack.unpackb(

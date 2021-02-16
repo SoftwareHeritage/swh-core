@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import glob
 import os
 
 from swh.core.db import BaseDb
@@ -19,12 +20,42 @@ postgres_fun = postgresql_fact(
     no_truncate_tables={"dbversion", "people"},
 )
 
+postgres_fun2 = postgresql_fact(
+    "postgresql_proc",
+    db_name="fun2",
+    dump_files=sorted(glob.glob(f"{SQL_DIR}/*.sql")),
+    no_truncate_tables={"dbversion", "people"},
+)
+
 
 def test_smoke_test_fun_db_is_up(postgres_fun):
     """This ensures the db is created and configured according to its dumps files.
 
     """
     with BaseDb.connect(postgres_fun.dsn).cursor() as cur:
+        cur.execute("select count(*) from dbversion")
+        nb_rows = cur.fetchone()[0]
+        assert nb_rows == 5
+
+        cur.execute("select count(*) from fun")
+        nb_rows = cur.fetchone()[0]
+        assert nb_rows == 3
+
+        cur.execute("select count(*) from people")
+        nb_rows = cur.fetchone()[0]
+        assert nb_rows == 2
+
+        # in data, we requested a value already so it starts at 2
+        cur.execute("select nextval('serial')")
+        val = cur.fetchone()[0]
+        assert val == 2
+
+
+def test_smoke_test_fun2_db_is_up(postgres_fun2):
+    """This ensures the db is created and configured according to its dumps files.
+
+    """
+    with BaseDb.connect(postgres_fun2.dsn).cursor() as cur:
         cur.execute("select count(*) from dbversion")
         nb_rows = cur.fetchone()[0]
         assert nb_rows == 5

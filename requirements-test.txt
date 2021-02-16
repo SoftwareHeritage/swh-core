@@ -1,6 +1,6 @@
 pytest
 pytest-mock
 requests-mock
-hypothesis >= 3.11.0
+hypothesis >= 3.11.0, < 6
 pre-commit
 pytz
