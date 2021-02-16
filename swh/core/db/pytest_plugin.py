@@ -6,7 +6,7 @@
 import glob
 import logging
 import subprocess
-from typing import Optional, Set, Union
+from typing import List, Optional, Set, Union
 
 from _pytest.fixtures import FixtureRequest
 import psycopg2
@@ -36,14 +36,16 @@ class SWHDatabaseJanitor(DatabaseJanitor):
         port: str,
         db_name: str,
         version: Union[str, float, Version],
-        dump_files: Optional[str] = None,
+        dump_files: Union[None, str, List[str]] = None,
         no_truncate_tables: Set[str] = set(),
     ) -> None:
         super().__init__(user, host, port, db_name, version)
-        if dump_files:
+        if dump_files is None:
+            self.dump_files = []
+        elif isinstance(dump_files, str):
             self.dump_files = sorted(glob.glob(dump_files), key=sortkey)
         else:
-            self.dump_files = []
+            self.dump_files = dump_files
         # do no truncate the following tables
         self.no_truncate_tables = set(no_truncate_tables)
 
@@ -134,7 +136,7 @@ class SWHDatabaseJanitor(DatabaseJanitor):
 def postgresql_fact(
     process_fixture_name: str,
     db_name: Optional[str] = None,
-    dump_files: str = "",
+    dump_files: Union[str, List[str]] = "",
     no_truncate_tables: Set[str] = {"dbversion"},
 ):
     @pytest.fixture

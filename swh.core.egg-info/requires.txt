@@ -14,7 +14,7 @@ aiohttp_utils>=3.1.1
 decorator
 Flask
 iso8601
-msgpack>0.5
+msgpack>=1.0.0
 requests
 blinker
 
@@ -25,7 +25,7 @@ systemd-python
 pytest
 pytest-mock
 requests-mock
-hypothesis>=3.11.0
+hypothesis<6,>=3.11.0
 pre-commit
 pytz
 psycopg2
@@ -36,7 +36,7 @@ aiohttp_utils>=3.1.1
 decorator
 Flask
 iso8601
-msgpack>0.5
+msgpack>=1.0.0
 requests
 blinker
 systemd-python
@@ -45,7 +45,7 @@ systemd-python
 pytest
 pytest-mock
 requests-mock
-hypothesis>=3.11.0
+hypothesis<6,>=3.11.0
 pre-commit
 pytz
 
