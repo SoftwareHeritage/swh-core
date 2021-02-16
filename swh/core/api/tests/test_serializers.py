@@ -8,6 +8,7 @@ import json
 from typing import Any, Callable, List, Tuple, Union
 from uuid import UUID
 
+import msgpack
 import pytest
 import requests
 from requests.exceptions import ConnectionError
@@ -15,9 +16,9 @@ from requests.exceptions import ConnectionError
 from swh.core.api.classes import PagedResult
 from swh.core.api.serializers import (
     ENCODERS,
-    SWHJSONDecoder,
-    SWHJSONEncoder,
     decode_response,
+    json_dumps,
+    json_loads,
     msgpack_dumps,
     msgpack_loads,
 )
@@ -130,34 +131,45 @@ ENCODED_DATA = {
 }
 
 
+class ComplexExceptionType(Exception):
+    def __init__(self, error_type, message):
+        self.error_type = error_type
+        super().__init__(f"{error_type}: {message}")
+
+
 def test_serializers_round_trip_json():
-    json_data = json.dumps(DATA, cls=SWHJSONEncoder)
-    actual_data = json.loads(json_data, cls=SWHJSONDecoder)
+    json_data = json_dumps(DATA)
+    actual_data = json_loads(json_data)
     assert actual_data == DATA
 
 
 def test_serializers_round_trip_json_extra_types():
     expected_original_data = [ExtraType("baz", DATA), "qux"]
-    data = json.dumps(
-        expected_original_data, cls=SWHJSONEncoder, extra_encoders=extra_encoders
-    )
-    actual_data = json.loads(data, cls=SWHJSONDecoder, extra_decoders=extra_decoders)
+    data = json_dumps(expected_original_data, extra_encoders=extra_encoders)
+    actual_data = json_loads(data, extra_decoders=extra_decoders)
     assert actual_data == expected_original_data
 
 
 def test_exception_serializer_round_trip_json():
     error_message = "unreachable host"
-    json_data = json.dumps(
-        {"exception": ConnectionError(error_message)}, cls=SWHJSONEncoder
-    )
-    actual_data = json.loads(json_data, cls=SWHJSONDecoder)
+    json_data = json_dumps({"exception": ConnectionError(error_message)},)
+    actual_data = json_loads(json_data)
     assert "exception" in actual_data
     assert type(actual_data["exception"]) == ConnectionError
     assert str(actual_data["exception"]) == error_message
 
 
+def test_complex_exception_serializer_round_trip_json():
+    exception = ComplexExceptionType("NotFound", "the object is missing")
+    json_data = json_dumps({"exception": exception})
+    actual_data = json_loads(json_data)
+    assert "exception" in actual_data
+    assert type(actual_data["exception"]) == Exception
+    assert str(actual_data["exception"]) == str(exception)
+
+
 def test_serializers_encode_swh_json():
-    json_str = json.dumps(DATA, cls=SWHJSONEncoder)
+    json_str = json_dumps(DATA)
     actual_data = json.loads(json_str)
     assert actual_data == ENCODED_DATA
 
@@ -190,9 +202,18 @@ def test_exception_serializer_round_trip_msgpack():
     assert str(actual_data["exception"]) == error_message
 
 
+def test_complex_exception_serializer_round_trip_msgpack():
+    exception = ComplexExceptionType("NotFound", "the object is missing")
+    data = msgpack_dumps({"exception": exception})
+    actual_data = msgpack_loads(data)
+    assert "exception" in actual_data
+    assert type(actual_data["exception"]) == Exception
+    assert str(actual_data["exception"]) == str(exception)
+
+
 def test_serializers_generator_json():
-    data = json.dumps((i for i in range(5)), cls=SWHJSONEncoder)
-    assert json.loads(data, cls=SWHJSONDecoder) == [i for i in range(5)]
+    data = json_dumps((i for i in range(5)))
+    assert json_loads(data) == [i for i in range(5)]
 
 
 def test_serializers_generator_msgpack():
@@ -211,10 +232,31 @@ def test_serializers_decode_response_json(requests_mock):
     assert decode_response(response) == DATA
 
 
-def test_serializers_encode_native_datetime():
+def test_serializers_encode_datetime_msgpack():
+    dt = datetime.datetime.now(tz=datetime.timezone.utc)
+    encmsg = msgpack_dumps(dt)
+    decmsg = msgpack.loads(encmsg, timestamp=0)
+    assert isinstance(decmsg, msgpack.Timestamp)
+    assert decmsg.to_datetime() == dt
+
+
+def test_serializers_decode_datetime_compat_msgpack():
+    dt = datetime.datetime.now(tz=datetime.timezone.utc)
+    encmsg = msgpack_dumps({b"swhtype": "datetime", b"d": dt.isoformat()})
+    decmsg = msgpack_loads(encmsg)
+    assert decmsg == dt
+
+
+def test_serializers_encode_native_datetime_msgpack():
     dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
-    with pytest.raises(ValueError, match="naive datetime"):
+    with pytest.raises(TypeError, match="datetime"):
         msgpack_dumps(dt)
+
+
+def test_serializers_encode_native_datetime_json():
+    dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
+    with pytest.raises(TypeError, match="datetime"):
+        json_dumps(dt)
 
 
 def test_serializers_decode_naive_datetime():
@@ -237,6 +279,6 @@ def test_msgpack_extra_encoders_mutation():
 
 
 def test_json_extra_encoders_mutation():
-    data = json.dumps({}, cls=SWHJSONEncoder, extra_encoders=extra_encoders)
+    data = json_dumps({}, extra_encoders=extra_encoders)
     assert data is not None
     assert ENCODERS[-1][0] != ExtraType
