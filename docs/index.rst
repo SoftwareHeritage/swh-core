@@ -1,10 +1,4 @@
-.. _swh-core:
-
-Software Heritage - Core foundations
-====================================
-
-Low-level utilities and helpers used by almost all other modules in the stack.
-
+.. include:: README.rst
 
 Reference Documentation
 -----------------------
