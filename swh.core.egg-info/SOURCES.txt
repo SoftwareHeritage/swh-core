@@ -7,7 +7,7 @@ LICENSE
 MANIFEST.in
 Makefile
 Makefile.local
-README.md
+README.rst
 conftest.py
 mypy.ini
 pyproject.toml
@@ -25,6 +25,7 @@ setup.py
 tox.ini
 docs/.gitignore
 docs/Makefile
+docs/README.rst
 docs/cli.rst
 docs/conf.py
 docs/index.rst

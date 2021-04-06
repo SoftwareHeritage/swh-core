@@ -140,27 +140,30 @@ def datadir(request: FixtureRequest) -> str:
 def requests_mock_datadir_factory(
     ignore_urls: List[str] = [], has_multi_visit: bool = False
 ):
-    """This factory generates fixture which allow to look for files on the
+    """This factory generates fixtures which allow to look for files on the
     local filesystem based on the requested URL, using the following rules:
 
-    - files are searched in the datadir/<hostname> directory
+    - files are searched in the data/<hostname> directory
 
     - the local file name is the path part of the URL with path hierarchy
       markers (aka '/') replaced by '_'
 
     Multiple implementations are possible, for example:
 
-    - requests_mock_datadir_factory([]):
+    ``requests_mock_datadir_factory([])``
+
         This computes the file name from the query and always returns the same
         result.
 
-    - requests_mock_datadir_factory(has_multi_visit=True):
+    ``requests_mock_datadir_factory(has_multi_visit=True)``
+
         This computes the file name from the query and returns the content of
         the filename the first time, the next call returning the content of
         files suffixed with _visit1 and so on and so forth. If the file is not
         found, returns a 404.
 
-    - requests_mock_datadir_factory(ignore_urls=['url1', 'url2']):
+    ``requests_mock_datadir_factory(ignore_urls=['url1', 'url2'])``
+
         This will ignore any files corresponding to url1 and url2, always
         returning 404.
 
@@ -194,13 +197,21 @@ def requests_mock_datadir_factory(
 
 
 # Default `requests_mock_datadir` implementation
-requests_mock_datadir = requests_mock_datadir_factory([])
+requests_mock_datadir = requests_mock_datadir_factory()
+"""
+Instance of :py:func:`requests_mock_datadir_factory`,
+with the default arguments.
+"""
 
 # Implementation for multiple visits behavior:
 # - first time, it checks for a file named `filename`
 # - second time, it checks for a file named `filename`_visit1
 # etc...
 requests_mock_datadir_visits = requests_mock_datadir_factory(has_multi_visit=True)
+"""
+Instance of :py:func:`requests_mock_datadir_factory`,
+with the default arguments, but `has_multi_visit=True`.
+"""
 
 
 @pytest.fixture
