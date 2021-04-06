@@ -1,3 +1,9 @@
+swh-core (0.13.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+
+  * Rebuild for buster-swh
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 06 Apr 2021 17:08:24 +0000
+
 swh-core (0.13.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.13.0     - (tagged by Vincent SELLIER
