@@ -12,7 +12,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock
 import uuid
 
-from hypothesis import given, strategies
+from hypothesis import given, settings, strategies
 from hypothesis.extra.pytz import timezones
 import psycopg2
 import pytest
@@ -21,6 +21,7 @@ from typing_extensions import Protocol
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction, db_transaction_generator
 from swh.core.db.pytest_plugin import postgresql_fact
+from swh.core.db.tests.conftest import function_scoped_fixture_check
 
 
 # workaround mypy bug https://github.com/python/mypy/issues/5485
@@ -282,6 +283,7 @@ def test_db_copy_to_static(db_with_data):
         assert EXPECTED_ROW_OUT == output[0]
 
 
+@settings(suppress_health_check=function_scoped_fixture_check)
 @given(db_rows)
 def test_db_copy_to(db_with_data, data):
     items = [dict(zip(COLUMNS, item)) for item in data]

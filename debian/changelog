@@ -1,8 +1,14 @@
-swh-core (0.12.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.12.1-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.12.1     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2021-04-06 12:34:34 +0200)
+  * Upstream changes:     - v0.12.1     - * tests: Drop hypothesis < 6
+    requirement     - * README.rst: Remove getting-started instructions,
+    they are duplicates     - * Improve/fix documentation of
+    requests_mock_datadir     - * Remove dependency on 'decorator'
+    (fixes a regression in decorator 5.0.5)
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 16 Feb 2021 10:53:27 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 06 Apr 2021 10:37:17 +0000
 
 swh-core (0.12.0-1~swh1) unstable-swh; urgency=medium
 
