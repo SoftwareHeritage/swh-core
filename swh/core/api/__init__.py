@@ -432,12 +432,14 @@ class RPCServerApp(Flask):
 
     def __init__(self, *args, backend_class=None, backend_factory=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.add_backend_class(backend_class, backend_factory)
+
+    def add_backend_class(self, backend_class=None, backend_factory=None):
         if backend_class is None and backend_factory is not None:
             raise ValueError(
                 "backend_factory should only be provided if backend_class is"
             )
 
-        self.backend_class = backend_class
         if backend_class is not None:
             backend_factory = backend_factory or backend_class
             for (meth_name, meth) in backend_class.__dict__.items():

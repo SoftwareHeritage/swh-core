@@ -1,8 +1,11 @@
-swh-core (0.12.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.13.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.13.0     - (tagged by Vincent SELLIER
+    <vincent.sellier@softwareheritage.org> on 2021-04-06 19:01:37 +0200)
+  * Upstream changes:     - v0.13.0     - Support several backends on
+    RPCServerApp
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 06 Apr 2021 10:38:32 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 06 Apr 2021 17:07:10 +0000
 
 swh-core (0.12.1-1~swh1) unstable-swh; urgency=medium
 
