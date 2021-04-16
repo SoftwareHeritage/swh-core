@@ -13,7 +13,7 @@ Shared command-line interface
 Database initialization utilities
 ---------------------------------
 
-.. click:: swh.core.cli.db:init
+.. click:: swh.core.cli.db:db_init
   :prog: swh db init
   :nested: full
 
