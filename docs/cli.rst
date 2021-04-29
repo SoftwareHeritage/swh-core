@@ -8,15 +8,15 @@ Shared command-line interface
 
 .. click:: swh.core.cli:swh
   :prog: swh
-  :show-nested:
+  :nested: full
 
 Database initialization utilities
 ---------------------------------
 
-.. click:: swh.core.cli.db:init
+.. click:: swh.core.cli.db:db_init
   :prog: swh db init
-  :show-nested:
+  :nested: full
 
 .. click:: swh.core.cli.db:db_init
   :prog: swh db-init
-  :show-nested:
+  :nested: full
