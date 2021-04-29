@@ -1,5 +1,3 @@
-.. _swh-core:
-
 Software Heritage - Core foundations
 ====================================
 

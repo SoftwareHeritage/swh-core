@@ -101,7 +101,7 @@ documented at https://docs.python.org/3/library/logging.config.html.
     help=(
         "Log level (defaults to INFO). "
         "Can override the log level for a specific module, by using the "
-        "`specific.module:LOGLEVEL` syntax (e.g. `--log-level swh.core:DEBUG` "
+        "``specific.module:LOGLEVEL`` syntax (e.g. ``--log-level swh.core:DEBUG`` "
         "will enable DEBUG logging for swh.core)."
     ),
 )

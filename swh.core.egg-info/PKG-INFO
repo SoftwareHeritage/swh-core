@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: swh.core
-Version: 0.13.0
+Version: 0.13.1
 Summary: Software Heritage core utilities
 Home-page: https://forge.softwareheritage.org/diffusion/DCORE/
 Author: Software Heritage developers
@@ -10,9 +10,7 @@ Project-URL: Bug Reports, https://forge.softwareheritage.org/maniphest
 Project-URL: Funding, https://www.softwareheritage.org/donate
 Project-URL: Source, https://forge.softwareheritage.org/source/swh-core
 Project-URL: Documentation, https://docs.softwareheritage.org/devel/swh-core/
-Description: .. _swh-core:
-        
-        Software Heritage - Core foundations
+Description: Software Heritage - Core foundations
         ====================================
         
         Low-level utilities and helpers used by almost all other modules in the stack.
