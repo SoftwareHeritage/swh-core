@@ -61,9 +61,9 @@ def db_create(module, db_name, template):
 
     and potentially execute superuser-level initialization steps.
 
-    Example:
+    Example::
 
-      swh db create -d swh-test storage
+        swh db create -d swh-test storage
 
     If you want to specify non-default postgresql connection parameters, please
     provide them using standard environment variables or by the mean of a
@@ -72,10 +72,10 @@ def db_create(module, db_name, template):
 
     Note: this command requires a postgresql connection with superuser permissions.
 
-    Example:
+    Example::
 
-      PGPORT=5434 swh db create indexer
-      swh db create -d postgresql://superuser:passwd@pghost:5433/swh-storage storage
+        PGPORT=5434 swh db create indexer
+        swh db create -d postgresql://superuser:passwd@pghost:5433/swh-storage storage
 
     """
 
@@ -96,9 +96,9 @@ def db_init_admin(module: str, db_name: str) -> None:
     """Execute superuser-level initialization steps (e.g pg extensions, admin functions,
     ...)
 
-    Example:
+    Example::
 
-      PGPASSWORD=... swh db init-admin -d swh-test scheduler
+        PGPASSWORD=... swh db init-admin -d swh-test scheduler
 
     If you want to specify non-default postgresql connection parameters, please
     provide them using standard environment variables or by the mean of a
@@ -108,11 +108,11 @@ def db_init_admin(module: str, db_name: str) -> None:
     Note: this command requires a postgresql connection with superuser permissions (e.g
     postgres, swh-admin, ...)
 
-    Example:
+    Example::
 
-      PGPORT=5434 swh db init-admin scheduler
-      swh db init-admin -d postgresql://superuser:passwd@pghost:5433/swh-scheduler \
-        scheduler
+        PGPORT=5434 swh db init-admin scheduler
+        swh db init-admin -d postgresql://superuser:passwd@pghost:5433/swh-scheduler \
+          scheduler
 
     """
     logger.debug("db_init_admin %s db_name=%s", module, db_name)
@@ -134,19 +134,19 @@ def db_init_admin(module: str, db_name: str) -> None:
 def db_init(module, db_name, flavor):
     """Initialize a database for the Software Heritage <module>.
 
-    Example:
+    Example::
 
-      swh db init -d swh-test storage
+        swh db init -d swh-test storage
 
     If you want to specify non-default postgresql connection parameters,
     please provide them using standard environment variables.
     See psql(1) man page (section ENVIRONMENTS) for details.
 
-    Examples:
+    Examples::
 
-      PGPORT=5434 swh db init indexer
-      swh db init -d postgresql://user:passwd@pghost:5433/swh-storage storage
-      swh db init --flavor read_replica -d swh-storage storage
+        PGPORT=5434 swh db init indexer
+        swh db init -d postgresql://user:passwd@pghost:5433/swh-storage storage
+        swh db init --flavor read_replica -d swh-storage storage
 
     """
 
@@ -202,13 +202,14 @@ def get_sql_for_package(modname):
 def populate_database_for_package(
     modname: str, conninfo: str, flavor: Optional[str] = None
 ) -> Tuple[bool, int, Optional[str]]:
-    """Populate the database, pointed at with `conninfo`, using the SQL files found in
-    the package `modname`.
+    """Populate the database, pointed at with ``conninfo``,
+    using the SQL files found in the package ``modname``.
 
     Args:
       modname: Name of the module of which we're loading the files
       conninfo: connection info string for the SQL database
       flavor: the module-specific flavor which we want to initialize the database under
+
     Returns:
       Tuple with three elements: whether the database has been initialized; the current
       version of the database; if it exists, the flavor of the database.
@@ -256,14 +257,14 @@ def init_admin_extensions(modname: str, conninfo: str) -> None:
 def create_database_for_package(
     modname: str, conninfo: str, template: str = "template1"
 ):
-    """Create the database pointed at with `conninfo`, and initialize it using
-    -superuser- SQL files found in the package `modname`.
+    """Create the database pointed at with ``conninfo``, and initialize it using
+    -superuser- SQL files found in the package ``modname``.
 
     Args:
       modname: Name of the module of which we're loading the files
       conninfo: connection info string or plain database name for the SQL database
       template: the name of the database to connect to and use as template to create
-                the new database
+        the new database
 
     """
     import subprocess
@@ -295,7 +296,7 @@ def create_database_for_package(
 def execute_sqlfiles(
     sqlfiles: Collection[str], conninfo: str, flavor: Optional[str] = None
 ):
-    """Execute a list of SQL files on the database pointed at with `conninfo`.
+    """Execute a list of SQL files on the database pointed at with ``conninfo``.
 
     Args:
       sqlfiles: List of SQL files to execute

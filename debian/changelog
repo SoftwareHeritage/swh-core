@@ -1,8 +1,10 @@
-swh-core (0.13.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (0.13.1-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 0.13.1     - (tagged by Antoine Lambert
+    <antoine.lambert@inria.fr> on 2021-04-29 14:21:29 +0200)
+  * Upstream changes:     - version 0.13.1
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 06 Apr 2021 17:08:24 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 29 Apr 2021 12:25:15 +0000
 
 swh-core (0.13.0-1~swh1) unstable-swh; urgency=medium
 

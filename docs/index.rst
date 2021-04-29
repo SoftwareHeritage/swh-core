@@ -1,3 +1,5 @@
+.. _swh-core:
+
 .. include:: README.rst
 
 Reference Documentation
