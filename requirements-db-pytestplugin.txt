@@ -1,2 +1,2 @@
 # requirements for swh.core.db.pytest_plugin
-pytest-postgresql < 3.0.0
+pytest-postgresql
