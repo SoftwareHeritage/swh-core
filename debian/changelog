@@ -1,3 +1,12 @@
+swh-core (0.14.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.14.1     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2021-05-06 15:33:56 +0200)
+  * Upstream changes:     - v0.14.1     - * Fix reserved name being used
+    in pytest plugin
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 06 May 2021 13:38:24 +0000
+
 swh-core (0.14.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.14.0     - (tagged by Valentin Lorentz
