@@ -11,8 +11,13 @@ from typing import List, Optional, Set, Union
 from _pytest.fixtures import FixtureRequest
 import psycopg2
 import pytest
-from pytest_postgresql import factories
 from pytest_postgresql.janitor import DatabaseJanitor, Version
+
+try:
+    from pytest_postgresql.config import get_config as pytest_postgresql_get_config
+except ImportError:
+    # pytest_postgresql < 3.0.0
+    from pytest_postgresql.factories import get_config as pytest_postgresql_get_config
 
 from swh.core.utils import numfile_sortkey as sortkey
 
@@ -34,12 +39,15 @@ class SWHDatabaseJanitor(DatabaseJanitor):
         user: str,
         host: str,
         port: str,
-        db_name: str,
+        dbname: str,
         version: Union[str, float, Version],
         dump_files: Union[None, str, List[str]] = None,
         no_truncate_tables: Set[str] = set(),
     ) -> None:
-        super().__init__(user, host, port, db_name, version)
+        super().__init__(user, host, port, dbname, version)
+        if not hasattr(self, "dbname"):
+            # pytest_postgresql < 3.0.0
+            self.dbname = self.db_name
         if dump_files is None:
             self.dump_files = []
         elif isinstance(dump_files, str):
@@ -51,7 +59,7 @@ class SWHDatabaseJanitor(DatabaseJanitor):
 
     def db_setup(self):
         conninfo = (
-            f"host={self.host} user={self.user} port={self.port} dbname={self.db_name}"
+            f"host={self.host} user={self.user} port={self.port} dbname={self.dbname}"
         )
 
         for fname in self.dump_files:
@@ -74,7 +82,7 @@ class SWHDatabaseJanitor(DatabaseJanitor):
 
         """
         with psycopg2.connect(
-            dbname=self.db_name, user=self.user, host=self.host, port=self.port,
+            dbname=self.dbname, user=self.user, host=self.host, port=self.port,
         ) as cnx:
             with cnx.cursor() as cur:
                 cur.execute(
@@ -102,20 +110,20 @@ class SWHDatabaseJanitor(DatabaseJanitor):
         """Initialize db. Create the db if it does not exist. Reset it if it exists."""
         with self.cursor() as cur:
             cur.execute(
-                "SELECT COUNT(1) FROM pg_database WHERE datname=%s;", (self.db_name,)
+                "SELECT COUNT(1) FROM pg_database WHERE datname=%s;", (self.dbname,)
             )
             db_exists = cur.fetchone()[0] == 1
             if db_exists:
                 cur.execute(
                     "UPDATE pg_database SET datallowconn=true WHERE datname = %s;",
-                    (self.db_name,),
+                    (self.dbname,),
                 )
                 self.db_reset()
                 return
 
         # initialize the inexistent db
         with self.cursor() as cur:
-            cur.execute('CREATE DATABASE "{}";'.format(self.db_name))
+            cur.execute('CREATE DATABASE "{}";'.format(self.dbname))
         self.db_setup()
 
     def drop(self):
@@ -135,7 +143,7 @@ class SWHDatabaseJanitor(DatabaseJanitor):
 # specify our version of the DBJanitor we use.
 def postgresql_fact(
     process_fixture_name: str,
-    db_name: Optional[str] = None,
+    dbname: Optional[str] = None,
     dump_files: Union[str, List[str]] = "",
     no_truncate_tables: Set[str] = {"dbversion"},
 ):
@@ -147,14 +155,14 @@ def postgresql_fact(
         :rtype: psycopg2.connection
         :returns: postgresql client
         """
-        config = factories.get_config(request)
+        config = pytest_postgresql_get_config(request)
         proc_fixture = request.getfixturevalue(process_fixture_name)
 
         pg_host = proc_fixture.host
         pg_port = proc_fixture.port
         pg_user = proc_fixture.user
         pg_options = proc_fixture.options
-        pg_db = db_name or config["dbname"]
+        pg_db = dbname or config["dbname"]
         with SWHDatabaseJanitor(
             pg_user,
             pg_host,

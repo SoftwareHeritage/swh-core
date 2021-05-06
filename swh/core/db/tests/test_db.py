@@ -235,7 +235,7 @@ def convert_lines(cur):
     ]
 
 
-test_db = postgresql_fact("postgresql_proc", db_name="test-db2")
+test_db = postgresql_fact("postgresql_proc", dbname="test-db2")
 
 
 @pytest.fixture

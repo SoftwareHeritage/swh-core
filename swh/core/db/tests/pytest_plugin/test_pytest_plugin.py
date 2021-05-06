@@ -15,14 +15,14 @@ SQL_DIR = os.path.join(os.path.dirname(__file__), "data")
 # db with special policy for tables dbversion and people
 postgres_fun = postgresql_fact(
     "postgresql_proc",
-    db_name="fun",
+    dbname="fun",
     dump_files=f"{SQL_DIR}/*.sql",
     no_truncate_tables={"dbversion", "people"},
 )
 
 postgres_fun2 = postgresql_fact(
     "postgresql_proc",
-    db_name="fun2",
+    dbname="fun2",
     dump_files=sorted(glob.glob(f"{SQL_DIR}/*.sql")),
     no_truncate_tables={"dbversion", "people"},
 )
@@ -106,7 +106,7 @@ def test_smoke_test_fun_db_is_still_up_and_got_reset(postgres_fun):
 # db with no special policy for tables truncation, all tables are reset
 postgres_people = postgresql_fact(
     "postgresql_proc",
-    db_name="people",
+    dbname="people",
     dump_files=f"{SQL_DIR}/*.sql",
     no_truncate_tables=set(),
 )
@@ -160,7 +160,7 @@ def test_smoke_test_people_db_up_and_reset(postgres_people):
 
 
 # db with no initialization step, an empty db
-postgres_no_init = postgresql_fact("postgresql_proc", db_name="something")
+postgres_no_init = postgresql_fact("postgresql_proc", dbname="something")
 
 
 def test_smoke_test_db_no_init(postgres_no_init):
