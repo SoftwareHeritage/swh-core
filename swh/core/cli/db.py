@@ -43,6 +43,7 @@ def db(ctx, config_file):
 @db.command(name="create", context_settings=CONTEXT_SETTINGS)
 @click.argument("module", required=True)
 @click.option(
+    "--dbname",
     "--db-name",
     "-d",
     help="Database name.",
@@ -56,7 +57,7 @@ def db(ctx, config_file):
     default="template1",
     show_default=True,
 )
-def db_create(module, db_name, template):
+def db_create(module, dbname, template):
     """Create a database for the Software Heritage <module>.
 
     and potentially execute superuser-level initialization steps.
@@ -79,20 +80,21 @@ def db_create(module, db_name, template):
 
     """
 
-    logger.debug("db_create %s dn_name=%s", module, db_name)
-    create_database_for_package(module, db_name, template)
+    logger.debug("db_create %s dn_name=%s", module, dbname)
+    create_database_for_package(module, dbname, template)
 
 
 @db.command(name="init-admin", context_settings=CONTEXT_SETTINGS)
 @click.argument("module", required=True)
 @click.option(
+    "--dbname",
     "--db-name",
     "-d",
     help="Database name.",
     default="softwareheritage-dev",
     show_default=True,
 )
-def db_init_admin(module: str, db_name: str) -> None:
+def db_init_admin(module: str, dbname: str) -> None:
     """Execute superuser-level initialization steps (e.g pg extensions, admin functions,
     ...)
 
@@ -115,13 +117,14 @@ def db_init_admin(module: str, db_name: str) -> None:
           scheduler
 
     """
-    logger.debug("db_init_admin %s db_name=%s", module, db_name)
-    init_admin_extensions(module, db_name)
+    logger.debug("db_init_admin %s dbname=%s", module, dbname)
+    init_admin_extensions(module, dbname)
 
 
 @db.command(name="init", context_settings=CONTEXT_SETTINGS)
 @click.argument("module", required=True)
 @click.option(
+    "--dbname",
     "--db-name",
     "-d",
     help="Database name.",
@@ -131,7 +134,7 @@ def db_init_admin(module: str, db_name: str) -> None:
 @click.option(
     "--flavor", help="Database flavor.", default=None,
 )
-def db_init(module, db_name, flavor):
+def db_init(module, dbname, flavor):
     """Initialize a database for the Software Heritage <module>.
 
     Example::
@@ -150,10 +153,10 @@ def db_init(module, db_name, flavor):
 
     """
 
-    logger.debug("db_init %s flavor=%s dn_name=%s", module, flavor, db_name)
+    logger.debug("db_init %s flavor=%s dbname=%s", module, flavor, dbname)
 
     initialized, dbversion, dbflavor = populate_database_for_package(
-        module, db_name, flavor
+        module, dbname, flavor
     )
 
     # TODO: Ideally migrate the version from db_version to the latest
@@ -274,9 +277,9 @@ def create_database_for_package(
     # Use the given conninfo string, but with dbname replaced by the template dbname
     # for the database creation step
     creation_dsn = parse_dsn_or_dbname(conninfo)
-    db_name = creation_dsn["dbname"]
+    dbname = creation_dsn["dbname"]
     creation_dsn["dbname"] = template
-    logger.debug("db_create db_name=%s (from %s)", db_name, template)
+    logger.debug("db_create dbname=%s (from %s)", dbname, template)
     subprocess.check_call(
         [
             "psql",
@@ -287,7 +290,7 @@ def create_database_for_package(
             "-d",
             make_dsn(**creation_dsn),
             "-c",
-            f'CREATE DATABASE "{db_name}"',
+            f'CREATE DATABASE "{dbname}"',
         ]
     )
     init_admin_extensions(modname, conninfo)
@@ -317,7 +320,7 @@ def execute_sqlfiles(
 
     flavor_set = False
     for sqlfile in sqlfiles:
-        logger.debug(f"execute SQL file {sqlfile} db_name={conninfo}")
+        logger.debug(f"execute SQL file {sqlfile} dbname={conninfo}")
         subprocess.check_call(psql_command + ["-f", sqlfile])
 
         if flavor is not None and not flavor_set and sqlfile.endswith("-flavor.sql"):
