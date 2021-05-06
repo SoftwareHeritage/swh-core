@@ -73,15 +73,26 @@ def uncompress(tarpath: str, dest: str):
     except shutil.ReadError as e:
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
 
-    # Fix permissions
-    for dirpath, _, fnames in os.walk(dest):
-        os.chmod(dirpath, 0o755)
+    normalize_permissions(dest)
+
+
+def normalize_permissions(path: str):
+    """Normalize the permissions of all files and directories under `path`.
+
+    This makes all subdirectories and files with the user executable bit set mode
+    0o0755, and all other files mode 0o0644.
+
+    Args:
+      path: the path under which permissions should be normalized
+    """
+    for dirpath, _, fnames in os.walk(path):
+        os.chmod(dirpath, 0o0755)
         for fname in fnames:
             fpath = os.path.join(dirpath, fname)
             if not os.path.islink(fpath):
-                fpath_exec = os.stat(fpath).st_mode & stat.S_IXUSR
-                if not fpath_exec:
-                    os.chmod(fpath, 0o644)
+                is_executable = os.stat(fpath).st_mode & stat.S_IXUSR
+                forced_mode = 0o0755 if is_executable else 0o0644
+                os.chmod(fpath, forced_mode)
 
 
 def _ls(rootdir):
