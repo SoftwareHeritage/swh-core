@@ -1,3 +1,13 @@
+swh-core (0.13.2-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.13.2     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2021-05-06 10:40:51 +0200)
+  * Upstream changes:     - v0.13.2     - * tarball: properly normalize
+    perms for all extracted files     - * requirements-db-pytestplugin:
+    Don't install pytest-postgresql 3.0+
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 06 May 2021 08:44:45 +0000
+
 swh-core (0.13.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.13.1     - (tagged by Antoine Lambert
