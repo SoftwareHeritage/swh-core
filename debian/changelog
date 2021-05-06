@@ -1,3 +1,13 @@
+swh-core (0.14.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.14.0     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2021-05-06 14:14:10 +0200)
+  * Upstream changes:     - v0.14.0     - Add support for pytest-
+    postgresql 3.0.0     - For consistency, I renamed db_name to dbname
+    everywhere, so this will     - affect other SWH packages.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 06 May 2021 12:17:31 +0000
+
 swh-core (0.13.3-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.13.3     - (tagged by Antoine Lambert
