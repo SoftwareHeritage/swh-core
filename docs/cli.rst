@@ -8,7 +8,6 @@ Shared command-line interface
 
 .. click:: swh.core.cli:swh
   :prog: swh
-  :nested: full
 
 Database initialization utilities
 ---------------------------------
