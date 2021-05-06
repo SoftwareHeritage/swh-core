@@ -73,14 +73,14 @@ def mock_package_sql(mocker, datadir):
 
 # We do not want the truncate behavior for those tests
 test_db = postgresql_fact(
-    "postgresql_proc", db_name="clidb", no_truncate_tables={"dbversion", "origin"}
+    "postgresql_proc", dbname="clidb", no_truncate_tables={"dbversion", "origin"}
 )
 
 
 @pytest.fixture
 def swh_db_cli(cli_runner, monkeypatch, test_db):
     """This initializes a cli_runner and sets the correct environment variable expected by
-       the cli to run appropriately (when not specifying the --db-name flag)
+       the cli to run appropriately (when not specifying the --dbname flag)
 
     """
     db_params = test_db.get_dsn_parameters()
@@ -111,11 +111,11 @@ def test_cli_swh_db_create_and_init_db(cli_runner, test_db, mock_package_sql):
 
     conninfo = craft_conninfo(test_db, "new-db")
     # This creates the db and installs the necessary admin extensions
-    result = cli_runner.invoke(swhdb, ["create", module_name, "--db-name", conninfo])
+    result = cli_runner.invoke(swhdb, ["create", module_name, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     # This initializes the schema and data
-    result = cli_runner.invoke(swhdb, ["init", module_name, "--db-name", conninfo])
+    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
 
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
@@ -136,7 +136,7 @@ def test_cli_swh_db_initialization_fail_without_creation_first(
     module_name = "anything"  # it's mocked here
     conninfo = craft_conninfo(test_db, "inexisting-db")
 
-    result = cli_runner.invoke(swhdb, ["init", module_name, "--db-name", conninfo])
+    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     # Fails because we cannot connect to an inexisting db
     assert result.exit_code == 1, f"Unexpected output: {result.output}"
 
@@ -152,7 +152,7 @@ def test_cli_swh_db_initialization_fail_without_extension(
     module_name = "anything"  # it's mocked here
     conninfo = craft_conninfo(test_db)
 
-    result = cli_runner.invoke(swhdb, ["init", module_name, "--db-name", conninfo])
+    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     # Fails as the function `public.digest` is not installed, init-admin calls is needed
     # first (the next tests show such behavior)
     assert result.exit_code == 1, f"Unexpected output: {result.output}"
@@ -167,12 +167,10 @@ def test_cli_swh_db_initialization_works_with_flags(
     module_name = "anything"  # it's mocked here
     conninfo = craft_conninfo(test_db)
 
-    result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--db-name", conninfo]
-    )
+    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
-    result = cli_runner.invoke(swhdb, ["init", module_name, "--db-name", conninfo])
+    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
 
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
     # the origin values in the scripts uses a hash function (which implementation wise
@@ -190,12 +188,12 @@ def test_cli_swh_db_initialization_with_env(swh_db_cli, mock_package_sql, test_d
     module_name = "anything"  # it's mocked here
     cli_runner, db_params = swh_db_cli
     result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--db-name", db_params["dbname"]]
+        swhdb, ["init-admin", module_name, "--dbname", db_params["dbname"]]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--db-name", db_params["dbname"]]
+        swhdb, ["init", module_name, "--dbname", db_params["dbname"]]
     )
 
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -215,22 +213,22 @@ def test_cli_swh_db_initialization_idempotent(swh_db_cli, mock_package_sql, test
     cli_runner, db_params = swh_db_cli
 
     result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--db-name", db_params["dbname"]]
+        swhdb, ["init-admin", module_name, "--dbname", db_params["dbname"]]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--db-name", db_params["dbname"]]
+        swhdb, ["init", module_name, "--dbname", db_params["dbname"]]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--db-name", db_params["dbname"]]
+        swhdb, ["init-admin", module_name, "--dbname", db_params["dbname"]]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--db-name", db_params["dbname"]]
+        swhdb, ["init", module_name, "--dbname", db_params["dbname"]]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
