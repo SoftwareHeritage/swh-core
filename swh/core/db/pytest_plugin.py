@@ -14,10 +14,10 @@ import pytest
 from pytest_postgresql.janitor import DatabaseJanitor, Version
 
 try:
-    from pytest_postgresql.config import get_config as pytest_postgresql_get_config
+    from pytest_postgresql.config import get_config as _pytest_postgresql_get_config
 except ImportError:
     # pytest_postgresql < 3.0.0
-    from pytest_postgresql.factories import get_config as pytest_postgresql_get_config
+    from pytest_postgresql.factories import get_config as _pytest_postgresql_get_config
 
 from swh.core.utils import numfile_sortkey as sortkey
 
@@ -155,7 +155,7 @@ def postgresql_fact(
         :rtype: psycopg2.connection
         :returns: postgresql client
         """
-        config = pytest_postgresql_get_config(request)
+        config = _pytest_postgresql_get_config(request)
         proc_fixture = request.getfixturevalue(process_fixture_name)
 
         pg_host = proc_fixture.host
