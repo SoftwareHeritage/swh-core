@@ -222,3 +222,22 @@ def test_uncompress_tarpaths(tmp_path, datadir, prepare_shutil_state):
         tarball.uncompress(tarpath, dest=tmp_path)
 
     assert n == len(tarpaths)
+
+
+def test_normalize_permissions(tmp_path):
+    for perms in range(0o1000):
+        filename = str(perms)
+        file_path = tmp_path / filename
+        file_path.touch()
+        file_path.chmod(perms)
+
+    for file in tmp_path.iterdir():
+        assert file.stat().st_mode == 0o100000 | int(file.name)
+
+    tarball.normalize_permissions(str(tmp_path))
+
+    for file in tmp_path.iterdir():
+        if int(file.name) & 0o100:  # original file was executable for its owner
+            assert file.stat().st_mode == 0o100755
+        else:
+            assert file.stat().st_mode == 0o100644
