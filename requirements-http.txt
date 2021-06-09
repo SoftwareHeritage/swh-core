@@ -6,3 +6,4 @@ iso8601
 msgpack >= 1.0.0
 requests
 blinker  # dependency of sentry-sdk[flask]
+types-Flask

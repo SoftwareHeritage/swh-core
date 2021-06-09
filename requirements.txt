@@ -2,3 +2,6 @@ Click
 Deprecated
 PyYAML
 sentry-sdk
+types-click
+types-PyYAML
+types-requests
