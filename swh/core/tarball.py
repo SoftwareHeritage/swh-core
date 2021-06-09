@@ -22,12 +22,11 @@ def _unpack_tar(tarpath: str, extract_dir: str) -> str:
 
     This expects the `extract_dir` to exist.
 
-    Raises
-
+    Raises:
         shutil.ReadError in case of issue uncompressing the archive (tarpath
         does not exist, extract_dir does not exist, etc...)
 
-    Returns
+    Returns:
         full path to the uncompressed directory.
 
     """
@@ -37,6 +36,29 @@ def _unpack_tar(tarpath: str, extract_dir: str) -> str:
     except Exception as e:
         raise shutil.ReadError(
             f"Unable to uncompress {tarpath} to {extract_dir}. Reason: {e}"
+        )
+
+
+def _unpack_zip(zippath: str, extract_dir: str) -> str:
+    """Unpack zip files unsupported by the standard python library, for instance
+    those with legacy compression type 6 (implode).
+
+    This expects the `extract_dir` to exist.
+
+    Raises:
+        shutil.ReadError in case of issue uncompressing the archive (zippath
+        does not exist, extract_dir does not exist, etc...)
+
+    Returns:
+        full path to the uncompressed directory.
+
+    """
+    try:
+        run(["unzip", "-d", extract_dir, zippath], check=True)
+        return extract_dir
+    except Exception as e:
+        raise shutil.ReadError(
+            f"Unable to uncompress {zippath} to {extract_dir}. Reason: {e}"
         )
 
 
@@ -72,6 +94,11 @@ def uncompress(tarpath: str, dest: str):
         shutil.unpack_archive(tarpath, extract_dir=dest)
     except shutil.ReadError as e:
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
+    except NotImplementedError:
+        if tarpath.endswith(".zip"):
+            return _unpack_zip(tarpath, dest)
+        else:
+            raise
 
     normalize_permissions(dest)
 
