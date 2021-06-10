@@ -1,3 +1,9 @@
+swh-core (0.14.2-2~swh1) unstable-swh; urgency=medium
+
+  * Rebuild v0.14.2 after missing unzip dependency
+
+ -- Antoine Lambert <antoine.lambert@inria.fr>  Thu, 10 Jun 2021 16:24:09 +0200
+
 swh-core (0.14.2-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.14.2     - (tagged by Antoine Lambert
