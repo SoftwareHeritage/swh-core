@@ -1,4 +1,4 @@
-Click
-Deprecated
-PyYAML
+click
+deprecated
+pyyaml
 sentry-sdk
