@@ -180,7 +180,7 @@ def main():
             # it's the responsibility of the click commands/groups in this
             # module to transitively have the main swh group as parent.
         except Exception as e:
-            logger.warning("Could not load subcommand %s: %s", entry_point.name, str(e))
+            logger.warning("Could not load subcommand %s: %r", entry_point.name, e)
 
     return swh(auto_envvar_prefix="SWH")
 

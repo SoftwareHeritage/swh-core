@@ -17,7 +17,6 @@ requirements-db.txt
 requirements-http.txt
 requirements-logging.txt
 requirements-swh.txt
-requirements-test-db.txt
 requirements-test.txt
 requirements.txt
 setup.cfg
@@ -102,6 +101,7 @@ swh/core/tests/data/archives/hello.tar.gz
 swh/core/tests/data/archives/hello.tar.lz
 swh/core/tests/data/archives/hello.tar.x
 swh/core/tests/data/archives/hello.zip
+swh/core/tests/data/archives/msk316src.zip
 swh/core/tests/data/http_example.com/something.json
 swh/core/tests/data/https_example.com/file.json
 swh/core/tests/data/https_example.com/file.json,name=doe,firstname=jane

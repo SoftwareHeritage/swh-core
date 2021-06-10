@@ -28,7 +28,8 @@ Build-Depends: debhelper (>= 9),
                python3-setuptools-scm,
                python3-systemd,
                python3-yaml,
-               python3-hypothesis (>= 3.11.0~)
+               python3-hypothesis (>= 3.11.0~),
+               unzip
 Standards-Version: 3.9.6
 Homepage: https://forge.softwareheritage.org/diffusion/DCORE/
 
@@ -41,6 +42,7 @@ Package: python3-swh.core.db.pytestplugin
 Architecture: all
 Depends: python3-pytest-postgresql,
          python3-swh.core (= ${binary:Version}),
+         unzip,
          ${misc:Depends},
          ${python3:Depends}
 Breaks: python3-swh.core (<< 0.9.0-1~swh2~)

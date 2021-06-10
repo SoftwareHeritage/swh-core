@@ -241,3 +241,22 @@ def test_normalize_permissions(tmp_path):
             assert file.stat().st_mode == 0o100755
         else:
             assert file.stat().st_mode == 0o100644
+
+
+def test_unpcompress_zip_imploded(tmp_path, datadir):
+    """Unpack a zip archive with compression type 6 (implode),
+    not supported by python zipfile module.
+
+    """
+    filename = "msk316src.zip"
+    zippath = os.path.join(datadir, "archives", filename)
+
+    assert os.path.exists(zippath)
+
+    extract_dir = os.path.join(tmp_path, filename)
+    os.makedirs(extract_dir, exist_ok=True)
+
+    output_directory = tarball.uncompress(zippath, extract_dir)
+
+    assert extract_dir == output_directory
+    assert len(os.listdir(extract_dir)) > 0
