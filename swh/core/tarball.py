@@ -81,22 +81,21 @@ def uncompress(tarpath: str, dest: str):
 
     Args:
         tarpath: path to tarball to uncompress
-        dest: the destination folder where to uncompress the tarball
-
-    Returns:
-        The nature of the tarball, zip or tar.
+        dest: the destination folder where to uncompress the tarball,
+            it will be created if it does not exist
 
     Raises:
         ValueError when a problem occurs during unpacking
 
     """
     try:
+        os.makedirs(dest, exist_ok=True)
         shutil.unpack_archive(tarpath, extract_dir=dest)
     except shutil.ReadError as e:
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
     except NotImplementedError:
         if tarpath.endswith(".zip"):
-            return _unpack_zip(tarpath, dest)
+            _unpack_zip(tarpath, dest)
         else:
             raise
 
