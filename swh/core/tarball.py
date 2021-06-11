@@ -81,13 +81,15 @@ def uncompress(tarpath: str, dest: str):
 
     Args:
         tarpath: path to tarball to uncompress
-        dest: the destination folder where to uncompress the tarball
+        dest: the destination folder where to uncompress the tarball,
+            it will be created if it does not exist
 
     Raises:
         ValueError when a problem occurs during unpacking
 
     """
     try:
+        os.makedirs(dest, exist_ok=True)
         shutil.unpack_archive(tarpath, extract_dir=dest)
     except shutil.ReadError as e:
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")

@@ -127,21 +127,6 @@ def test_uncompress_tar_failure(tmp_path, datadir):
         tarball.uncompress(tarpath, tmp_path)
 
 
-def test_uncompress_tar_failure2(tmp_path, datadir):
-    """Unpack Existent tarball into an inexistent folder should fail
-
-    """
-    filename = "groff-1.02.tar.Z"
-    tarpath = os.path.join(datadir, "archives", filename)
-
-    assert os.path.exists(tarpath)
-
-    extract_dir = os.path.join(tmp_path, "dir", "inexistent")
-
-    with pytest.raises(ValueError, match=f"Problem during unpacking {tarpath}"):
-        tarball.uncompress(tarpath, extract_dir)
-
-
 def test_uncompress_tar(tmp_path, datadir):
     """Unpack supported tarball into an existent folder should be ok
 
@@ -152,7 +137,6 @@ def test_uncompress_tar(tmp_path, datadir):
     assert os.path.exists(tarpath)
 
     extract_dir = os.path.join(tmp_path, filename)
-    os.makedirs(extract_dir, exist_ok=True)
 
     tarball.uncompress(tarpath, extract_dir)
 
@@ -234,7 +218,6 @@ def test_unpcompress_zip_imploded(tmp_path, datadir):
     assert os.path.exists(zippath)
 
     extract_dir = os.path.join(tmp_path, filename)
-    os.makedirs(extract_dir, exist_ok=True)
 
     tarball.uncompress(zippath, extract_dir)
 
