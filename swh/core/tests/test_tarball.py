@@ -115,7 +115,7 @@ def test_compress_uncompress_tar_modes(tmp_path):
     assert executable_path.stat().st_mode == 0o100755
 
 
-def test__unpack_tar_failure(tmp_path, datadir):
+def test_uncompress_tar_failure(tmp_path, datadir):
     """Unpack inexistent tarball should fail
 
     """
@@ -123,13 +123,11 @@ def test__unpack_tar_failure(tmp_path, datadir):
 
     assert not os.path.exists(tarpath)
 
-    with pytest.raises(
-        shutil.ReadError, match=f"Unable to uncompress {tarpath} to {tmp_path}"
-    ):
-        tarball._unpack_tar(tarpath, tmp_path)
+    with pytest.raises(ValueError, match=f"Problem during unpacking {tarpath}"):
+        tarball.uncompress(tarpath, tmp_path)
 
 
-def test__unpack_tar_failure2(tmp_path, datadir):
+def test_uncompress_tar_failure2(tmp_path, datadir):
     """Unpack Existent tarball into an inexistent folder should fail
 
     """
@@ -140,28 +138,11 @@ def test__unpack_tar_failure2(tmp_path, datadir):
 
     extract_dir = os.path.join(tmp_path, "dir", "inexistent")
 
-    with pytest.raises(
-        shutil.ReadError, match=f"Unable to uncompress {tarpath} to {tmp_path}"
-    ):
-        tarball._unpack_tar(tarpath, extract_dir)
+    with pytest.raises(ValueError, match=f"Problem during unpacking {tarpath}"):
+        tarball.uncompress(tarpath, extract_dir)
 
 
-def test__unpack_tar_failure3(tmp_path, datadir):
-    """Unpack unsupported tarball should fail
-
-    """
-    filename = "hello.zip"
-    tarpath = os.path.join(datadir, "archives", filename)
-
-    assert os.path.exists(tarpath)
-
-    with pytest.raises(
-        shutil.ReadError, match=f"Unable to uncompress {tarpath} to {tmp_path}"
-    ):
-        tarball._unpack_tar(tarpath, tmp_path)
-
-
-def test__unpack_tar(tmp_path, datadir):
+def test_uncompress_tar(tmp_path, datadir):
     """Unpack supported tarball into an existent folder should be ok
 
     """
@@ -173,9 +154,8 @@ def test__unpack_tar(tmp_path, datadir):
     extract_dir = os.path.join(tmp_path, filename)
     os.makedirs(extract_dir, exist_ok=True)
 
-    output_directory = tarball._unpack_tar(tarpath, extract_dir)
+    tarball.uncompress(tarpath, extract_dir)
 
-    assert extract_dir == output_directory
     assert len(os.listdir(extract_dir)) > 0
 
 
@@ -256,7 +236,6 @@ def test_unpcompress_zip_imploded(tmp_path, datadir):
     extract_dir = os.path.join(tmp_path, filename)
     os.makedirs(extract_dir, exist_ok=True)
 
-    output_directory = tarball.uncompress(zippath, extract_dir)
+    tarball.uncompress(zippath, extract_dir)
 
-    assert extract_dir == output_directory
     assert len(os.listdir(extract_dir)) > 0

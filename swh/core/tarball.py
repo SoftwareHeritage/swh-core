@@ -83,9 +83,6 @@ def uncompress(tarpath: str, dest: str):
         tarpath: path to tarball to uncompress
         dest: the destination folder where to uncompress the tarball
 
-    Returns:
-        The nature of the tarball, zip or tar.
-
     Raises:
         ValueError when a problem occurs during unpacking
 
@@ -96,7 +93,7 @@ def uncompress(tarpath: str, dest: str):
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
     except NotImplementedError:
         if tarpath.endswith(".zip"):
-            return _unpack_zip(tarpath, dest)
+            _unpack_zip(tarpath, dest)
         else:
             raise
 
