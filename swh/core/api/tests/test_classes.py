@@ -3,10 +3,12 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from typing import TypeVar
+from typing import Optional, TypeVar
+
+import pytest
 
 from swh.core.api.classes import PagedResult as CorePagedResult
-from swh.core.api.classes import stream_results
+from swh.core.api.classes import stream_results, stream_results_optional
 
 T = TypeVar("T")
 TestPagedResult = CorePagedResult[T, bytes]
@@ -21,7 +23,27 @@ def test_stream_results_no_result():
     assert list(actual_data) == []
 
 
-def test_stream_results_no_pagination():
+def test_stream_results_optional():
+    def paged_results(page_token) -> Optional[TestPagedResult]:
+        return None
+
+    # Should be None, not an empty iterator!
+    actual_data = stream_results_optional(paged_results)
+    assert actual_data is None
+
+
+@pytest.mark.parametrize("stream_results", [stream_results, stream_results_optional])
+def test_stream_results_kwarg(stream_results):
+    def paged_results(page_token):
+        assert False, "should not be called"
+
+    with pytest.raises(TypeError):
+        actual_data = stream_results(paged_results, page_token=42)
+        list(actual_data)
+
+
+@pytest.mark.parametrize("stream_results", [stream_results, stream_results_optional])
+def test_stream_results_no_pagination(stream_results):
     input_data = [
         {"url": "something"},
         {"url": "something2"},
@@ -35,7 +57,8 @@ def test_stream_results_no_pagination():
     assert list(actual_data) == input_data
 
 
-def test_stream_results_pagination():
+@pytest.mark.parametrize("stream_results", [stream_results, stream_results_optional])
+def test_stream_results_pagination(stream_results):
     input_data = [
         {"url": "something"},
         {"url": "something2"},
