@@ -175,9 +175,10 @@ def compress(tarpath, nature, dirpath_or_files):
 
 # Additional uncompression archive format support
 ADDITIONAL_ARCHIVE_FORMATS = [
-    # name  , extensions, function
+    # name, extensions, function
     ("tar.Z|x", [".tar.Z", ".tar.x"], _unpack_tar),
     ("jar", [".jar"], _unpack_zip),
+    ("tbz2", [".tbz", "tbz2"], _unpack_tar),
     # FIXME: make this optional depending on the runtime lzip package install
     ("tar.lz", [".tar.lz"], _unpack_tar),
 ]
