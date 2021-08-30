@@ -1,3 +1,12 @@
+swh-core (0.14.5-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.14.5     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2021-08-30 10:31:47 +0200)
+  * Upstream changes:     - v0.14.5     - * tarball: Add support for
+    .tbz, .tbz2, and .jar
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 30 Aug 2021 08:34:03 +0000
+
 swh-core (0.14.4-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.14.4     - (tagged by Valentin Lorentz
