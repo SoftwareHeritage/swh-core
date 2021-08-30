@@ -100,6 +100,8 @@ swh/core/tests/data/archives/hello.tar.bz2
 swh/core/tests/data/archives/hello.tar.gz
 swh/core/tests/data/archives/hello.tar.lz
 swh/core/tests/data/archives/hello.tar.x
+swh/core/tests/data/archives/hello.tbz
+swh/core/tests/data/archives/hello.tbz2
 swh/core/tests/data/archives/hello.zip
 swh/core/tests/data/archives/msk316src.zip
 swh/core/tests/data/http_example.com/something.json
