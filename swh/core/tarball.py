@@ -54,7 +54,7 @@ def _unpack_zip(zippath: str, extract_dir: str) -> str:
 
     """
     try:
-        run(["unzip", "-d", extract_dir, zippath], check=True)
+        run(["unzip", "-q", "-d", extract_dir, zippath], check=True)
         return extract_dir
     except Exception as e:
         raise shutil.ReadError(
