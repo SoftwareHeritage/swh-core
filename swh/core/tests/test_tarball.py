@@ -160,32 +160,34 @@ def test_register_new_archive_formats(prepare_shutil_state):
         assert format_id[0] in unpack_formats_v2
 
 
-def test_uncompress_tarpaths(tmp_path, datadir, prepare_shutil_state):
-    """High level call uncompression on un/supported tarballs
+def test_uncompress_archives(tmp_path, datadir, prepare_shutil_state):
+    """High level call uncompression on un/supported archives
 
     """
     archive_dir = os.path.join(datadir, "archives")
-    tarfiles = os.listdir(archive_dir)
-    tarpaths = [os.path.join(archive_dir, tarfile) for tarfile in tarfiles]
-
-    unsupported_tarpaths = []
-    for t in tarpaths:
-        if t.endswith(".Z") or t.endswith(".x") or t.endswith(".lz"):
-            unsupported_tarpaths.append(t)
+    archive_files = os.listdir(archive_dir)
 
     # not supported yet
-    for tarpath in unsupported_tarpaths:
-        with pytest.raises(ValueError, match=f"Problem during unpacking {tarpath}."):
-            tarball.uncompress(tarpath, dest=tmp_path)
+    unsupported_archives = []
+    for archive_file in archive_files:
+        if archive_file.endswith((".Z", ".x", ".lz", ".crate")):
+            unsupported_archives.append(os.path.join(archive_dir, archive_file))
+
+    for archive_path in unsupported_archives:
+        with pytest.raises(
+            ValueError, match=f"Problem during unpacking {archive_path}."
+        ):
+            tarball.uncompress(archive_path, dest=tmp_path)
 
     # register those unsupported formats
     tarball.register_new_archive_formats()
 
     # unsupported formats are now supported
-    for n, tarpath in enumerate(tarpaths, start=1):
-        tarball.uncompress(tarpath, dest=tmp_path)
-
-    assert n == len(tarpaths)
+    for archive_file in archive_files:
+        archive_path = os.path.join(archive_dir, archive_file)
+        extract_dir = os.path.join(tmp_path, archive_file)
+        tarball.uncompress(archive_path, dest=extract_dir)
+        assert len(os.listdir(extract_dir)) > 0
 
 
 def test_normalize_permissions(tmp_path):

@@ -186,6 +186,7 @@ ADDITIONAL_ARCHIVE_FORMATS = [
     ("tbz2", [".tbz", "tbz2"], _unpack_tar),
     # FIXME: make this optional depending on the runtime lzip package install
     ("tar.lz", [".tar.lz"], _unpack_tar),
+    ("crate", [".crate"], _unpack_tar),
 ]
 
 register_new_archive_formats()
