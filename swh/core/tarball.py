@@ -90,11 +90,16 @@ def uncompress(tarpath: str, dest: str):
     """
     try:
         os.makedirs(dest, exist_ok=True)
-        shutil.unpack_archive(tarpath, extract_dir=dest)
+        format = None
+        for format_, exts, _ in shutil.get_unpack_formats():
+            if any([tarpath.lower().endswith(ext.lower()) for ext in exts]):
+                format = format_
+                break
+        shutil.unpack_archive(tarpath, extract_dir=dest, format=format)
     except shutil.ReadError as e:
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
     except NotImplementedError:
-        if tarpath.endswith(".zip"):
+        if tarpath.lower().endswith(".zip"):
             _unpack_zip(tarpath, dest)
         else:
             raise

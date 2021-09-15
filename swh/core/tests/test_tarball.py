@@ -222,3 +222,21 @@ def test_unpcompress_zip_imploded(tmp_path, datadir):
     tarball.uncompress(zippath, extract_dir)
 
     assert len(os.listdir(extract_dir)) > 0
+
+
+def test_uncompress_upper_archive_extension(tmp_path, datadir):
+    """Copy test archives in a temporary directory but turn their names
+    to uppercase, then check they can be successfully extracted.
+    """
+    archives_path = os.path.join(datadir, "archives")
+    archive_files = [
+        f
+        for f in os.listdir(archives_path)
+        if os.path.isfile(os.path.join(archives_path, f))
+    ]
+    for archive_file in archive_files:
+        archive_file_upper = os.path.join(tmp_path, archive_file.upper())
+        extract_dir = os.path.join(tmp_path, archive_file)
+        shutil.copy(os.path.join(archives_path, archive_file), archive_file_upper)
+        tarball.uncompress(archive_file_upper, extract_dir)
+        assert len(os.listdir(extract_dir)) > 0
