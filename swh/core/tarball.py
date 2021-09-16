@@ -54,7 +54,7 @@ def _unpack_zip(zippath: str, extract_dir: str) -> str:
 
     """
     try:
-        run(["unzip", "-d", extract_dir, zippath], check=True)
+        run(["unzip", "-q", "-d", extract_dir, zippath], check=True)
         return extract_dir
     except Exception as e:
         raise shutil.ReadError(
@@ -90,11 +90,16 @@ def uncompress(tarpath: str, dest: str):
     """
     try:
         os.makedirs(dest, exist_ok=True)
-        shutil.unpack_archive(tarpath, extract_dir=dest)
+        format = None
+        for format_, exts, _ in shutil.get_unpack_formats():
+            if any([tarpath.lower().endswith(ext.lower()) for ext in exts]):
+                format = format_
+                break
+        shutil.unpack_archive(tarpath, extract_dir=dest, format=format)
     except shutil.ReadError as e:
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
     except NotImplementedError:
-        if tarpath.endswith(".zip"):
+        if tarpath.lower().endswith(".zip"):
             _unpack_zip(tarpath, dest)
         else:
             raise
@@ -181,6 +186,7 @@ ADDITIONAL_ARCHIVE_FORMATS = [
     ("tbz2", [".tbz", "tbz2"], _unpack_tar),
     # FIXME: make this optional depending on the runtime lzip package install
     ("tar.lz", [".tar.lz"], _unpack_tar),
+    ("crate", [".crate"], _unpack_tar),
 ]
 
 register_new_archive_formats()
