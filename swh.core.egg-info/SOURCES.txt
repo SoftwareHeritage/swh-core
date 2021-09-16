@@ -104,6 +104,7 @@ swh/core/tests/data/archives/hello.tbz
 swh/core/tests/data/archives/hello.tbz2
 swh/core/tests/data/archives/hello.zip
 swh/core/tests/data/archives/msk316src.zip
+swh/core/tests/data/archives/tokei-12.1.2.crate
 swh/core/tests/data/http_example.com/something.json
 swh/core/tests/data/https_example.com/file.json
 swh/core/tests/data/https_example.com/file.json,name=doe,firstname=jane
