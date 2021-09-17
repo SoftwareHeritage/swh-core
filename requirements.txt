@@ -1,4 +1,5 @@
 click
 deprecated
+python-magic
 pyyaml
 sentry-sdk
