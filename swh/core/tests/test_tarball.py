@@ -1,8 +1,9 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import hashlib
 import os
 import shutil
 
@@ -123,7 +124,7 @@ def test_uncompress_tar_failure(tmp_path, datadir):
 
     assert not os.path.exists(tarpath)
 
-    with pytest.raises(ValueError, match=f"Problem during unpacking {tarpath}"):
+    with pytest.raises(ValueError, match="Problem during unpacking"):
         tarball.uncompress(tarpath, tmp_path)
 
 
@@ -160,29 +161,13 @@ def test_register_new_archive_formats(prepare_shutil_state):
         assert format_id[0] in unpack_formats_v2
 
 
-def test_uncompress_archives(tmp_path, datadir, prepare_shutil_state):
-    """High level call uncompression on un/supported archives
+def test_uncompress_archives(tmp_path, datadir):
+    """High level call uncompression on supported archives
 
     """
     archive_dir = os.path.join(datadir, "archives")
     archive_files = os.listdir(archive_dir)
 
-    # not supported yet
-    unsupported_archives = []
-    for archive_file in archive_files:
-        if archive_file.endswith((".Z", ".x", ".lz", ".crate")):
-            unsupported_archives.append(os.path.join(archive_dir, archive_file))
-
-    for archive_path in unsupported_archives:
-        with pytest.raises(
-            ValueError, match=f"Problem during unpacking {archive_path}."
-        ):
-            tarball.uncompress(archive_path, dest=tmp_path)
-
-    # register those unsupported formats
-    tarball.register_new_archive_formats()
-
-    # unsupported formats are now supported
     for archive_file in archive_files:
         archive_path = os.path.join(archive_dir, archive_file)
         extract_dir = os.path.join(tmp_path, archive_file)
@@ -241,4 +226,25 @@ def test_uncompress_upper_archive_extension(tmp_path, datadir):
         extract_dir = os.path.join(tmp_path, archive_file)
         shutil.copy(os.path.join(archives_path, archive_file), archive_file_upper)
         tarball.uncompress(archive_file_upper, extract_dir)
+        assert len(os.listdir(extract_dir)) > 0
+
+
+def test_uncompress_archive_no_extension(tmp_path, datadir):
+    """Copy test archives in a temporary directory but turn their names
+    to their md5 sums, then check they can be successfully extracted.
+    """
+    archives_path = os.path.join(datadir, "archives")
+    archive_files = [
+        f
+        for f in os.listdir(archives_path)
+        if os.path.isfile(os.path.join(archives_path, f))
+    ]
+    for archive_file in archive_files:
+        archive_file_path = os.path.join(archives_path, archive_file)
+        with open(archive_file_path, "rb") as f:
+            md5sum = hashlib.md5(f.read()).hexdigest()
+        archive_file_md5sum = os.path.join(tmp_path, md5sum)
+        extract_dir = os.path.join(tmp_path, archive_file)
+        shutil.copy(archive_file_path, archive_file_md5sum)
+        tarball.uncompress(archive_file_md5sum, extract_dir)
         assert len(os.listdir(extract_dir)) > 0
