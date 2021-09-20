@@ -1,3 +1,13 @@
+swh-core (0.15.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.15.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2021-09-20 11:45:26
+    +0200)
+  * Upstream changes:     - v0.15.0     - tarball: Fallback to guess
+    archive format from mimetype when no format detected
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 20 Sep 2021 09:48:28 +0000
+
 swh-core (0.14.6-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.14.6     - (tagged by Antoine Lambert
