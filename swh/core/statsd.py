@@ -194,8 +194,8 @@ class Statsd(object):
     ):
         # Connection
         if host is None:
-            host = os.environ.get("STATSD_HOST") or "localhost"
-        self.host = host
+            host = os.environ.get("STATSD_HOST", "localhost")
+        self.host = host.strip()
 
         if port is None:
             port = os.environ.get("STATSD_PORT") or 8125
@@ -338,6 +338,8 @@ class Statsd(object):
         Note: connect the socket before assigning it to the class instance to
         avoid bad thread race conditions.
         """
+        if not self.host:
+            return None
         with self.lock:
             if not self._socket:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -407,6 +409,8 @@ class Statsd(object):
         self._send(payload)
 
     def _send_to_server(self, packet):
+        if not self.socket:
+            return
         try:
             # If set, use socket directly
             self.socket.send(packet.encode("utf-8"))
