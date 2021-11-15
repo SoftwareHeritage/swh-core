@@ -237,6 +237,21 @@ class RPCClient(metaclass=MetaRPCClient):
         )
         self.session.mount(self.url, adapter)
 
+        authcfg = kwargs.get("auth")
+        if authcfg:
+            if authcfg["cls"] == "basic":
+                auth = requests.auth.HTTPBasicAuth(
+                    username=authcfg["username"], password=authcfg["password"]
+                )
+            elif authcfg["cls"] == "digest":
+                auth = requests.auth.HTTPDigestAuth(
+                    username=authcfg["username"], password=authcfg["password"]
+                )
+            else:
+                raise ConfigurationError(
+                    "Unsupported authentication mechanism {authcfg['cls']}"
+                )
+
         self.timeout = timeout
         self.chunk_size = chunk_size
 
