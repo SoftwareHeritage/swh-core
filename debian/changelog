@@ -1,3 +1,9 @@
+swh-core (1.0.0-2~swh1) unstable-swh; urgency=medium
+
+  * Add missing B-D on python3-blinker for sentry-sdk
+
+ -- Nicolas Dandrimont <olasd@debian.org>  Thu, 02 Dec 2021 12:34:50 +0100
+
 swh-core (1.0.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 1.0.0     - (tagged by David Douard
