@@ -1,3 +1,11 @@
+swh-core (1.0.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.0.0     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2021-12-02 10:51:10 +0100)
+  * Upstream changes:     - v1.0.0
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 02 Dec 2021 10:00:19 +0000
+
 swh-core (0.15.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 0.15.1     - (tagged by Valentin Lorentz
