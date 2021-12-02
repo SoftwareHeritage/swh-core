@@ -249,7 +249,7 @@ def test_serializers_decode_datetime_compat_msgpack():
 
 def test_serializers_encode_native_datetime_msgpack():
     dt = datetime.datetime(2015, 1, 1, 12, 4, 42, 231455)
-    with pytest.raises(TypeError, match="datetime"):
+    with pytest.raises((TypeError, ValueError), match="datetime"):
         msgpack_dumps(dt)
 
 
