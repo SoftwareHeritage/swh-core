@@ -1,8 +1,9 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from collections import deque
 from functools import partial
 import logging
 from os import path
@@ -327,3 +328,41 @@ def _push_request_context(request: FixtureRequest):
         ctx.pop()
 
     request.addfinalizer(teardown)
+
+
+class FakeSocket(object):
+    """ A fake socket for testing. """
+
+    def __init__(self):
+        self.payloads = deque()
+
+    def send(self, payload):
+        assert type(payload) == bytes
+        self.payloads.append(payload)
+
+    def recv(self):
+        try:
+            return self.payloads.popleft().decode("utf-8")
+        except IndexError:
+            return None
+
+    def close(self):
+        pass
+
+    def __repr__(self):
+        return str(self.payloads)
+
+
+@pytest.fixture
+def statsd():
+    """Simple fixture giving a Statsd instance suitable for tests
+
+    The Statsd instance uses a FakeSocket as `.socket` attribute in which one
+    can get the accumulated statsd messages in a deque in `.socket.payloads`.
+    """
+
+    from swh.core.statsd import Statsd
+
+    statsd = Statsd()
+    statsd._socket = FakeSocket()
+    yield statsd
