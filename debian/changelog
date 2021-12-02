@@ -1,8 +1,25 @@
-swh-core (0.15.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (1.0.0-2~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * Add missing B-D on python3-blinker for sentry-sdk
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 20 Sep 2021 09:49:46 +0000
+ -- Nicolas Dandrimont <olasd@debian.org>  Thu, 02 Dec 2021 12:34:50 +0100
+
+swh-core (1.0.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 1.0.0     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2021-12-02 10:51:10 +0100)
+  * Upstream changes:     - v1.0.0
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 02 Dec 2021 10:00:19 +0000
+
+swh-core (0.15.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 0.15.1     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2021-11-08 14:10:08 +0100)
+  * Upstream changes:     - v0.15.1     - * Require pytest-postgresql <
+    4.0
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 08 Nov 2021 13:12:36 +0000
 
 swh-core (0.15.0-1~swh1) unstable-swh; urgency=medium
 

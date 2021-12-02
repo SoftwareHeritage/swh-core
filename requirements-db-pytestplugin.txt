@@ -1,2 +1,2 @@
 # requirements for swh.core.db.pytest_plugin
-pytest-postgresql
+pytest-postgresql < 4.0.0  # version 4.0 depends on psycopg 3. https://github.com/ClearcodeHQ/pytest-postgresql/blob/main/CHANGES.rst#400
