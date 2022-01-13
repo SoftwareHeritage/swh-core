@@ -57,6 +57,7 @@ import itertools
 import logging
 import os
 from random import random
+import re
 import socket
 import threading
 from time import monotonic
@@ -221,6 +222,14 @@ class Statsd(object):
                 )
                 continue
             k, v = tag.split(":", 1)
+
+            # look for a possible env var substitution, using $NAME or ${NAME} format
+            m = re.match(r"^[$]([{])?(?P<envvar>\w+)(?(1)[}]|)$", v)
+            if m:
+                envvar = m.group("envvar")
+                if envvar in os.environ:
+                    v = os.environ[envvar]
+
             self.constant_tags[k] = v
 
         if constant_tags:

@@ -428,6 +428,21 @@ def test_tags_from_environment(monkeypatch):
     assert statsd.socket.recv() == "gt:123.4|g|#age:45,country:china"
 
 
+def test_tags_from_environment_with_substitution(monkeypatch):
+    monkeypatch.setenv("HOSTNAME", "sweethome")
+    monkeypatch.setenv("PORT", "42")
+    monkeypatch.setenv(
+        "STATSD_TAGS", "country:china,age:45,host:$HOSTNAME,port:${PORT}"
+    )
+    statsd = Statsd()
+    statsd._socket = FakeSocket()
+    statsd.gauge("gt", 123.4)
+    assert (
+        statsd.socket.recv()
+        == "gt:123.4|g|#age:45,country:china,host:sweethome,port:42"
+    )
+
+
 def test_tags_from_environment_and_constant(monkeypatch):
     monkeypatch.setenv("STATSD_TAGS", "country:china,age:45")
     statsd = Statsd(constant_tags={"country": "canada"})
