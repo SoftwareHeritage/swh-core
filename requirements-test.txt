@@ -1,5 +1,4 @@
 hypothesis >= 3.11.0
-pre-commit
 pytest
 pytest-mock
 pytz
