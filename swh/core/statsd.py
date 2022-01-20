@@ -52,14 +52,17 @@
 
 
 from asyncio import iscoroutinefunction
+from contextlib import contextmanager
 from functools import wraps
 import itertools
 import logging
 import os
 from random import random
+import re
 import socket
 import threading
 from time import monotonic
+from typing import Collection, Dict, Optional
 import warnings
 
 log = logging.getLogger("swh.core.statsd")
@@ -221,6 +224,14 @@ class Statsd(object):
                 )
                 continue
             k, v = tag.split(":", 1)
+
+            # look for a possible env var substitution, using $NAME or ${NAME} format
+            m = re.match(r"^[$]([{])?(?P<envvar>\w+)(?(1)[}]|)$", v)
+            if m:
+                envvar = m.group("envvar")
+                if envvar in os.environ:
+                    v = os.environ[envvar]
+
             self.constant_tags[k] = v
 
         if constant_tags:
@@ -435,6 +446,50 @@ class Statsd(object):
                 self.constant_tags.items(), (tags if tags else {}).items(),
             )
         }
+
+    @contextmanager
+    def status_gauge(
+        self,
+        metric_name: str,
+        statuses: Collection[str],
+        tags: Optional[Dict[str, str]] = None,
+    ):
+        """Context manager to keep track of status changes as a gauge
+
+        In addition to the `metric_name` and `tags` arguments, it expects a
+        list of `statuses` to declare which statuses are possible, and returns
+        a callable as context manager. This callable takes ones of the possible
+        statuses as argument. Typical usage would be:
+
+        >>> with statsd.status_gauge(
+                    "metric_name", ["starting", "processing", "waiting"]) as set_status:
+                set_status("starting")
+                # ...
+                set_status("waiting")
+                # ...
+        """
+        if tags is None:
+            tags = {}
+        current_status: Optional[str] = None
+        # reset status gauges to make sure they do not "leak"
+        for status in statuses:
+            self.gauge(metric_name, 0, {**tags, "status": status})
+
+        def set_status(new_status: str):
+            nonlocal current_status
+            assert isinstance(tags, dict)
+            if new_status not in statuses:
+                raise ValueError(f"{new_status} not in {statuses}")
+            if current_status and new_status != current_status:
+                self.gauge(metric_name, 0, {**tags, "status": current_status})
+            current_status = new_status
+            self.gauge(metric_name, 1, {**tags, "status": current_status})
+
+        yield set_status
+
+        # reset gauges on exit
+        for status in statuses:
+            self.gauge(metric_name, 0, {**tags, "status": status})
 
 
 statsd = Statsd()
