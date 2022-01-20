@@ -549,3 +549,55 @@ def test_timed_elapsed(statsd):
 
     assert t.elapsed >= 0
     assert statsd.socket.recv() == "test_timer:%s|ms" % t.elapsed
+
+
+def test_status_gauge(statsd):
+    with statsd.status_gauge("test_status_gauge", ["s1", "s2", "s3"]) as set_status:
+        set_status("s1")
+        set_status("s2")
+        set_status("s3")
+
+    # enter the context manager: initialisation of gauges for listed statuses
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s1"
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s2"
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s3"
+    # set_status("s1")
+    assert statsd.socket.recv() == "test_status_gauge:1|g|#status:s1"
+    # set_status("s2")
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s1"
+    assert statsd.socket.recv() == "test_status_gauge:1|g|#status:s2"
+    # set_status("s3")
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s2"
+    assert statsd.socket.recv() == "test_status_gauge:1|g|#status:s3"
+    # exit the context manager: cleanup gauges
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s1"
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s2"
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s3"
+
+
+def test_status_gauge_error(statsd):
+    with statsd.status_gauge("test_status_gauge", ["s1", "s2", "s3"]) as set_status:
+        with pytest.raises(ValueError):
+            set_status("s4")
+
+
+def test_status_gauge_repeated(statsd):
+    with statsd.status_gauge("test_status_gauge", ["s1", "s2", "s3"]) as set_status:
+        set_status("s1")
+        set_status("s1")
+        set_status("s1")
+
+    # enter the context manager: initialisation of gauges for listed statuses
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s1"
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s2"
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s3"
+    # set_status("s1")
+    assert statsd.socket.recv() == "test_status_gauge:1|g|#status:s1"
+    # set_status("s1")
+    assert statsd.socket.recv() == "test_status_gauge:1|g|#status:s1"
+    # set_status("s1")
+    assert statsd.socket.recv() == "test_status_gauge:1|g|#status:s1"
+    # exit the context manager: cleanup gauges
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s1"
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s2"
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s3"
