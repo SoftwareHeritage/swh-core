@@ -1,8 +1,9 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from datetime import datetime
 import functools
 import glob
 from importlib import import_module
@@ -10,7 +11,7 @@ import logging
 from os import path
 import re
 import subprocess
-from typing import Collection, Dict, Optional, Tuple, Union
+from typing import Collection, Dict, List, Optional, Tuple, Union
 
 import psycopg2
 import psycopg2.extensions
@@ -99,12 +100,108 @@ def swh_db_version(db_or_conninfo: Union[str, pgconnection]) -> Optional[int]:
             query = "select version from dbversion order by dbversion desc limit 1"
             try:
                 c.execute(query)
-                return c.fetchone()[0]
+                result = c.fetchone()
+                if result:
+                    return result[0]
             except psycopg2.errors.UndefinedTable:
                 return None
     except Exception:
         logger.exception("Could not get version from `%s`", db_or_conninfo)
+    return None
+
+
+def swh_db_versions(
+    db_or_conninfo: Union[str, pgconnection]
+) -> Optional[List[Tuple[int, datetime, str]]]:
+    """Retrieve the swh version history of the database.
+
+    If the database is not initialized, this logs a warning and returns None.
+
+    Args:
+      db_or_conninfo: A database connection, or a database connection info string
+
+    Returns:
+        Either the version of the database, or None if it couldn't be detected
+    """
+    try:
+        db = connect_to_conninfo(db_or_conninfo)
+    except psycopg2.Error:
+        logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        # Database not initialized
         return None
+
+    try:
+        with db.cursor() as c:
+            query = (
+                "select version, release, description "
+                "from dbversion order by dbversion desc"
+            )
+            try:
+                c.execute(query)
+                return c.fetchall()
+            except psycopg2.errors.UndefinedTable:
+                return None
+    except Exception:
+        logger.exception("Could not get versions from `%s`", db_or_conninfo)
+        return None
+
+
+def swh_db_module(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
+    """Retrieve the swh module used to create the database.
+
+    If the database is not initialized, this logs a warning and returns None.
+
+    Args:
+      db_or_conninfo: A database connection, or a database connection info string
+
+    Returns:
+        Either the module of the database, or None if it couldn't be detected
+    """
+    try:
+        db = connect_to_conninfo(db_or_conninfo)
+    except psycopg2.Error:
+        logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        # Database not initialized
+        return None
+
+    try:
+        with db.cursor() as c:
+            query = "select dbmodule from dbmodule limit 1"
+            try:
+                c.execute(query)
+                resp = c.fetchone()
+                if resp:
+                    return resp[0]
+            except psycopg2.errors.UndefinedTable:
+                return None
+    except Exception:
+        logger.exception("Could not get module from `%s`", db_or_conninfo)
+    return None
+
+
+def swh_set_db_module(db_or_conninfo: Union[str, pgconnection], module: str) -> None:
+    """Set the swh module used to create the database.
+
+    Fails if the dbmodule is already set or the table does not exist.
+
+    Args:
+      db_or_conninfo: A database connection, or a database connection info string
+      module: the swh module to register (without the leading 'swh.')
+    """
+    if module.startswith("swh."):
+        module = module[4:]
+
+    try:
+        db = connect_to_conninfo(db_or_conninfo)
+    except psycopg2.Error:
+        logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        # Database not initialized
+        return None
+
+    with db.cursor() as c:
+        query = "insert into dbmodule(dbmodule) values (%s)"
+        c.execute(query, (module,))
+    db.commit()
 
 
 def swh_db_flavor(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
@@ -281,7 +378,7 @@ def get_sql_for_package(modname):
 
 def populate_database_for_package(
     modname: str, conninfo: str, flavor: Optional[str] = None
-) -> Tuple[bool, int, Optional[str]]:
+) -> Tuple[bool, Optional[int], Optional[str]]:
     """Populate the database, pointed at with ``conninfo``,
     using the SQL files found in the package ``modname``.
     Also fill the 'dbmodule' table with the given ``modname``.
@@ -300,14 +397,33 @@ def populate_database_for_package(
         dbflavor = swh_db_flavor(conninfo)
         return False, current_version, dbflavor
 
-    sqlfiles = get_sql_for_package(modname)
+    def globalsortkey(key):
+        "like sortkey but only on basenames"
+        return sortkey(path.basename(key))
+
+    sqlfiles = get_sql_for_package(modname) + get_sql_for_package("swh.core.db")
+    sqlfiles = sorted(sqlfiles, key=globalsortkey)
     sqlfiles = [fname for fname in sqlfiles if "-superuser-" not in fname]
     execute_sqlfiles(sqlfiles, conninfo, flavor)
 
-    current_version = swh_db_version(conninfo)
-    assert current_version is not None
+    # populate the dbmodule table
+    swh_set_db_module(conninfo, modname)
+
+    current_db_version = swh_db_version(conninfo)
     dbflavor = swh_db_flavor(conninfo)
-    return True, current_version, dbflavor
+    return True, current_db_version, dbflavor
+
+
+def get_database_info(
+    conninfo: str,
+) -> Tuple[Optional[str], Optional[int], Optional[str]]:
+    """Get version, flavor and module of the db"""
+    dbmodule = swh_db_module(conninfo)
+    dbversion = swh_db_version(conninfo)
+    dbflavor = None
+    if dbversion is not None:
+        dbflavor = swh_db_flavor(conninfo)
+    return (dbmodule, dbversion, dbflavor)
 
 
 def parse_dsn_or_dbname(dsn_or_dbname: str) -> Dict[str, str]:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2018-2020  The Software Heritage developers
+# Copyright (C) 2018-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -200,6 +200,73 @@ def db_init(ctx, module, dbname, flavor):
             fg="red",
             bold=True,
         )
+
+
+@db.command(name="version", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
+@click.option(
+    "--all/--no-all",
+    "show_all",
+    help="Show version history.",
+    default=False,
+    show_default=True,
+)
+@click.pass_context
+def db_version(ctx, module, show_all):
+    """Print the database version for the Software Heritage.
+
+    Example::
+
+        swh db version -d swh-test
+
+    """
+    from swh.core.db.db_utils import get_database_info, import_swhmodule
+
+    # use the db cnx from the config file; the expected config entry is the
+    # given module name
+    cfg = ctx.obj["config"].get(module, {})
+    dbname = get_dburl_from_config(cfg)
+
+    if not dbname:
+        raise click.BadParameter(
+            "Missing the postgresql connection configuration. Either fix your "
+            "configuration file or use the --dbname option."
+        )
+
+    logger.debug("db_version dbname=%s", dbname)
+
+    db_module, db_version, db_flavor = get_database_info(dbname)
+    if db_module is None:
+        click.secho(
+            "WARNING the database does not have a dbmodule table.", fg="red", bold=True
+        )
+        db_module = module
+    assert db_module == module, f"{db_module} (in the db) != {module} (given)"
+
+    click.secho(f"module: {db_module}", fg="green", bold=True)
+
+    if db_flavor is not None:
+        click.secho(f"flavor: {db_flavor}", fg="green", bold=True)
+
+    # instantiate the data source to retrieve the current (expected) db version
+    datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
+    if datastore_factory:
+        datastore = datastore_factory(**cfg)
+        code_version = datastore.get_current_version()
+        click.secho(
+            f"current code version: {code_version}",
+            fg="green" if code_version == db_version else "red",
+            bold=True,
+        )
+
+    if not show_all:
+        click.secho(f"version: {db_version}", fg="green", bold=True)
+    else:
+        from swh.core.db.db_utils import swh_db_versions
+
+        versions = swh_db_versions(dbname)
+        for version, tstamp, desc in versions:
+            click.echo(f"{version} [{tstamp}] {desc}")
 
 
 def get_dburl_from_config(cfg):

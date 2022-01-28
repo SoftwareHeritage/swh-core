@@ -1,13 +1,11 @@
-# Copyright (C) 2019-2020  The Software Heritage developers
+# Copyright (C) 2019-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import copy
-import glob
-from os import path
+from datetime import datetime, timezone
 
-from click.testing import CliRunner
 import pytest
 
 from swh.core.cli.db import db as swhdb
@@ -16,9 +14,8 @@ from swh.core.db.pytest_plugin import postgresql_fact
 from swh.core.tests.test_cli import assert_section_contains
 
 
-@pytest.fixture
-def cli_runner():
-    return CliRunner()
+def now():
+    return datetime.now(tz=timezone.utc)
 
 
 def test_cli_swh_help(swhmain, cli_runner):
@@ -56,36 +53,6 @@ def test_cli_swh_db_help(swhmain, cli_runner):
     for section, snippets in help_db_snippets:
         for snippet in snippets:
             assert_section_contains(result.output, section, snippet)
-
-
-@pytest.fixture()
-def mock_package_sql(mocker, datadir):
-    """This bypasses the module manipulation to only returns the data test files.
-
-    For a given module `test.mod`, look for sql files in the directory `data/mod/*.sql`.
-
-    Typical usage::
-
-      def test_xxx(cli_runner, mock_package_sql):
-        conninfo = craft_conninfo(test_db, "new-db")
-        module_name = "test.cli"
-        # the command below will use sql scripts from swh/core/db/tests/data/cli/*.sql
-        cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
-    """
-    from swh.core.db.db_utils import get_sql_for_package
-    from swh.core.utils import numfile_sortkey as sortkey
-
-    def get_sql_for_package_mock(modname):
-        if modname.startswith("test."):
-            sqldir = modname.split(".", 1)[1]
-            return sorted(glob.glob(path.join(datadir, sqldir, "*.sql")), key=sortkey)
-        return get_sql_for_package(modname)
-
-    mock_sql_files = mocker.patch(
-        "swh.core.db.db_utils.get_sql_for_package", get_sql_for_package_mock
-    )
-
-    return mock_sql_files
 
 
 # We do not want the truncate behavior for those tests
