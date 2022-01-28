@@ -4,12 +4,22 @@
 # See top-level LICENSE file for more information
 
 import functools
+import glob
+from importlib import import_module
 import logging
+from os import path
 import re
-from typing import Optional, Union
+import subprocess
+from typing import Collection, Dict, Optional, Tuple, Union
 
 import psycopg2
 import psycopg2.extensions
+from psycopg2.extensions import connection as pgconnection
+from psycopg2.extensions import encodings as pgencodings
+from psycopg2.extensions import make_dsn
+from psycopg2.extensions import parse_dsn as _parse_dsn
+
+from swh.core.utils import numfile_sortkey as sortkey
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +52,7 @@ def jsonize(value):
     return value
 
 
-def connect_to_conninfo(
-    db_or_conninfo: Union[str, psycopg2.extensions.connection]
-) -> psycopg2.extensions.connection:
+def connect_to_conninfo(db_or_conninfo: Union[str, pgconnection]) -> pgconnection:
     """Connect to the database passed in argument
 
     Args:
@@ -56,7 +64,7 @@ def connect_to_conninfo(
     Raises:
         psycopg2.Error if the database doesn't exist
     """
-    if isinstance(db_or_conninfo, psycopg2.extensions.connection):
+    if isinstance(db_or_conninfo, pgconnection):
         return db_or_conninfo
 
     if "=" not in db_or_conninfo and "//" not in db_or_conninfo:
@@ -68,9 +76,7 @@ def connect_to_conninfo(
     return db
 
 
-def swh_db_version(
-    db_or_conninfo: Union[str, psycopg2.extensions.connection]
-) -> Optional[int]:
+def swh_db_version(db_or_conninfo: Union[str, pgconnection]) -> Optional[int]:
     """Retrieve the swh version of the database.
 
     If the database is not initialized, this logs a warning and returns None.
@@ -101,9 +107,7 @@ def swh_db_version(
         return None
 
 
-def swh_db_flavor(
-    db_or_conninfo: Union[str, psycopg2.extensions.connection]
-) -> Optional[str]:
+def swh_db_flavor(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
     """Retrieve the swh flavor of the database.
 
     If the database is not initialized, or the database doesn't support
@@ -237,7 +241,7 @@ def execute_values_generator(cur, sql, argslist, template=None, page_size=100):
     # there will be some decoding error because of stupid codec used, and Py3
     # doesn't implement % on bytes.
     if not isinstance(sql, bytes):
-        sql = sql.encode(psycopg2.extensions.encodings[cur.connection.encoding])
+        sql = sql.encode(pgencodings[cur.connection.encoding])
     pre, post = _split_sql(sql)
 
     for page in _paginate(argslist, page_size=page_size):
@@ -250,3 +254,149 @@ def execute_values_generator(cur, sql, argslist, template=None, page_size=100):
         parts[-1:] = post
         cur.execute(b"".join(parts))
         yield from cur
+
+
+def import_swhmodule(modname):
+    if not modname.startswith("swh."):
+        modname = f"swh.{modname}"
+    try:
+        m = import_module(modname)
+    except ImportError as exc:
+        logger.error(f"Could not load the {modname} module: {exc}")
+        return None
+    return m
+
+
+def get_sql_for_package(modname):
+    m = import_swhmodule(modname)
+    if m is None:
+        raise ValueError(f"Module {modname} cannot be loaded")
+    sqldir = path.join(path.dirname(m.__file__), "sql")
+    if not path.isdir(sqldir):
+        raise ValueError(
+            "Module {} does not provide a db schema " "(no sql/ dir)".format(modname)
+        )
+    return sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey)
+
+
+def populate_database_for_package(
+    modname: str, conninfo: str, flavor: Optional[str] = None
+) -> Tuple[bool, int, Optional[str]]:
+    """Populate the database, pointed at with ``conninfo``,
+    using the SQL files found in the package ``modname``.
+    Also fill the 'dbmodule' table with the given ``modname``.
+
+    Args:
+      modname: Name of the module of which we're loading the files
+      conninfo: connection info string for the SQL database
+      flavor: the module-specific flavor which we want to initialize the database under
+
+    Returns:
+      Tuple with three elements: whether the database has been initialized; the current
+      version of the database; if it exists, the flavor of the database.
+    """
+    current_version = swh_db_version(conninfo)
+    if current_version is not None:
+        dbflavor = swh_db_flavor(conninfo)
+        return False, current_version, dbflavor
+
+    sqlfiles = get_sql_for_package(modname)
+    sqlfiles = [fname for fname in sqlfiles if "-superuser-" not in fname]
+    execute_sqlfiles(sqlfiles, conninfo, flavor)
+
+    current_version = swh_db_version(conninfo)
+    assert current_version is not None
+    dbflavor = swh_db_flavor(conninfo)
+    return True, current_version, dbflavor
+
+
+def parse_dsn_or_dbname(dsn_or_dbname: str) -> Dict[str, str]:
+    """Parse a psycopg2 dsn, falling back to supporting plain database names as well"""
+    try:
+        return _parse_dsn(dsn_or_dbname)
+    except psycopg2.ProgrammingError:
+        # psycopg2 failed to parse the DSN; it's probably a database name,
+        # handle it as such
+        return _parse_dsn(f"dbname={dsn_or_dbname}")
+
+
+def init_admin_extensions(modname: str, conninfo: str) -> None:
+    """The remaining initialization process -- running -superuser- SQL files -- is done
+    using the given conninfo, thus connecting to the newly created database
+
+    """
+    sqlfiles = get_sql_for_package(modname)
+    sqlfiles = [fname for fname in sqlfiles if "-superuser-" in fname]
+    execute_sqlfiles(sqlfiles, conninfo)
+
+
+def create_database_for_package(
+    modname: str, conninfo: str, template: str = "template1"
+):
+    """Create the database pointed at with ``conninfo``, and initialize it using
+    -superuser- SQL files found in the package ``modname``.
+
+    Args:
+      modname: Name of the module of which we're loading the files
+      conninfo: connection info string or plain database name for the SQL database
+      template: the name of the database to connect to and use as template to create
+        the new database
+
+    """
+    # Use the given conninfo string, but with dbname replaced by the template dbname
+    # for the database creation step
+    creation_dsn = parse_dsn_or_dbname(conninfo)
+    dbname = creation_dsn["dbname"]
+    creation_dsn["dbname"] = template
+    logger.debug("db_create dbname=%s (from %s)", dbname, template)
+    subprocess.check_call(
+        [
+            "psql",
+            "--quiet",
+            "--no-psqlrc",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-d",
+            make_dsn(**creation_dsn),
+            "-c",
+            f'CREATE DATABASE "{dbname}"',
+        ]
+    )
+    init_admin_extensions(modname, conninfo)
+
+
+def execute_sqlfiles(
+    sqlfiles: Collection[str], conninfo: str, flavor: Optional[str] = None
+):
+    """Execute a list of SQL files on the database pointed at with ``conninfo``.
+
+    Args:
+      sqlfiles: List of SQL files to execute
+      conninfo: connection info string for the SQL database
+      flavor: the database flavor to initialize
+    """
+    psql_command = [
+        "psql",
+        "--quiet",
+        "--no-psqlrc",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-d",
+        conninfo,
+    ]
+
+    flavor_set = False
+    for sqlfile in sqlfiles:
+        logger.debug(f"execute SQL file {sqlfile} dbname={conninfo}")
+        subprocess.check_call(psql_command + ["-f", sqlfile])
+
+        if flavor is not None and not flavor_set and sqlfile.endswith("-flavor.sql"):
+            logger.debug("Setting database flavor %s", flavor)
+            query = f"insert into dbflavor (flavor) values ('{flavor}')"
+            subprocess.check_call(psql_command + ["-c", query])
+            flavor_set = True
+
+    if flavor is not None and not flavor_set:
+        logger.warn(
+            "Asked for flavor %s, but module does not support database flavors", flavor,
+        )

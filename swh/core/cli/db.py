@@ -5,8 +5,7 @@
 # See top-level LICENSE file for more information
 
 import logging
-from os import environ, path
-from typing import Collection, Dict, Optional, Tuple
+from os import environ
 import warnings
 
 import click
@@ -79,7 +78,7 @@ def db_create(module, dbname, template):
         swh db create -d postgresql://superuser:passwd@pghost:5433/swh-storage storage
 
     """
-
+    from swh.core.db.db_utils import create_database_for_package
     logger.debug("db_create %s dn_name=%s", module, dbname)
     create_database_for_package(module, dbname, template)
 
@@ -117,6 +116,7 @@ def db_init_admin(module: str, dbname: str) -> None:
           scheduler
 
     """
+    from swh.core.db.db_utils import init_admin_extensions
     logger.debug("db_init_admin %s dbname=%s", module, dbname)
     init_admin_extensions(module, dbname)
 
@@ -152,6 +152,7 @@ def db_init(module, dbname, flavor):
         swh db init --flavor read_replica -d swh-storage storage
 
     """
+    from swh.core.db.db_utils import populate_database_for_package
 
     logger.debug("db_init %s flavor=%s dbname=%s", module, flavor, dbname)
 
@@ -181,155 +182,12 @@ def db_init(module, dbname, flavor):
         )
 
 
-def get_sql_for_package(modname):
-    import glob
-    from importlib import import_module
-
-    from swh.core.utils import numfile_sortkey as sortkey
-
-    if not modname.startswith("swh."):
-        modname = "swh.{}".format(modname)
-    try:
-        m = import_module(modname)
-    except ImportError:
-        raise click.BadParameter("Unable to load module {}".format(modname))
-
-    sqldir = path.join(path.dirname(m.__file__), "sql")
-    if not path.isdir(sqldir):
+def get_dburl_from_config(cfg):
+    if cfg.get("cls") != "postgresql":
         raise click.BadParameter(
-            "Module {} does not provide a db schema " "(no sql/ dir)".format(modname)
+            "Configuration cls must be set to 'postgresql' for this command."
         )
-    return sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey)
-
-
-def populate_database_for_package(
-    modname: str, conninfo: str, flavor: Optional[str] = None
-) -> Tuple[bool, int, Optional[str]]:
-    """Populate the database, pointed at with ``conninfo``,
-    using the SQL files found in the package ``modname``.
-
-    Args:
-      modname: Name of the module of which we're loading the files
-      conninfo: connection info string for the SQL database
-      flavor: the module-specific flavor which we want to initialize the database under
-
-    Returns:
-      Tuple with three elements: whether the database has been initialized; the current
-      version of the database; if it exists, the flavor of the database.
-    """
-    from swh.core.db.db_utils import swh_db_flavor, swh_db_version
-
-    current_version = swh_db_version(conninfo)
-    if current_version is not None:
-        dbflavor = swh_db_flavor(conninfo)
-        return False, current_version, dbflavor
-
-    sqlfiles = get_sql_for_package(modname)
-    sqlfiles = [fname for fname in sqlfiles if "-superuser-" not in fname]
-    execute_sqlfiles(sqlfiles, conninfo, flavor)
-
-    current_version = swh_db_version(conninfo)
-    assert current_version is not None
-    dbflavor = swh_db_flavor(conninfo)
-    return True, current_version, dbflavor
-
-
-def parse_dsn_or_dbname(dsn_or_dbname: str) -> Dict[str, str]:
-    """Parse a psycopg2 dsn, falling back to supporting plain database names as well"""
-    import psycopg2
-    from psycopg2.extensions import parse_dsn as _parse_dsn
-
-    try:
-        return _parse_dsn(dsn_or_dbname)
-    except psycopg2.ProgrammingError:
-        # psycopg2 failed to parse the DSN; it's probably a database name,
-        # handle it as such
-        return _parse_dsn(f"dbname={dsn_or_dbname}")
-
-
-def init_admin_extensions(modname: str, conninfo: str) -> None:
-    """The remaining initialization process -- running -superuser- SQL files -- is done
-    using the given conninfo, thus connecting to the newly created database
-
-    """
-    sqlfiles = get_sql_for_package(modname)
-    sqlfiles = [fname for fname in sqlfiles if "-superuser-" in fname]
-    execute_sqlfiles(sqlfiles, conninfo)
-
-
-def create_database_for_package(
-    modname: str, conninfo: str, template: str = "template1"
-):
-    """Create the database pointed at with ``conninfo``, and initialize it using
-    -superuser- SQL files found in the package ``modname``.
-
-    Args:
-      modname: Name of the module of which we're loading the files
-      conninfo: connection info string or plain database name for the SQL database
-      template: the name of the database to connect to and use as template to create
-        the new database
-
-    """
-    import subprocess
-
-    from psycopg2.extensions import make_dsn
-
-    # Use the given conninfo string, but with dbname replaced by the template dbname
-    # for the database creation step
-    creation_dsn = parse_dsn_or_dbname(conninfo)
-    dbname = creation_dsn["dbname"]
-    creation_dsn["dbname"] = template
-    logger.debug("db_create dbname=%s (from %s)", dbname, template)
-    subprocess.check_call(
-        [
-            "psql",
-            "--quiet",
-            "--no-psqlrc",
-            "-v",
-            "ON_ERROR_STOP=1",
-            "-d",
-            make_dsn(**creation_dsn),
-            "-c",
-            f'CREATE DATABASE "{dbname}"',
-        ]
-    )
-    init_admin_extensions(modname, conninfo)
-
-
-def execute_sqlfiles(
-    sqlfiles: Collection[str], conninfo: str, flavor: Optional[str] = None
-):
-    """Execute a list of SQL files on the database pointed at with ``conninfo``.
-
-    Args:
-      sqlfiles: List of SQL files to execute
-      conninfo: connection info string for the SQL database
-      flavor: the database flavor to initialize
-    """
-    import subprocess
-
-    psql_command = [
-        "psql",
-        "--quiet",
-        "--no-psqlrc",
-        "-v",
-        "ON_ERROR_STOP=1",
-        "-d",
-        conninfo,
-    ]
-
-    flavor_set = False
-    for sqlfile in sqlfiles:
-        logger.debug(f"execute SQL file {sqlfile} dbname={conninfo}")
-        subprocess.check_call(psql_command + ["-f", sqlfile])
-
-        if flavor is not None and not flavor_set and sqlfile.endswith("-flavor.sql"):
-            logger.debug("Setting database flavor %s", flavor)
-            query = f"insert into dbflavor (flavor) values ('{flavor}')"
-            subprocess.check_call(psql_command + ["-c", query])
-            flavor_set = True
-
-    if flavor is not None and not flavor_set:
-        logger.warn(
-            "Asked for flavor %s, but module does not support database flavors", flavor,
-        )
+    if "args" in cfg:
+        # for bw compat
+        cfg = cfg["args"]
+    return cfg.get("db")

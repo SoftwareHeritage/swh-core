@@ -65,7 +65,7 @@ def mock_package_sql(mocker, datadir):
     """
     from swh.core.utils import numfile_sortkey as sortkey
 
-    mock_sql_files = mocker.patch("swh.core.cli.db.get_sql_for_package")
+    mock_sql_files = mocker.patch("swh.core.db.db_utils.get_sql_for_package")
     sql_files = sorted(glob.glob(path.join(datadir, "cli", "*.sql")), key=sortkey)
     mock_sql_files.return_value = sql_files
     return mock_sql_files
