@@ -79,6 +79,7 @@ def db_create(module, dbname, template):
 
     """
     from swh.core.db.db_utils import create_database_for_package
+
     logger.debug("db_create %s dn_name=%s", module, dbname)
     create_database_for_package(module, dbname, template)
 
@@ -117,6 +118,7 @@ def db_init_admin(module: str, dbname: str) -> None:
 
     """
     from swh.core.db.db_utils import init_admin_extensions
+
     logger.debug("db_init_admin %s dbname=%s", module, dbname)
     init_admin_extensions(module, dbname)
 
@@ -127,32 +129,50 @@ def db_init_admin(module: str, dbname: str) -> None:
     "--dbname",
     "--db-name",
     "-d",
-    help="Database name.",
-    default="softwareheritage-dev",
-    show_default=True,
+    help="Database name or connection URI.",
+    default=None,
+    show_default=False,
 )
 @click.option(
     "--flavor", help="Database flavor.", default=None,
 )
-def db_init(module, dbname, flavor):
+@click.pass_context
+def db_init(ctx, module, dbname, flavor):
     """Initialize a database for the Software Heritage <module>.
+
+    The database connection string comes from the configuration file (see
+    option ``--config-file`` in ``swh db --help``) in the section named after
+    the MODULE argument.
 
     Example::
 
-        swh db init -d swh-test storage
+        $ cat conf.yml
+        storage:
+          cls: postgresql
+          db: postgresql://user:passwd@pghost:5433/swh-storage
+          objstorage:
+            cls: memory
 
-    If you want to specify non-default postgresql connection parameters,
-    please provide them using standard environment variables.
-    See psql(1) man page (section ENVIRONMENTS) for details.
+        $ swh db -C conf.yml init storage  # or
+        $ SWH_CONFIG_FILENAME=conf.yml swh db init storage
 
-    Examples::
-
-        PGPORT=5434 swh db init indexer
-        swh db init -d postgresql://user:passwd@pghost:5433/swh-storage storage
-        swh db init --flavor read_replica -d swh-storage storage
+    Note that the connection string can also be passed directly using the
+    '--db-name' option, but this usage is about to be deprecated.
 
     """
     from swh.core.db.db_utils import populate_database_for_package
+
+    if dbname is None:
+        # use the db cnx from the config file; the expected config entry is the
+        # given module name
+        cfg = ctx.obj["config"].get(module, {})
+        dbname = get_dburl_from_config(cfg)
+
+    if not dbname:
+        raise click.BadParameter(
+            "Missing the postgresql connection configuration. Either fix your "
+            "configuration file or use the --dbname option."
+        )
 
     logger.debug("db_init %s flavor=%s dbname=%s", module, flavor, dbname)
 
