@@ -10,7 +10,6 @@ import pytest
 
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
-from swh.core.db.pytest_plugin import postgresql_fact
 from swh.core.tests.test_cli import assert_section_contains
 
 
@@ -55,19 +54,13 @@ def test_cli_swh_db_help(swhmain, cli_runner):
             assert_section_contains(result.output, section, snippet)
 
 
-# We do not want the truncate behavior for those tests
-test_db = postgresql_fact(
-    "postgresql_proc", dbname="clidb", no_truncate_tables={"dbversion", "origin"}
-)
-
-
 @pytest.fixture
-def swh_db_cli(cli_runner, monkeypatch, test_db):
+def swh_db_cli(cli_runner, monkeypatch, postgresql):
     """This initializes a cli_runner and sets the correct environment variable expected by
        the cli to run appropriately (when not specifying the --dbname flag)
 
     """
-    db_params = test_db.get_dsn_parameters()
+    db_params = postgresql.get_dsn_parameters()
     monkeypatch.setenv("PGHOST", db_params["host"])
     monkeypatch.setenv("PGUSER", db_params["user"])
     monkeypatch.setenv("PGPORT", db_params["port"])
@@ -87,13 +80,13 @@ def craft_conninfo(test_db, dbname=None) -> str:
     return "postgresql://{user}@{host}:{port}/{dbname}".format(**params)
 
 
-def test_cli_swh_db_create_and_init_db(cli_runner, test_db, mock_package_sql):
+def test_cli_swh_db_create_and_init_db(cli_runner, postgresql, mock_package_sql):
     """Create a db then initializing it should be ok
 
     """
     module_name = "test.cli"
 
-    conninfo = craft_conninfo(test_db, "new-db")
+    conninfo = craft_conninfo(postgresql, "new-db")
     # This creates the db and installs the necessary admin extensions
     result = cli_runner.invoke(swhdb, ["create", module_name, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -112,13 +105,13 @@ def test_cli_swh_db_create_and_init_db(cli_runner, test_db, mock_package_sql):
 
 
 def test_cli_swh_db_initialization_fail_without_creation_first(
-    cli_runner, test_db, mock_package_sql
+    cli_runner, postgresql, mock_package_sql
 ):
     """Init command on an inexisting db cannot work
 
     """
     module_name = "test.cli"  # it's mocked here
-    conninfo = craft_conninfo(test_db, "inexisting-db")
+    conninfo = craft_conninfo(postgresql, "inexisting-db")
 
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     # Fails because we cannot connect to an inexisting db
@@ -126,7 +119,7 @@ def test_cli_swh_db_initialization_fail_without_creation_first(
 
 
 def test_cli_swh_db_initialization_fail_without_extension(
-    cli_runner, test_db, mock_package_sql
+    cli_runner, postgresql, mock_package_sql
 ):
     """Init command cannot work without privileged extension.
 
@@ -134,7 +127,7 @@ def test_cli_swh_db_initialization_fail_without_extension(
 
     """
     module_name = "test.cli"  # it's mocked here
-    conninfo = craft_conninfo(test_db)
+    conninfo = craft_conninfo(postgresql)
 
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     # Fails as the function `public.digest` is not installed, init-admin calls is needed
@@ -143,13 +136,13 @@ def test_cli_swh_db_initialization_fail_without_extension(
 
 
 def test_cli_swh_db_initialization_works_with_flags(
-    cli_runner, test_db, mock_package_sql
+    cli_runner, postgresql, mock_package_sql
 ):
     """Init commands with carefully crafted libpq conninfo works
 
     """
     module_name = "test.cli"  # it's mocked here
-    conninfo = craft_conninfo(test_db)
+    conninfo = craft_conninfo(postgresql)
 
     result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -159,13 +152,13 @@ def test_cli_swh_db_initialization_works_with_flags(
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(test_db.dsn).cursor() as cur:
+    with BaseDb.connect(postgresql.dsn).cursor() as cur:
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1
 
 
-def test_cli_swh_db_initialization_with_env(swh_db_cli, mock_package_sql, test_db):
+def test_cli_swh_db_initialization_with_env(swh_db_cli, mock_package_sql, postgresql):
     """Init commands with standard environment variables works
 
     """
@@ -183,13 +176,13 @@ def test_cli_swh_db_initialization_with_env(swh_db_cli, mock_package_sql, test_d
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(test_db.dsn).cursor() as cur:
+    with BaseDb.connect(postgresql.dsn).cursor() as cur:
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1
 
 
-def test_cli_swh_db_initialization_idempotent(swh_db_cli, mock_package_sql, test_db):
+def test_cli_swh_db_initialization_idempotent(swh_db_cli, mock_package_sql, postgresql):
     """Multiple runs of the init commands are idempotent
 
     """
@@ -218,7 +211,7 @@ def test_cli_swh_db_initialization_idempotent(swh_db_cli, mock_package_sql, test
 
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(test_db.dsn).cursor() as cur:
+    with BaseDb.connect(postgresql.dsn).cursor() as cur:
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1
