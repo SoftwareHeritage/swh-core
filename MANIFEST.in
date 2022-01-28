@@ -3,5 +3,6 @@ include conftest.py
 include requirements*.txt
 include version.txt
 recursive-include swh py.typed
+recursive-include swh/core/db/tests/data/ *
 recursive-include swh/core/tests/data/ *
 recursive-include swh/core/tests/fixture/data/ *

@@ -62,12 +62,29 @@ def test_cli_swh_db_help(swhmain, cli_runner):
 def mock_package_sql(mocker, datadir):
     """This bypasses the module manipulation to only returns the data test files.
 
+    For a given module `test.mod`, look for sql files in the directory `data/mod/*.sql`.
+
+    Typical usage::
+
+      def test_xxx(cli_runner, mock_package_sql):
+        conninfo = craft_conninfo(test_db, "new-db")
+        module_name = "test.cli"
+        # the command below will use sql scripts from swh/core/db/tests/data/cli/*.sql
+        cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     """
+    from swh.core.db.db_utils import get_sql_for_package
     from swh.core.utils import numfile_sortkey as sortkey
 
-    mock_sql_files = mocker.patch("swh.core.db.db_utils.get_sql_for_package")
-    sql_files = sorted(glob.glob(path.join(datadir, "cli", "*.sql")), key=sortkey)
-    mock_sql_files.return_value = sql_files
+    def get_sql_for_package_mock(modname):
+        if modname.startswith("test."):
+            sqldir = modname.split(".", 1)[1]
+            return sorted(glob.glob(path.join(datadir, sqldir, "*.sql")), key=sortkey)
+        return get_sql_for_package(modname)
+
+    mock_sql_files = mocker.patch(
+        "swh.core.db.db_utils.get_sql_for_package", get_sql_for_package_mock
+    )
+
     return mock_sql_files
 
 
@@ -107,7 +124,7 @@ def test_cli_swh_db_create_and_init_db(cli_runner, test_db, mock_package_sql):
     """Create a db then initializing it should be ok
 
     """
-    module_name = "something"
+    module_name = "test.cli"
 
     conninfo = craft_conninfo(test_db, "new-db")
     # This creates the db and installs the necessary admin extensions
@@ -133,7 +150,7 @@ def test_cli_swh_db_initialization_fail_without_creation_first(
     """Init command on an inexisting db cannot work
 
     """
-    module_name = "anything"  # it's mocked here
+    module_name = "test.cli"  # it's mocked here
     conninfo = craft_conninfo(test_db, "inexisting-db")
 
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
@@ -149,7 +166,7 @@ def test_cli_swh_db_initialization_fail_without_extension(
        In this test, the schema needs privileged extension to work.
 
     """
-    module_name = "anything"  # it's mocked here
+    module_name = "test.cli"  # it's mocked here
     conninfo = craft_conninfo(test_db)
 
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
@@ -164,7 +181,7 @@ def test_cli_swh_db_initialization_works_with_flags(
     """Init commands with carefully crafted libpq conninfo works
 
     """
-    module_name = "anything"  # it's mocked here
+    module_name = "test.cli"  # it's mocked here
     conninfo = craft_conninfo(test_db)
 
     result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
@@ -185,7 +202,7 @@ def test_cli_swh_db_initialization_with_env(swh_db_cli, mock_package_sql, test_d
     """Init commands with standard environment variables works
 
     """
-    module_name = "anything"  # it's mocked here
+    module_name = "test.cli"  # it's mocked here
     cli_runner, db_params = swh_db_cli
     result = cli_runner.invoke(
         swhdb, ["init-admin", module_name, "--dbname", db_params["dbname"]]
@@ -209,7 +226,7 @@ def test_cli_swh_db_initialization_idempotent(swh_db_cli, mock_package_sql, test
     """Multiple runs of the init commands are idempotent
 
     """
-    module_name = "anything"  # mocked
+    module_name = "test.cli"  # mocked
     cli_runner, db_params = swh_db_cli
 
     result = cli_runner.invoke(
