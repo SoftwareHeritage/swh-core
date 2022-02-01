@@ -3,7 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from datetime import datetime
+from datetime import datetime, timezone
 import functools
 import glob
 from importlib import import_module
@@ -23,6 +23,10 @@ from psycopg2.extensions import parse_dsn as _parse_dsn
 from swh.core.utils import numfile_sortkey as sortkey
 
 logger = logging.getLogger(__name__)
+
+
+def now():
+    return datetime.now(tz=timezone.utc)
 
 
 def stored_procedure(stored_proc):
@@ -201,6 +205,36 @@ def swh_set_db_module(db_or_conninfo: Union[str, pgconnection], module: str) -> 
     with db.cursor() as c:
         query = "insert into dbmodule(dbmodule) values (%s)"
         c.execute(query, (module,))
+    db.commit()
+
+
+def swh_set_db_version(
+    db_or_conninfo: Union[str, pgconnection],
+    version: int,
+    ts: Optional[datetime] = None,
+    desc: str = "Work in progress",
+) -> None:
+    """Set the version of the database.
+
+    Fails if the dbversion table does not exists.
+
+    Args:
+      db_or_conninfo: A database connection, or a database connection info string
+      version: the version to add
+    """
+    try:
+        db = connect_to_conninfo(db_or_conninfo)
+    except psycopg2.Error:
+        logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        # Database not initialized
+        return None
+    if ts is None:
+        ts = now()
+    with db.cursor() as c:
+        query = (
+            "insert into dbversion(version, release, description) values (%s, %s, %s)"
+        )
+        c.execute(query, (version, ts, desc))
     db.commit()
 
 

@@ -4,17 +4,15 @@
 # See top-level LICENSE file for more information
 
 import copy
-from datetime import datetime, timezone
+from unittest.mock import MagicMock
 
 import pytest
+import yaml
 
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
+from swh.core.db.db_utils import import_swhmodule
 from swh.core.tests.test_cli import assert_section_contains
-
-
-def now():
-    return datetime.now(tz=timezone.utc)
 
 
 def test_cli_swh_help(swhmain, cli_runner):
@@ -212,6 +210,49 @@ def test_cli_swh_db_initialization_idempotent(swh_db_cli, mock_package_sql, post
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
     with BaseDb.connect(postgresql.dsn).cursor() as cur:
+        cur.execute("select * from origin")
+        origins = cur.fetchall()
+        assert len(origins) == 1
+
+
+def test_cli_swh_db_create_and_init_db_new_api(
+    cli_runner, postgresql, mock_package_sql, mocker, tmp_path
+):
+    """Create a db then initializing it should be ok for a "new style" datastore
+
+    """
+    module_name = "test.cli_new"
+
+    def import_swhmodule_mock(modname):
+        if modname.startswith("test."):
+
+            def get_datastore(cls, **kw):
+                # XXX probably not the best way of doing this...
+                return MagicMock(get_current_version=lambda: 42)
+
+            return MagicMock(name=modname, get_datastore=get_datastore)
+
+        return import_swhmodule(modname)
+
+    mocker.patch("swh.core.db.db_utils.import_swhmodule", import_swhmodule_mock)
+    conninfo = craft_conninfo(postgresql)
+
+    # This initializes the schema and data
+    cfgfile = tmp_path / "config.yml"
+    cfgfile.write_text(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
+    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", module_name])
+
+    import traceback
+
+    assert (
+        result.exit_code == 0
+    ), f"Unexpected output: {traceback.print_tb(result.exc_info[2])}"
+
+    # the origin value in the scripts uses a hash function (which implementation wise
+    # uses a function from the pgcrypt extension, installed during db creation step)
+    with BaseDb.connect(conninfo).cursor() as cur:
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1

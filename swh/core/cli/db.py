@@ -136,8 +136,11 @@ def db_init_admin(module: str, dbname: str) -> None:
 @click.option(
     "--flavor", help="Database flavor.", default=None,
 )
+@click.option(
+    "--initial-version", help="Database initial version.", default=1, show_default=True
+)
 @click.pass_context
-def db_init(ctx, module, dbname, flavor):
+def db_init(ctx, module, dbname, flavor, initial_version):
     """Initialize a database for the Software Heritage <module>.
 
     The database connection string comes from the configuration file (see
@@ -160,8 +163,14 @@ def db_init(ctx, module, dbname, flavor):
     '--db-name' option, but this usage is about to be deprecated.
 
     """
-    from swh.core.db.db_utils import populate_database_for_package
+    from swh.core.db.db_utils import (
+        get_database_info,
+        import_swhmodule,
+        populate_database_for_package,
+        swh_set_db_version,
+    )
 
+    cfg = None
     if dbname is None:
         # use the db cnx from the config file; the expected config entry is the
         # given module name
@@ -179,6 +188,42 @@ def db_init(ctx, module, dbname, flavor):
     initialized, dbversion, dbflavor = populate_database_for_package(
         module, dbname, flavor
     )
+    if dbversion is None:
+        if cfg is not None:
+            # db version has not been populated by sql init scripts (new style),
+            # let's do it; instantiate the data source to retrieve the current
+            # (expected) db version
+            datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
+            if datastore_factory:
+                datastore = datastore_factory(**cfg)
+                try:
+                    get_current_version = datastore.get_current_version
+                except AttributeError:
+                    logger.warning(
+                        "Datastore %s does not implement the "
+                        "'get_current_version()' method",
+                        datastore,
+                    )
+                else:
+                    code_version = get_current_version()
+                    logger.info(
+                        "Initializing database version to %s from the %s datastore",
+                        code_version,
+                        module,
+                    )
+                    swh_set_db_version(dbname, code_version, desc="DB initialization")
+
+    dbversion = get_database_info(dbname)[1]
+    if dbversion is None:
+        logger.info(
+            "Initializing database version to %s "
+            "from the command line option --initial-version",
+            initial_version,
+        )
+        swh_set_db_version(dbname, initial_version, desc="DB initialization")
+
+    dbversion = get_database_info(dbname)[1]
+    assert dbversion is not None
 
     # TODO: Ideally migrate the version from db_version to the latest
     # db version

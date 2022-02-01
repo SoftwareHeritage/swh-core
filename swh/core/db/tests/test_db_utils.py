@@ -9,9 +9,9 @@ import pytest
 
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
-from swh.core.db.db_utils import get_database_info, swh_db_module, swh_db_versions
+from swh.core.db.db_utils import get_database_info, now, swh_db_module, swh_db_versions
 
-from .test_cli import craft_conninfo, now
+from .test_cli import craft_conninfo
 
 
 @pytest.mark.parametrize("module", ["test.cli", "test.cli_new"])
@@ -27,57 +27,52 @@ def test_db_utils_versions(cli_runner, postgresql, mock_package_sql, module):
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
-    result = cli_runner.invoke(swhdb, ["init", module, "--dbname", conninfo])
+    result = cli_runner.invoke(
+        swhdb, ["init", module, "--dbname", conninfo, "--initial-version", 10]
+    )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
+
+    # check the swh_db_module() function
+    assert swh_db_module(conninfo) == module
 
     # the dbversion and dbmodule tables exists and are populated
     dbmodule, dbversion, dbflavor = get_database_info(conninfo)
-    assert dbmodule == module
-    if module == "test.cli":
-        # old style: backend init script set the db version
-        assert dbversion == 1
-    else:
-        # new style: they do not (but we do not have support for this in swh.core yet)
-        assert dbversion is None
-    assert dbflavor is None
-
-    # check also the swh_db_module() function
-    assert swh_db_module(conninfo) == module
-
     # check also the swh_db_versions() function
     versions = swh_db_versions(conninfo)
+
+    assert dbmodule == module
+    assert dbversion == 10
+    assert dbflavor is None
+    # check also the swh_db_versions() function
+    versions = swh_db_versions(conninfo)
+    assert len(versions) == 1
+    assert versions[0][0] == 10
     if module == "test.cli":
-        assert len(versions) == 1
-        assert versions[0][0] == 1
         assert versions[0][1] == datetime.fromisoformat(
             "2016-02-22T15:56:28.358587+00:00"
         )
         assert versions[0][2] == "Work In Progress"
     else:
-        assert not versions
+        # new scheme but with no datastore (so no version support from there)
+        assert versions[0][2] == "DB initialization"
+
     # add a few versions in dbversion
     cnx = BaseDb.connect(conninfo)
     with cnx.transaction() as cur:
-        if module == "test.cli_new":
-            # add version 1 to make it simpler for checks below
-            cur.execute(
-                "insert into dbversion(version, release, description) "
-                "values(1, NOW(), 'Wotk in progress')"
-            )
         cur.executemany(
             "insert into dbversion(version, release, description) values (%s, %s, %s)",
-            [(i, now(), f"Upgrade to version {i}") for i in range(2, 6)],
+            [(i, now(), f"Upgrade to version {i}") for i in range(11, 15)],
         )
 
     dbmodule, dbversion, dbflavor = get_database_info(conninfo)
     assert dbmodule == module
-    assert dbversion == 5
+    assert dbversion == 14
     assert dbflavor is None
 
     versions = swh_db_versions(conninfo)
     assert len(versions) == 5
     for i, (version, ts, desc) in enumerate(versions):
-        assert version == (5 - i)  # these are in reverse order
-        if version > 1:
+        assert version == (14 - i)  # these are in reverse order
+        if version > 10:
             assert desc == f"Upgrade to version {version}"
             assert (now() - ts) < timedelta(seconds=1)
