@@ -314,6 +314,90 @@ def db_version(ctx, module, show_all):
             click.echo(f"{version} [{tstamp}] {desc}")
 
 
+@db.command(name="upgrade", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
+@click.option(
+    "--to-version",
+    type=int,
+    help="Upgrade up to version VERSION",
+    metavar="VERSION",
+    default=None,
+)
+@click.pass_context
+def db_upgrade(ctx, module, to_version):
+    """Upgrade the database for given module (to a given version if specified).
+
+    Examples::
+
+        swh db upgrade storage
+        swg db upgrade scheduler --to-version=10
+
+    """
+    from swh.core.db.db_utils import (
+        get_database_info,
+        import_swhmodule,
+        swh_db_upgrade,
+        swh_set_db_module,
+    )
+
+    # use the db cnx from the config file; the expected config entry is the
+    # given module name
+    cfg = ctx.obj["config"].get(module, {})
+    dbname = get_dburl_from_config(cfg)
+
+    if not dbname:
+        raise click.BadParameter(
+            "Missing the postgresql connection configuration. Either fix your "
+            "configuration file or use the --dbname option."
+        )
+
+    logger.debug("db_version dbname=%s", dbname)
+
+    db_module, db_version, db_flavor = get_database_info(dbname)
+    if db_module is None:
+        click.secho(
+            "Warning: the database does not have a dbmodule table.",
+            fg="yellow",
+            bold=True,
+        )
+        if not click.confirm(
+            f"Write the module information ({module}) in the database?", default=True
+        ):
+            raise click.BadParameter("Migration aborted.")
+        swh_set_db_module(dbname, module)
+        db_module = module
+
+    if db_module != module:
+        raise click.BadParameter(
+            f"Error: the given module ({module}) does not match the value "
+            f"stored in the database ({db_module})."
+        )
+
+    # instantiate the data source to retrieve the current (expected) db version
+    datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
+    if not datastore_factory:
+        raise click.UsageError(
+            "You cannot use this command on old-style datastore backend {db_module}"
+        )
+    datastore = datastore_factory(**cfg)
+    ds_version = datastore.get_current_version()
+    if to_version is None:
+        to_version = ds_version
+    if to_version > ds_version:
+        raise click.UsageError(
+            f"The target version {to_version} is larger than the current version "
+            f"{ds_version} of the datastore backend {db_module}"
+        )
+
+    new_db_version = swh_db_upgrade(dbname, module, to_version)
+    click.secho(f"Migration to version {new_db_version} done", fg="green")
+    if new_db_version < ds_version:
+        click.secho(
+            f"Warning: migration was not complete: the current version is {ds_version}",
+            fg="yellow",
+        )
+
+
 def get_dburl_from_config(cfg):
     if cfg.get("cls") != "postgresql":
         raise click.BadParameter(

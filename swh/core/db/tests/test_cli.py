@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import copy
+import traceback
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,7 +12,7 @@ import yaml
 
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
-from swh.core.db.db_utils import import_swhmodule
+from swh.core.db.db_utils import import_swhmodule, swh_db_module
 from swh.core.tests.test_cli import assert_section_contains
 
 
@@ -244,8 +245,6 @@ def test_cli_swh_db_create_and_init_db_new_api(
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", module_name])
 
-    import traceback
-
     assert (
         result.exit_code == 0
     ), f"Unexpected output: {traceback.print_tb(result.exc_info[2])}"
@@ -256,3 +255,102 @@ def test_cli_swh_db_create_and_init_db_new_api(
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1
+
+
+def test_cli_swh_db_upgrade_new_api(
+    cli_runner, postgresql, mock_package_sql, mocker, tmp_path
+):
+    """Upgrade scenario for a "new style" datastore
+
+    """
+    module_name = "test.cli_new"
+
+    from unittest.mock import MagicMock
+
+    from swh.core.db.db_utils import import_swhmodule, swh_db_version
+
+    # the `current_version` variable is the version that will be returned by
+    # any call to `get_current_version()` in this test session, thanks to the
+    # local mocked version of import_swhmodule() below.
+    current_version = 1
+
+    def import_swhmodule_mock(modname):
+        if modname.startswith("test."):
+
+            def get_datastore(cls, **kw):
+                # XXX probably not the best way of doing this...
+                return MagicMock(get_current_version=lambda: current_version)
+
+            return MagicMock(name=modname, get_datastore=get_datastore)
+
+        return import_swhmodule(modname)
+
+    mocker.patch("swh.core.db.db_utils.import_swhmodule", import_swhmodule_mock)
+    conninfo = craft_conninfo(postgresql)
+
+    # This initializes the schema and data
+    cfgfile = tmp_path / "config.yml"
+    cfgfile.write_text(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
+    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", module_name])
+
+    assert (
+        result.exit_code == 0
+    ), f"Unexpected output: {traceback.print_tb(result.exc_info[2])}"
+
+    assert swh_db_version(conninfo) == 1
+
+    # the upgrade should not do anything because the datastore does advertise
+    # version 1
+    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
+    assert swh_db_version(conninfo) == 1
+
+    # advertise current version as 3, a simple upgrade should get us there, but
+    # no further
+    current_version = 3
+    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
+    assert swh_db_version(conninfo) == 3
+
+    # an attempt to go further should not do anything
+    result = cli_runner.invoke(
+        swhdb, ["-C", cfgfile, "upgrade", module_name, "--to-version", 5]
+    )
+    assert swh_db_version(conninfo) == 3
+    # an attempt to go lower should not do anything
+    result = cli_runner.invoke(
+        swhdb, ["-C", cfgfile, "upgrade", module_name, "--to-version", 2]
+    )
+    assert swh_db_version(conninfo) == 3
+
+    # advertise current version as 6, an upgrade with --to-version 4 should
+    # stick to the given version 4 and no further
+    current_version = 6
+    result = cli_runner.invoke(
+        swhdb, ["-C", cfgfile, "upgrade", module_name, "--to-version", 4]
+    )
+    assert swh_db_version(conninfo) == 4
+    assert "migration was not complete" in result.output
+
+    # attempt to upgrade to a newer version than current code version fails
+    result = cli_runner.invoke(
+        swhdb,
+        ["-C", cfgfile, "upgrade", module_name, "--to-version", current_version + 1],
+    )
+    assert result.exit_code != 0
+    assert swh_db_version(conninfo) == 4
+
+    cnx = BaseDb.connect(conninfo)
+    with cnx.transaction() as cur:
+        cur.execute("drop table dbmodule")
+    assert swh_db_module(conninfo) is None
+
+    # db migration should recreate the missing dbmodule table
+    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
+    assert result.exit_code == 0
+    assert "Warning: the database does not have a dbmodule table." in result.output
+    assert (
+        "Write the module information (test.cli_new) in the database? [Y/n]"
+        in result.output
+    )
+    assert swh_db_module(conninfo) == module_name

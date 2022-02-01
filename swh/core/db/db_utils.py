@@ -150,6 +150,78 @@ def swh_db_versions(
         return None
 
 
+def swh_db_upgrade(
+    conninfo: str, modname: str, to_version: Optional[int] = None
+) -> int:
+    """Upgrade the database at `conninfo` for module `modname`
+
+    This will run migration scripts found in the `sql/upgrades` subdirectory of
+    the module `modname`. By default, this will upgrade to the latest declared version.
+
+    Args:
+      conninfo: A database connection, or a database connection info string
+      modname: datastore module the database stores content for
+      to_version: if given, update the database to this version rather than the latest
+
+    """
+
+    if to_version is None:
+        to_version = 99999999
+
+    db_module, db_version, db_flavor = get_database_info(conninfo)
+    if db_version is None:
+        raise ValueError("Unable to retrieve the current version of the database")
+    if db_module is None:
+        raise ValueError("Unable to retrieve the module of the database")
+    if db_module != modname:
+        raise ValueError(
+            "The stored module of the database is different than the given one"
+        )
+
+    sqlfiles = [
+        fname
+        for fname in get_sql_for_package(modname, upgrade=True)
+        if db_version < int(path.splitext(path.basename(fname))[0]) <= to_version
+    ]
+
+    for sqlfile in sqlfiles:
+        new_version = int(path.splitext(path.basename(sqlfile))[0])
+        logger.info("Executing migration script {sqlfile}")
+        if db_version is not None and (new_version - db_version) > 1:
+            logger.error(
+                f"There are missing migration steps between {db_version} and "
+                f"{new_version}. It might be expected but it most unlikely is not. "
+                "Will stop here."
+            )
+            return db_version
+
+        execute_sqlfiles([sqlfile], conninfo, db_flavor)
+
+        # check if the db version has been updated by the upgrade script
+        db_version = swh_db_version(conninfo)
+        assert db_version is not None
+        if db_version == new_version:
+            # nothing to do, upgrade script did the job
+            pass
+        elif db_version == new_version - 1:
+            # it has not (new style), so do it
+            swh_set_db_version(
+                conninfo,
+                new_version,
+                desc=f"Upgraded to version {new_version} using {sqlfile}",
+            )
+            db_version = swh_db_version(conninfo)
+        else:
+            # upgrade script did it wrong
+            logger.error(
+                f"The upgrade script {sqlfile} did not update the dbversion table "
+                f"consistently ({db_version} vs. expected {new_version}). "
+                "Will stop migration here. Please check your migration scripts."
+            )
+            return db_version
+    return new_version
+
+
 def swh_db_module(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
     """Retrieve the swh module used to create the database.
 
@@ -183,7 +255,9 @@ def swh_db_module(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
     return None
 
 
-def swh_set_db_module(db_or_conninfo: Union[str, pgconnection], module: str) -> None:
+def swh_set_db_module(
+    db_or_conninfo: Union[str, pgconnection], module: str, force=False
+) -> None:
     """Set the swh module used to create the database.
 
     Fails if the dbmodule is already set or the table does not exist.
@@ -192,9 +266,25 @@ def swh_set_db_module(db_or_conninfo: Union[str, pgconnection], module: str) -> 
       db_or_conninfo: A database connection, or a database connection info string
       module: the swh module to register (without the leading 'swh.')
     """
+    update = False
     if module.startswith("swh."):
         module = module[4:]
 
+    current_module = swh_db_module(db_or_conninfo)
+    if current_module is not None:
+        if current_module == module:
+            logger.warning("The database module is already set to %s", module)
+            return
+
+        if not force:
+            raise ValueError(
+                "The database module is already set to a value %s "
+                "different than given %s",
+                current_module,
+                module,
+            )
+        # force is True
+        update = True
     try:
         db = connect_to_conninfo(db_or_conninfo)
     except psycopg2.Error:
@@ -202,8 +292,16 @@ def swh_set_db_module(db_or_conninfo: Union[str, pgconnection], module: str) -> 
         # Database not initialized
         return None
 
+    sqlfiles = [
+        fname for fname in get_sql_for_package("swh.core.db") if "dbmodule" in fname
+    ]
+    execute_sqlfiles(sqlfiles, db_or_conninfo)
+
     with db.cursor() as c:
-        query = "insert into dbmodule(dbmodule) values (%s)"
+        if update:
+            query = "update dbmodule set dbmodule = %s"
+        else:
+            query = "insert into dbmodule(dbmodule) values (%s)"
         c.execute(query, (module,))
     db.commit()
 
@@ -398,11 +496,18 @@ def import_swhmodule(modname):
     return m
 
 
-def get_sql_for_package(modname):
+def get_sql_for_package(modname: str, upgrade: bool = False) -> List[str]:
+    """Return the (sorted) list of sql script files for the given swh module
+
+    If upgrade is True, return the list of available migration scripts,
+    otherwise, return the list of initialization scripts.
+    """
     m = import_swhmodule(modname)
     if m is None:
         raise ValueError(f"Module {modname} cannot be loaded")
     sqldir = path.join(path.dirname(m.__file__), "sql")
+    if upgrade:
+        sqldir += "/upgrades"
     if not path.isdir(sqldir):
         raise ValueError(
             "Module {} does not provide a db schema " "(no sql/ dir)".format(modname)

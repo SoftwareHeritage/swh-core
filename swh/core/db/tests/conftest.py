@@ -43,9 +43,11 @@ def mock_package_sql(mocker, datadir):
         cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     """
 
-    def get_sql_for_package_mock(modname):
+    def get_sql_for_package_mock(modname, upgrade=False):
         if modname.startswith("test."):
             sqldir = modname.split(".", 1)[1]
+            if upgrade:
+                sqldir += "/upgrades"
             return sorted(
                 glob.glob(os.path.join(datadir, sqldir, "*.sql")), key=sortkey
             )

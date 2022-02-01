@@ -4,12 +4,21 @@
 # See top-level LICENSE file for more information
 
 from datetime import datetime, timedelta
+from os import path
 
 import pytest
 
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
-from swh.core.db.db_utils import get_database_info, now, swh_db_module, swh_db_versions
+from swh.core.db.db_utils import (
+    get_database_info,
+    now,
+    swh_db_module,
+    swh_db_upgrade,
+    swh_db_version,
+    swh_db_versions,
+    swh_set_db_module,
+)
 
 from .test_cli import craft_conninfo
 
@@ -76,3 +85,90 @@ def test_db_utils_versions(cli_runner, postgresql, mock_package_sql, module):
         if version > 10:
             assert desc == f"Upgrade to version {version}"
             assert (now() - ts) < timedelta(seconds=1)
+
+
+@pytest.mark.parametrize("module", ["test.cli_new"])
+def test_db_utils_upgrade(cli_runner, postgresql, mock_package_sql, module, datadir):
+    """Check swh_db_upgrade
+
+    """
+    conninfo = craft_conninfo(postgresql)
+    result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    result = cli_runner.invoke(swhdb, ["init", module, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+
+    assert swh_db_version(conninfo) == 1
+    new_version = swh_db_upgrade(conninfo, module)
+    assert new_version == 6
+    assert swh_db_version(conninfo) == 6
+
+    versions = swh_db_versions(conninfo)
+    # get rid of dates to ease checking
+    versions = [(v[0], v[2]) for v in versions]
+    assert versions[-1] == (1, "DB initialization")
+    sqlbasedir = path.join(datadir, module.split(".", 1)[1], "upgrades")
+
+    assert versions[1:-1] == [
+        (i, f"Upgraded to version {i} using {sqlbasedir}/{i:03d}.sql")
+        for i in range(5, 1, -1)
+    ]
+    assert versions[0] == (6, "Updated version from upgrade script")
+
+    cnx = BaseDb.connect(conninfo)
+    with cnx.transaction() as cur:
+        cur.execute("select url from origin where url like 'version%'")
+        result = cur.fetchall()
+        assert result == [("version%03d" % i,) for i in range(2, 7)]
+        cur.execute(
+            "select url from origin where url = 'this should never be executed'"
+        )
+        result = cur.fetchall()
+        assert not result
+
+
+@pytest.mark.parametrize("module", ["test.cli_new"])
+def test_db_utils_swh_db_upgrade_sanity_checks(
+    cli_runner, postgresql, mock_package_sql, module, datadir
+):
+    """Check swh_db_upgrade
+
+    """
+    conninfo = craft_conninfo(postgresql)
+    result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    result = cli_runner.invoke(swhdb, ["init", module, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+
+    cnx = BaseDb.connect(conninfo)
+    with cnx.transaction() as cur:
+        cur.execute("drop table dbmodule")
+
+    # try to upgrade with a unset module
+    with pytest.raises(ValueError):
+        swh_db_upgrade(conninfo, module)
+
+    # check the dbmodule is unset
+    assert swh_db_module(conninfo) is None
+
+    # set the stored module to something else
+    swh_set_db_module(conninfo, f"{module}2")
+    assert swh_db_module(conninfo) == f"{module}2"
+
+    # try to upgrade with a different module
+    with pytest.raises(ValueError):
+        swh_db_upgrade(conninfo, module)
+
+    # revert to the proper module in the db
+    swh_set_db_module(conninfo, module, force=True)
+    assert swh_db_module(conninfo) == module
+    # trying again is a noop
+    swh_set_db_module(conninfo, module)
+    assert swh_db_module(conninfo) == module
+
+    # drop the dbversion table
+    with cnx.transaction() as cur:
+        cur.execute("drop table dbversion")
+    # an upgrade should fail due to missing stored version
+    with pytest.raises(ValueError):
+        swh_db_upgrade(conninfo, module)
