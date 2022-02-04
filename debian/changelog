@@ -1,8 +1,10 @@
-swh-core (1.1.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (1.1.1-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 1.1.1     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2022-02-04 12:52:06 +0100)
+  * Upstream changes:     - v1.1.1     - * Require pytest to be <7.0.0
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 20 Jan 2022 14:45:56 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 04 Feb 2022 11:54:45 +0000
 
 swh-core (1.1.0-1~swh1) unstable-swh; urgency=medium
 
