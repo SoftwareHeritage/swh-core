@@ -131,3 +131,8 @@ def test_numfile_sotkey():
     assert utils.numfile_sortkey("1.sql") == (1, ".sql")
     assert utils.numfile_sortkey("1") == (1, "")
     assert utils.numfile_sortkey("toto-01.sql") == (999999, "toto-01.sql")
+
+
+def test_basename_sotkey():
+    assert utils.basename_sortkey("00-xxx.sql") == (0, "-xxx.sql")
+    assert utils.basename_sortkey("path/to/00-xxx.sql") == (0, "-xxx.sql")

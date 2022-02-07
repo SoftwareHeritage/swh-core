@@ -6,25 +6,31 @@
 import glob
 import os
 
+from pytest_postgresql import factories
+
 from swh.core.db import BaseDb
-from swh.core.db.pytest_plugin import postgresql_fact
+from swh.core.db.pytest_plugin import gen_dump_files, postgresql_fact
 
 SQL_DIR = os.path.join(os.path.dirname(__file__), "data")
 
+test_postgresql_proc = factories.postgresql_proc(
+    dbname="fun",
+    load=sorted(glob.glob(f"{SQL_DIR}/*.sql")),  # type: ignore[arg-type]
+    # type ignored because load is typed as Optional[List[...]] instead of an
+    # Optional[Sequence[...]] in pytest_postgresql<4
+)
 
 # db with special policy for tables dbversion and people
 postgres_fun = postgresql_fact(
-    "postgresql_proc",
-    dbname="fun",
-    dump_files=f"{SQL_DIR}/*.sql",
-    no_truncate_tables={"dbversion", "people"},
+    "test_postgresql_proc", no_db_drop=True, no_truncate_tables={"dbversion", "people"},
 )
 
 postgres_fun2 = postgresql_fact(
-    "postgresql_proc",
+    "test_postgresql_proc",
     dbname="fun2",
-    dump_files=sorted(glob.glob(f"{SQL_DIR}/*.sql")),
+    load=sorted(glob.glob(f"{SQL_DIR}/*.sql")),
     no_truncate_tables={"dbversion", "people"},
+    no_db_drop=True,
 )
 
 
@@ -109,7 +115,13 @@ postgres_people = postgresql_fact(
     dbname="people",
     dump_files=f"{SQL_DIR}/*.sql",
     no_truncate_tables=set(),
+    no_db_drop=True,
 )
+
+
+def test_gen_dump_files():
+    files = [os.path.basename(fn) for fn in gen_dump_files(f"{SQL_DIR}/*.sql")]
+    assert files == ["0-schema.sql", "1-data.sql"]
 
 
 def test_smoke_test_people_db_up(postgres_people):

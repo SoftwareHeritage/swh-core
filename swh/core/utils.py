@@ -130,3 +130,8 @@ def numfile_sortkey(fname: str) -> Tuple[int, str]:
     assert m is not None
     num, rem = m.groups()
     return (int(num) if num else 999999, rem)
+
+
+def basename_sortkey(fname: str) -> Tuple[int, str]:
+    "like numfile_sortkey but on basenames"
+    return numfile_sortkey(os.path.basename(fname))
