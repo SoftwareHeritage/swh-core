@@ -119,3 +119,15 @@ def test_commonname():
     actual_commonname2 = utils.commonname(b"/some/where/to/", b"/some/where/to/go/to")
     # then
     assert b"go/to" == actual_commonname2
+
+
+def test_numfile_sotkey():
+    assert utils.numfile_sortkey("00-xxx.sql") == (0, "-xxx.sql")
+    assert utils.numfile_sortkey("01-xxx.sql") == (1, "-xxx.sql")
+    assert utils.numfile_sortkey("10-xxx.sql") == (10, "-xxx.sql")
+    assert utils.numfile_sortkey("99-xxx.sql") == (99, "-xxx.sql")
+    assert utils.numfile_sortkey("100-xxx.sql") == (100, "-xxx.sql")
+    assert utils.numfile_sortkey("00100-xxx.sql") == (100, "-xxx.sql")
+    assert utils.numfile_sortkey("1.sql") == (1, ".sql")
+    assert utils.numfile_sortkey("1") == (1, "")
+    assert utils.numfile_sortkey("toto-01.sql") == (999999, "toto-01.sql")

@@ -8,6 +8,7 @@ from contextlib import contextmanager
 import itertools
 import os
 import re
+from typing import Tuple
 
 
 @contextmanager
@@ -109,14 +110,23 @@ def commonname(path0, path1, as_str=False):
     return path1.split(path0)[1]
 
 
-def numfile_sortkey(fname):
+def numfile_sortkey(fname: str) -> Tuple[int, str]:
     """Simple function to sort filenames of the form:
 
       nnxxx.ext
 
     where nn is a number according to the numbers.
 
+    Returns a tuple (order, remaining), where 'order' is the numeric (int)
+    value extracted from the file name, and 'remaining' is the remaining part
+    of the file name.
+
     Typically used to sort sql/nn-swh-xxx.sql files.
+
+    Unmatched file names will return 999999 as order value.
+
     """
-    num, rem = re.match(r"(\d*)(.*)", fname).groups()
-    return (num and int(num) or 99, rem)
+    m = re.match(r"(\d*)(.*)", fname)
+    assert m is not None
+    num, rem = m.groups()
+    return (int(num) if num else 999999, rem)
