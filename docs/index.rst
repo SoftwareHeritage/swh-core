@@ -9,4 +9,5 @@ Reference Documentation
    :maxdepth: 2
 
    cli
+   db
    /apidoc/swh.core
