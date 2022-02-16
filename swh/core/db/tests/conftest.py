@@ -3,8 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import glob
 import os
+import pathlib
 
 from click.testing import CliRunner
 from hypothesis import HealthCheck
@@ -45,12 +45,10 @@ def mock_package_sql(mocker, datadir):
 
     def get_sql_for_package_mock(modname, upgrade=False):
         if modname.startswith("test."):
-            sqldir = modname.split(".", 1)[1]
+            sqldir = pathlib.Path(datadir) / modname.split(".", 1)[1]
             if upgrade:
-                sqldir += "/upgrades"
-            return sorted(
-                glob.glob(os.path.join(datadir, sqldir, "*.sql")), key=sortkey
-            )
+                sqldir /= "upgrades"
+            return sorted(sqldir.glob("*.sql"), key=lambda x: sortkey(x.name))
         return get_sql_for_package(modname)
 
     mock_sql_files = mocker.patch(
