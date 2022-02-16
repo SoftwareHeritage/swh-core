@@ -12,6 +12,7 @@ from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
 from swh.core.db.db_utils import (
     get_database_info,
+    get_sql_for_package,
     now,
     swh_db_module,
     swh_db_upgrade,
@@ -24,7 +25,19 @@ from .test_cli import craft_conninfo
 
 
 @pytest.mark.parametrize("module", ["test.cli", "test.cli_new"])
-def test_db_utils_versions(cli_runner, postgresql, mock_package_sql, module):
+def test_get_sql_for_package(mock_import_swhmodule, module):
+    files = get_sql_for_package(module)
+    assert files
+    assert [f.name for f in files] == [
+        "0-superuser-init.sql",
+        "30-schema.sql",
+        "40-funcs.sql",
+        "50-data.sql",
+    ]
+
+
+@pytest.mark.parametrize("module", ["test.cli", "test.cli_new"])
+def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule, module):
     """Check get_database_info, swh_db_versions and swh_db_module work ok
 
     This test checks db versions for both a db with "new style" set of sql init
@@ -88,7 +101,9 @@ def test_db_utils_versions(cli_runner, postgresql, mock_package_sql, module):
 
 
 @pytest.mark.parametrize("module", ["test.cli_new"])
-def test_db_utils_upgrade(cli_runner, postgresql, mock_package_sql, module, datadir):
+def test_db_utils_upgrade(
+    cli_runner, postgresql, mock_import_swhmodule, module, datadir
+):
     """Check swh_db_upgrade
 
     """
@@ -107,7 +122,7 @@ def test_db_utils_upgrade(cli_runner, postgresql, mock_package_sql, module, data
     # get rid of dates to ease checking
     versions = [(v[0], v[2]) for v in versions]
     assert versions[-1] == (1, "DB initialization")
-    sqlbasedir = path.join(datadir, module.split(".", 1)[1], "upgrades")
+    sqlbasedir = path.join(datadir, module.split(".", 1)[1], "sql", "upgrades")
 
     assert versions[1:-1] == [
         (i, f"Upgraded to version {i} using {sqlbasedir}/{i:03d}.sql")
@@ -129,7 +144,7 @@ def test_db_utils_upgrade(cli_runner, postgresql, mock_package_sql, module, data
 
 @pytest.mark.parametrize("module", ["test.cli_new"])
 def test_db_utils_swh_db_upgrade_sanity_checks(
-    cli_runner, postgresql, mock_package_sql, module, datadir
+    cli_runner, postgresql, mock_import_swhmodule, module, datadir
 ):
     """Check swh_db_upgrade
 

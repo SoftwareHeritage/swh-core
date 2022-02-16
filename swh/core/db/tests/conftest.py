@@ -4,14 +4,12 @@
 # See top-level LICENSE file for more information
 
 import os
-import pathlib
 
 from click.testing import CliRunner
 from hypothesis import HealthCheck
 import pytest
 
-from swh.core.db.db_utils import get_sql_for_package
-from swh.core.utils import numfile_sortkey as sortkey
+from swh.core.db.db_utils import import_swhmodule
 
 os.environ["LC_ALL"] = "C.UTF-8"
 
@@ -29,29 +27,41 @@ def cli_runner():
 
 
 @pytest.fixture()
-def mock_package_sql(mocker, datadir):
-    """This bypasses the module manipulation to only returns the data test files.
+def mock_import_swhmodule(mocker, datadir):
+    """This bypasses the module manipulation to make import_swhmodule return a mock
+    object suitable for data test files listing via get_sql_for_package.
 
-    For a given module `test.mod`, look for sql files in the directory `data/mod/*.sql`.
+    For a given module `test.<mod>`, return a MagicMock object with a __name__
+    set to `<mod>` and __file__ pointing to `data/<mod>/__init__.py`.
+
+    The Mock object also defines a `get_datastore()` attribute on which the
+    `get_current_version()` exists and will return 42.
 
     Typical usage::
 
-      def test_xxx(cli_runner, mock_package_sql):
+      def test_xxx(cli_runner, mock_import_swhmodule):
         conninfo = craft_conninfo(test_db, "new-db")
         module_name = "test.cli"
-        # the command below will use sql scripts from swh/core/db/tests/data/cli/*.sql
+        # the command below will use sql scripts from
+        #     swh/core/db/tests/data/cli/sql/*.sql
         cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
+
     """
+    mock = mocker.MagicMock
 
-    def get_sql_for_package_mock(modname, upgrade=False):
+    def import_swhmodule_mock(modname):
         if modname.startswith("test."):
-            sqldir = pathlib.Path(datadir) / modname.split(".", 1)[1]
-            if upgrade:
-                sqldir /= "upgrades"
-            return sorted(sqldir.glob("*.sql"), key=lambda x: sortkey(x.name))
-        return get_sql_for_package(modname)
+            dirname = modname.split(".", 1)[1]
 
-    mock_sql_files = mocker.patch(
-        "swh.core.db.db_utils.get_sql_for_package", get_sql_for_package_mock
-    )
-    return mock_sql_files
+            def get_datastore(*args, **kw):
+                return mock(get_current_version=lambda: 42)
+
+            return mock(
+                __name__=modname,
+                __file__=os.path.join(datadir, dirname, "__init__.py"),
+                get_datastore=get_datastore,
+            )
+        else:
+            return import_swhmodule(modname)
+
+    return mocker.patch("swh.core.db.db_utils.import_swhmodule", import_swhmodule_mock)

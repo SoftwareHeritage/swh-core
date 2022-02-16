@@ -4,15 +4,15 @@
 # See top-level LICENSE file for more information
 
 import copy
+import os
 import traceback
-from unittest.mock import MagicMock
 
 import pytest
 import yaml
 
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
-from swh.core.db.db_utils import import_swhmodule, swh_db_module
+from swh.core.db.db_utils import import_swhmodule, swh_db_module, swh_db_version
 from swh.core.tests.test_cli import assert_section_contains
 
 
@@ -79,7 +79,7 @@ def craft_conninfo(test_db, dbname=None) -> str:
     return "postgresql://{user}@{host}:{port}/{dbname}".format(**params)
 
 
-def test_cli_swh_db_create_and_init_db(cli_runner, postgresql, mock_package_sql):
+def test_cli_swh_db_create_and_init_db(cli_runner, postgresql, mock_import_swhmodule):
     """Create a db then initializing it should be ok
 
     """
@@ -104,7 +104,7 @@ def test_cli_swh_db_create_and_init_db(cli_runner, postgresql, mock_package_sql)
 
 
 def test_cli_swh_db_initialization_fail_without_creation_first(
-    cli_runner, postgresql, mock_package_sql
+    cli_runner, postgresql, mock_import_swhmodule
 ):
     """Init command on an inexisting db cannot work
 
@@ -118,7 +118,7 @@ def test_cli_swh_db_initialization_fail_without_creation_first(
 
 
 def test_cli_swh_db_initialization_fail_without_extension(
-    cli_runner, postgresql, mock_package_sql
+    cli_runner, postgresql, mock_import_swhmodule
 ):
     """Init command cannot work without privileged extension.
 
@@ -135,7 +135,7 @@ def test_cli_swh_db_initialization_fail_without_extension(
 
 
 def test_cli_swh_db_initialization_works_with_flags(
-    cli_runner, postgresql, mock_package_sql
+    cli_runner, postgresql, mock_import_swhmodule
 ):
     """Init commands with carefully crafted libpq conninfo works
 
@@ -157,7 +157,9 @@ def test_cli_swh_db_initialization_works_with_flags(
         assert len(origins) == 1
 
 
-def test_cli_swh_db_initialization_with_env(swh_db_cli, mock_package_sql, postgresql):
+def test_cli_swh_db_initialization_with_env(
+    swh_db_cli, mock_import_swhmodule, postgresql
+):
     """Init commands with standard environment variables works
 
     """
@@ -181,7 +183,9 @@ def test_cli_swh_db_initialization_with_env(swh_db_cli, mock_package_sql, postgr
         assert len(origins) == 1
 
 
-def test_cli_swh_db_initialization_idempotent(swh_db_cli, mock_package_sql, postgresql):
+def test_cli_swh_db_initialization_idempotent(
+    swh_db_cli, mock_import_swhmodule, postgresql
+):
     """Multiple runs of the init commands are idempotent
 
     """
@@ -217,25 +221,13 @@ def test_cli_swh_db_initialization_idempotent(swh_db_cli, mock_package_sql, post
 
 
 def test_cli_swh_db_create_and_init_db_new_api(
-    cli_runner, postgresql, mock_package_sql, mocker, tmp_path
+    cli_runner, postgresql, mock_import_swhmodule, mocker, tmp_path
 ):
     """Create a db then initializing it should be ok for a "new style" datastore
 
     """
     module_name = "test.cli_new"
 
-    def import_swhmodule_mock(modname):
-        if modname.startswith("test."):
-
-            def get_datastore(cls, **kw):
-                # XXX probably not the best way of doing this...
-                return MagicMock(get_current_version=lambda: 42)
-
-            return MagicMock(name=modname, get_datastore=get_datastore)
-
-        return import_swhmodule(modname)
-
-    mocker.patch("swh.core.db.db_utils.import_swhmodule", import_swhmodule_mock)
     conninfo = craft_conninfo(postgresql)
 
     # This initializes the schema and data
@@ -257,31 +249,33 @@ def test_cli_swh_db_create_and_init_db_new_api(
         assert len(origins) == 1
 
 
-def test_cli_swh_db_upgrade_new_api(
-    cli_runner, postgresql, mock_package_sql, mocker, tmp_path
-):
+def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp_path):
     """Upgrade scenario for a "new style" datastore
 
     """
     module_name = "test.cli_new"
-
-    from unittest.mock import MagicMock
-
-    from swh.core.db.db_utils import import_swhmodule, swh_db_version
 
     # the `current_version` variable is the version that will be returned by
     # any call to `get_current_version()` in this test session, thanks to the
     # local mocked version of import_swhmodule() below.
     current_version = 1
 
+    # custom version of the mockup to make it easy to change the
+    # current_version returned by get_current_version()
+    # TODO: find a better solution for this...
     def import_swhmodule_mock(modname):
         if modname.startswith("test."):
+            dirname = modname.split(".", 1)[1]
 
             def get_datastore(cls, **kw):
-                # XXX probably not the best way of doing this...
-                return MagicMock(get_current_version=lambda: current_version)
+                return mocker.MagicMock(get_current_version=lambda: current_version)
 
-            return MagicMock(name=modname, get_datastore=get_datastore)
+            return mocker.MagicMock(
+                __name__=modname,
+                __file__=os.path.join(datadir, dirname, "__init__.py"),
+                name=modname,
+                get_datastore=get_datastore,
+            )
 
         return import_swhmodule(modname)
 
