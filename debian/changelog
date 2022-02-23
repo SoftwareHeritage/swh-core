@@ -1,3 +1,9 @@
+swh-core (2.0.0-2~swh1) unstable-swh; urgency=medium
+
+  * Bump dependency constranints for pytest and pytest-postgresql.
+
+ -- David Douard <david.douard@sdfa3.org>  Wed, 23 Feb 2022 10:56:37 +0100
+
 swh-core (2.0.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.0.0     - (tagged by David Douard
