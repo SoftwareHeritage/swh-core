@@ -1,5 +1,5 @@
 -- schema version table which won't get truncated
-create table if not exists dbversion (
+create table dbversion (
   version     int primary key,
   release     timestamptz,
   description text

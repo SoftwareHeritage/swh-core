@@ -1,9 +1,9 @@
+[console_scripts]
+swh = swh.core.cli:main
+swh-db-init = swh.core.cli.db:db_init
 
-        [console_scripts]
-        swh=swh.core.cli:main
-        swh-db-init=swh.core.cli.db:db_init
-        [swh.cli.subcommands]
-        db=swh.core.cli.db
-        [pytest11]
-        pytest_swh_core = swh.core.pytest_plugin
-    
+[pytest11]
+pytest_swh_core = swh.core.pytest_plugin
+
+[swh.cli.subcommands]
+db = swh.core.cli.db

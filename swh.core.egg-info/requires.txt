@@ -7,7 +7,7 @@ sentry-sdk
 [db]
 psycopg2
 typing-extensions
-pytest-postgresql<4.0.0
+pytest-postgresql<4.0.0,>=3
 
 [http]
 aiohttp
@@ -34,7 +34,7 @@ types-pyyaml
 types-requests
 psycopg2
 typing-extensions
-pytest-postgresql<4.0.0
+pytest-postgresql<4.0.0,>=3
 aiohttp
 aiohttp_utils>=3.1.1
 blinker
