@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# Copyright (C) 2018-2020  The Software Heritage developers
+# Copyright (C) 2018-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import logging
-from os import environ, path
-from typing import Collection, Dict, Optional, Tuple
+from os import environ
 import warnings
 
 import click
@@ -79,6 +78,7 @@ def db_create(module, dbname, template):
         swh db create -d postgresql://superuser:passwd@pghost:5433/swh-storage storage
 
     """
+    from swh.core.db.db_utils import create_database_for_package
 
     logger.debug("db_create %s dn_name=%s", module, dbname)
     create_database_for_package(module, dbname, template)
@@ -117,6 +117,8 @@ def db_init_admin(module: str, dbname: str) -> None:
           scheduler
 
     """
+    from swh.core.db.db_utils import init_admin_extensions
+
     logger.debug("db_init_admin %s dbname=%s", module, dbname)
     init_admin_extensions(module, dbname)
 
@@ -127,37 +129,101 @@ def db_init_admin(module: str, dbname: str) -> None:
     "--dbname",
     "--db-name",
     "-d",
-    help="Database name.",
-    default="softwareheritage-dev",
-    show_default=True,
+    help="Database name or connection URI.",
+    default=None,
+    show_default=False,
 )
 @click.option(
     "--flavor", help="Database flavor.", default=None,
 )
-def db_init(module, dbname, flavor):
+@click.option(
+    "--initial-version", help="Database initial version.", default=1, show_default=True
+)
+@click.pass_context
+def db_init(ctx, module, dbname, flavor, initial_version):
     """Initialize a database for the Software Heritage <module>.
+
+    The database connection string comes from the configuration file (see
+    option ``--config-file`` in ``swh db --help``) in the section named after
+    the MODULE argument.
 
     Example::
 
-        swh db init -d swh-test storage
+        $ cat conf.yml
+        storage:
+          cls: postgresql
+          db: postgresql://user:passwd@pghost:5433/swh-storage
+          objstorage:
+            cls: memory
 
-    If you want to specify non-default postgresql connection parameters,
-    please provide them using standard environment variables.
-    See psql(1) man page (section ENVIRONMENTS) for details.
+        $ swh db -C conf.yml init storage  # or
+        $ SWH_CONFIG_FILENAME=conf.yml swh db init storage
 
-    Examples::
-
-        PGPORT=5434 swh db init indexer
-        swh db init -d postgresql://user:passwd@pghost:5433/swh-storage storage
-        swh db init --flavor read_replica -d swh-storage storage
+    Note that the connection string can also be passed directly using the
+    '--db-name' option, but this usage is about to be deprecated.
 
     """
+    from swh.core.db.db_utils import (
+        get_database_info,
+        import_swhmodule,
+        populate_database_for_package,
+        swh_set_db_version,
+    )
+
+    cfg = None
+    if dbname is None:
+        # use the db cnx from the config file; the expected config entry is the
+        # given module name
+        cfg = ctx.obj["config"].get(module, {})
+        dbname = get_dburl_from_config(cfg)
+
+    if not dbname:
+        raise click.BadParameter(
+            "Missing the postgresql connection configuration. Either fix your "
+            "configuration file or use the --dbname option."
+        )
 
     logger.debug("db_init %s flavor=%s dbname=%s", module, flavor, dbname)
 
     initialized, dbversion, dbflavor = populate_database_for_package(
         module, dbname, flavor
     )
+    if dbversion is None:
+        if cfg is not None:
+            # db version has not been populated by sql init scripts (new style),
+            # let's do it; instantiate the data source to retrieve the current
+            # (expected) db version
+            datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
+            if datastore_factory:
+                datastore = datastore_factory(**cfg)
+                try:
+                    get_current_version = datastore.get_current_version
+                except AttributeError:
+                    logger.warning(
+                        "Datastore %s does not implement the "
+                        "'get_current_version()' method",
+                        datastore,
+                    )
+                else:
+                    code_version = get_current_version()
+                    logger.info(
+                        "Initializing database version to %s from the %s datastore",
+                        code_version,
+                        module,
+                    )
+                    swh_set_db_version(dbname, code_version, desc="DB initialization")
+
+    dbversion = get_database_info(dbname)[1]
+    if dbversion is None:
+        logger.info(
+            "Initializing database version to %s "
+            "from the command line option --initial-version",
+            initial_version,
+        )
+        swh_set_db_version(dbname, initial_version, desc="DB initialization")
+
+    dbversion = get_database_info(dbname)[1]
+    assert dbversion is not None
 
     # TODO: Ideally migrate the version from db_version to the latest
     # db version
@@ -181,155 +247,163 @@ def db_init(module, dbname, flavor):
         )
 
 
-def get_sql_for_package(modname):
-    import glob
-    from importlib import import_module
+@db.command(name="version", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
+@click.option(
+    "--all/--no-all",
+    "show_all",
+    help="Show version history.",
+    default=False,
+    show_default=True,
+)
+@click.pass_context
+def db_version(ctx, module, show_all):
+    """Print the database version for the Software Heritage.
 
-    from swh.core.utils import numfile_sortkey as sortkey
+    Example::
 
-    if not modname.startswith("swh."):
-        modname = "swh.{}".format(modname)
-    try:
-        m = import_module(modname)
-    except ImportError:
-        raise click.BadParameter("Unable to load module {}".format(modname))
+        swh db version -d swh-test
 
-    sqldir = path.join(path.dirname(m.__file__), "sql")
-    if not path.isdir(sqldir):
+    """
+    from swh.core.db.db_utils import get_database_info, import_swhmodule
+
+    # use the db cnx from the config file; the expected config entry is the
+    # given module name
+    cfg = ctx.obj["config"].get(module, {})
+    dbname = get_dburl_from_config(cfg)
+
+    if not dbname:
         raise click.BadParameter(
-            "Module {} does not provide a db schema " "(no sql/ dir)".format(modname)
+            "Missing the postgresql connection configuration. Either fix your "
+            "configuration file or use the --dbname option."
         )
-    return sorted(glob.glob(path.join(sqldir, "*.sql")), key=sortkey)
+
+    logger.debug("db_version dbname=%s", dbname)
+
+    db_module, db_version, db_flavor = get_database_info(dbname)
+    if db_module is None:
+        click.secho(
+            "WARNING the database does not have a dbmodule table.", fg="red", bold=True
+        )
+        db_module = module
+    assert db_module == module, f"{db_module} (in the db) != {module} (given)"
+
+    click.secho(f"module: {db_module}", fg="green", bold=True)
+
+    if db_flavor is not None:
+        click.secho(f"flavor: {db_flavor}", fg="green", bold=True)
+
+    # instantiate the data source to retrieve the current (expected) db version
+    datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
+    if datastore_factory:
+        datastore = datastore_factory(**cfg)
+        code_version = datastore.get_current_version()
+        click.secho(
+            f"current code version: {code_version}",
+            fg="green" if code_version == db_version else "red",
+            bold=True,
+        )
+
+    if not show_all:
+        click.secho(f"version: {db_version}", fg="green", bold=True)
+    else:
+        from swh.core.db.db_utils import swh_db_versions
+
+        versions = swh_db_versions(dbname)
+        for version, tstamp, desc in versions:
+            click.echo(f"{version} [{tstamp}] {desc}")
 
 
-def populate_database_for_package(
-    modname: str, conninfo: str, flavor: Optional[str] = None
-) -> Tuple[bool, int, Optional[str]]:
-    """Populate the database, pointed at with ``conninfo``,
-    using the SQL files found in the package ``modname``.
+@db.command(name="upgrade", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
+@click.option(
+    "--to-version",
+    type=int,
+    help="Upgrade up to version VERSION",
+    metavar="VERSION",
+    default=None,
+)
+@click.pass_context
+def db_upgrade(ctx, module, to_version):
+    """Upgrade the database for given module (to a given version if specified).
 
-    Args:
-      modname: Name of the module of which we're loading the files
-      conninfo: connection info string for the SQL database
-      flavor: the module-specific flavor which we want to initialize the database under
+    Examples::
 
-    Returns:
-      Tuple with three elements: whether the database has been initialized; the current
-      version of the database; if it exists, the flavor of the database.
-    """
-    from swh.core.db.db_utils import swh_db_flavor, swh_db_version
-
-    current_version = swh_db_version(conninfo)
-    if current_version is not None:
-        dbflavor = swh_db_flavor(conninfo)
-        return False, current_version, dbflavor
-
-    sqlfiles = get_sql_for_package(modname)
-    sqlfiles = [fname for fname in sqlfiles if "-superuser-" not in fname]
-    execute_sqlfiles(sqlfiles, conninfo, flavor)
-
-    current_version = swh_db_version(conninfo)
-    assert current_version is not None
-    dbflavor = swh_db_flavor(conninfo)
-    return True, current_version, dbflavor
-
-
-def parse_dsn_or_dbname(dsn_or_dbname: str) -> Dict[str, str]:
-    """Parse a psycopg2 dsn, falling back to supporting plain database names as well"""
-    import psycopg2
-    from psycopg2.extensions import parse_dsn as _parse_dsn
-
-    try:
-        return _parse_dsn(dsn_or_dbname)
-    except psycopg2.ProgrammingError:
-        # psycopg2 failed to parse the DSN; it's probably a database name,
-        # handle it as such
-        return _parse_dsn(f"dbname={dsn_or_dbname}")
-
-
-def init_admin_extensions(modname: str, conninfo: str) -> None:
-    """The remaining initialization process -- running -superuser- SQL files -- is done
-    using the given conninfo, thus connecting to the newly created database
-
-    """
-    sqlfiles = get_sql_for_package(modname)
-    sqlfiles = [fname for fname in sqlfiles if "-superuser-" in fname]
-    execute_sqlfiles(sqlfiles, conninfo)
-
-
-def create_database_for_package(
-    modname: str, conninfo: str, template: str = "template1"
-):
-    """Create the database pointed at with ``conninfo``, and initialize it using
-    -superuser- SQL files found in the package ``modname``.
-
-    Args:
-      modname: Name of the module of which we're loading the files
-      conninfo: connection info string or plain database name for the SQL database
-      template: the name of the database to connect to and use as template to create
-        the new database
+        swh db upgrade storage
+        swg db upgrade scheduler --to-version=10
 
     """
-    import subprocess
-
-    from psycopg2.extensions import make_dsn
-
-    # Use the given conninfo string, but with dbname replaced by the template dbname
-    # for the database creation step
-    creation_dsn = parse_dsn_or_dbname(conninfo)
-    dbname = creation_dsn["dbname"]
-    creation_dsn["dbname"] = template
-    logger.debug("db_create dbname=%s (from %s)", dbname, template)
-    subprocess.check_call(
-        [
-            "psql",
-            "--quiet",
-            "--no-psqlrc",
-            "-v",
-            "ON_ERROR_STOP=1",
-            "-d",
-            make_dsn(**creation_dsn),
-            "-c",
-            f'CREATE DATABASE "{dbname}"',
-        ]
+    from swh.core.db.db_utils import (
+        get_database_info,
+        import_swhmodule,
+        swh_db_upgrade,
+        swh_set_db_module,
     )
-    init_admin_extensions(modname, conninfo)
 
+    # use the db cnx from the config file; the expected config entry is the
+    # given module name
+    cfg = ctx.obj["config"].get(module, {})
+    dbname = get_dburl_from_config(cfg)
 
-def execute_sqlfiles(
-    sqlfiles: Collection[str], conninfo: str, flavor: Optional[str] = None
-):
-    """Execute a list of SQL files on the database pointed at with ``conninfo``.
-
-    Args:
-      sqlfiles: List of SQL files to execute
-      conninfo: connection info string for the SQL database
-      flavor: the database flavor to initialize
-    """
-    import subprocess
-
-    psql_command = [
-        "psql",
-        "--quiet",
-        "--no-psqlrc",
-        "-v",
-        "ON_ERROR_STOP=1",
-        "-d",
-        conninfo,
-    ]
-
-    flavor_set = False
-    for sqlfile in sqlfiles:
-        logger.debug(f"execute SQL file {sqlfile} dbname={conninfo}")
-        subprocess.check_call(psql_command + ["-f", sqlfile])
-
-        if flavor is not None and not flavor_set and sqlfile.endswith("-flavor.sql"):
-            logger.debug("Setting database flavor %s", flavor)
-            query = f"insert into dbflavor (flavor) values ('{flavor}')"
-            subprocess.check_call(psql_command + ["-c", query])
-            flavor_set = True
-
-    if flavor is not None and not flavor_set:
-        logger.warn(
-            "Asked for flavor %s, but module does not support database flavors", flavor,
+    if not dbname:
+        raise click.BadParameter(
+            "Missing the postgresql connection configuration. Either fix your "
+            "configuration file or use the --dbname option."
         )
+
+    logger.debug("db_version dbname=%s", dbname)
+
+    db_module, db_version, db_flavor = get_database_info(dbname)
+    if db_module is None:
+        click.secho(
+            "Warning: the database does not have a dbmodule table.",
+            fg="yellow",
+            bold=True,
+        )
+        if not click.confirm(
+            f"Write the module information ({module}) in the database?", default=True
+        ):
+            raise click.BadParameter("Migration aborted.")
+        swh_set_db_module(dbname, module)
+        db_module = module
+
+    if db_module != module:
+        raise click.BadParameter(
+            f"Error: the given module ({module}) does not match the value "
+            f"stored in the database ({db_module})."
+        )
+
+    # instantiate the data source to retrieve the current (expected) db version
+    datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
+    if not datastore_factory:
+        raise click.UsageError(
+            "You cannot use this command on old-style datastore backend {db_module}"
+        )
+    datastore = datastore_factory(**cfg)
+    ds_version = datastore.get_current_version()
+    if to_version is None:
+        to_version = ds_version
+    if to_version > ds_version:
+        raise click.UsageError(
+            f"The target version {to_version} is larger than the current version "
+            f"{ds_version} of the datastore backend {db_module}"
+        )
+
+    new_db_version = swh_db_upgrade(dbname, module, to_version)
+    click.secho(f"Migration to version {new_db_version} done", fg="green")
+    if new_db_version < ds_version:
+        click.secho(
+            f"Warning: migration was not complete: the current version is {ds_version}",
+            fg="yellow",
+        )
+
+
+def get_dburl_from_config(cfg):
+    if cfg.get("cls") != "postgresql":
+        raise click.BadParameter(
+            "Configuration cls must be set to 'postgresql' for this command."
+        )
+    if "args" in cfg:
+        # for bw compat
+        cfg = cfg["args"]
+    return cfg.get("db")

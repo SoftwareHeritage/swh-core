@@ -1,8 +1,14 @@
-swh-core (1.1.1-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (2.0.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 2.0.0     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2022-02-17 15:26:59 +0100)
+  * Upstream changes:     - v2.0.0     - add support for generic db
+    version handling for postgresql backends,     - add support for
+    generic db upgrade (for postgresql backends),     - upgrade pytest-
+    postgresql based tests scaffolding to use the     - template-based
+    db creation (instead of the truncate-based db reset).
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 04 Feb 2022 11:56:31 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 23 Feb 2022 09:34:41 +0000
 
 swh-core (1.1.1-1~swh1) unstable-swh; urgency=medium
 
