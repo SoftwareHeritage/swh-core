@@ -21,6 +21,7 @@ from typing import (
     Union,
 )
 
+from deprecated import deprecated
 from flask import Flask, Request, Response, abort, request
 import requests
 from werkzeug.exceptions import HTTPException
@@ -255,7 +256,7 @@ class RPCClient(metaclass=MetaRPCClient):
         except requests.exceptions.ConnectionError as e:
             raise self.api_exception(e)
 
-    def post(self, endpoint, data, **opts):
+    def _post(self, endpoint, data, **opts):
         if isinstance(data, (abc.Iterator, abc.Generator)):
             data = (self._encode_data(x) for x in data)
         else:
@@ -280,9 +281,17 @@ class RPCClient(metaclass=MetaRPCClient):
     def _encode_data(self, data):
         return encode_data(data, extra_encoders=self.extra_type_encoders)
 
-    post_stream = post
+    _post_stream = _post
 
-    def get(self, endpoint, **opts):
+    @deprecated(version="1.2.0", reason="Use _post instead")
+    def post(self, *args, **kwargs):
+        return self._post(*args, **kwargs)
+
+    @deprecated(version="1.2.0", reason="Use _post_stream instead")
+    def post_stream(self, *args, **kwargs):
+        return self._post_stream(*args, **kwargs)
+
+    def _get(self, endpoint, **opts):
         chunk_size = opts.pop("chunk_size", self.chunk_size)
         response = self.raw_verb(
             "get", endpoint, headers={"accept": "application/x-msgpack"}, **opts
@@ -293,8 +302,16 @@ class RPCClient(metaclass=MetaRPCClient):
         else:
             return self._decode_response(response)
 
-    def get_stream(self, endpoint, **opts):
-        return self.get(endpoint, stream=True, **opts)
+    def _get_stream(self, endpoint, **opts):
+        return self._get(endpoint, stream=True, **opts)
+
+    @deprecated(version="1.2.0", reason="Use _get instead")
+    def get(self, *args, **kwargs):
+        return self._get(*args, **kwargs)
+
+    @deprecated(version="1.2.0", reason="Use _get_stream instead")
+    def get_stream(self, *args, **kwargs):
+        return self._get_stream(*args, **kwargs)
 
     def raise_for_status(self, response) -> None:
         """check response HTTP status code and raise an exception if it denotes an
@@ -419,6 +436,11 @@ class RPCServerApp(Flask):
         A function with no argument that returns an instance of
         `backend_class`. If unset, defaults to calling `backend_class`
         constructor directly.
+
+    For each method 'do_x()' of the ``backend_factory``, subclasses may implement
+    two methods: ``pre_do_x(self, kw)`` and ``post_do_x(self, ret, kw)`` that will
+    be called respectively before and after ``do_x(**kw)``. ``kw`` is the dict
+    of request parameters, and ``ret`` is the return value of ``do_x(**kw)``.
     """
 
     request_class = BytesRequest
@@ -429,6 +451,9 @@ class RPCServerApp(Flask):
     extra_type_decoders: Dict[str, Callable] = {}
     """Value of `extra_decoders` passed to `json_loads` or `msgpack_loads`
     to be able to deserialize more object types."""
+
+    method_decorators: List[Callable[[Callable], Callable]] = []
+    """List of decorators to all methods generated from the ``backend_class``."""
 
     def __init__(self, *args, backend_class=None, backend_factory=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -449,12 +474,27 @@ class RPCServerApp(Flask):
     def __add_endpoint(self, meth_name, meth, backend_factory):
         from flask import request
 
-        @self.route("/" + meth._endpoint_path, methods=["POST"])
         @negotiate(MsgpackFormatter, extra_encoders=self.extra_type_encoders)
         @negotiate(JSONFormatter, extra_encoders=self.extra_type_encoders)
         @functools.wraps(meth)  # Copy signature and doc
-        def _f():
+        def f():
             # Call the actual code
+            pre_hook = getattr(self, f"pre_{meth_name}", None)
+            post_hook = getattr(self, f"post_{meth_name}", None)
             obj_meth = getattr(backend_factory(), meth_name)
             kw = decode_request(request, extra_decoders=self.extra_type_decoders)
-            return obj_meth(**kw)
+
+            if pre_hook is not None:
+                pre_hook(kw)
+
+            ret = obj_meth(**kw)
+
+            if post_hook is not None:
+                post_hook(ret, kw)
+
+            return ret
+
+        for decorator in self.method_decorators:
+            f = decorator(f)
+
+        self.route("/" + meth._endpoint_path, methods=["POST"])(f)
