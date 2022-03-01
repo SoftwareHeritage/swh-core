@@ -123,7 +123,7 @@ def test_api_typeerror(swh_rpc_client):
 
 def test_api_raise_exception_exc_arg(swh_rpc_client):
     with pytest.raises(RemoteException) as exc_info:
-        swh_rpc_client.post("raise_exception_exc_arg", data={})
+        swh_rpc_client._post("raise_exception_exc_arg", data={})
 
     assert exc_info.value.args[0]["type"] == "Exception"
     assert type(exc_info.value.args[0]["args"][0]) == Exception
