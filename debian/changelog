@@ -1,3 +1,13 @@
+swh-core (2.1.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.1.0     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2022-03-01 16:58:02 +0100)
+  * Upstream changes:     - v2.1.0     - * RPCClient: Make methods
+    {get,post}{,_stream} protected     - * RPCServerApp: Add hooks to
+    add behaviors to generated methods
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 01 Mar 2022 16:00:51 +0000
+
 swh-core (2.0.0-2~swh1) unstable-swh; urgency=medium
 
   * Bump dependency constranints for pytest and pytest-postgresql.
