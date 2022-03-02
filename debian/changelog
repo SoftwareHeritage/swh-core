@@ -1,3 +1,12 @@
+swh-core (2.2.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.2.0     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2022-03-02 11:45:18 +0100)
+  * Upstream changes:     - v2.2.0     - * utils: Add a new
+    'iter_chunks' function
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 02 Mar 2022 10:47:47 +0000
+
 swh-core (2.1.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.1.1     - (tagged by Valentin Lorentz
