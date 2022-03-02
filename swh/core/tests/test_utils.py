@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2018  The Software Heritage developers
+# Copyright (C) 2015-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -52,6 +52,37 @@ def test_grouper_with_stop_value():
         out.append(list(d))  # force generator resolution for checks
 
     assert out == [[9, 8, 7, 6], [5, 4, 3, 2], [1]]
+
+
+def test_iter_chunks():
+    def chunks(input_, remainder):
+        return list(utils.iter_chunks(input_, 3, remainder=remainder))
+
+    # all even, remainder=False
+    assert chunks(["ab", "cd", "ef"], False) == ["abc", "def"]
+    assert chunks(["abc", "def"], False) == ["abc", "def"]
+    assert chunks(["abcd", "ef"], False) == ["abc", "def"]
+
+    # all even, remainder=True
+    assert chunks(["ab", "cd", "ef"], True) == ["abc", "def"]
+    assert chunks(["abc", "def"], True) == ["abc", "def"]
+    assert chunks(["abcd", "ef"], True) == ["abc", "def"]
+
+    # uneven, remainder=False
+    assert chunks([], False) == []
+    assert chunks(["ab"], False) == []
+    assert chunks(["ab", "cd", "ef", "g"], False) == ["abc", "def"]
+    assert chunks(["ab", "cd", "efg"], False) == ["abc", "def"]
+    assert chunks(["abc", "def", "g"], False) == ["abc", "def"]
+    assert chunks(["abcd", "ef", "g"], False) == ["abc", "def"]
+
+    # uneven, remainder=True
+    assert chunks([], True) == []
+    assert chunks(["ab"], True) == ["ab"]
+    assert chunks(["ab", "cd", "ef", "g"], True) == ["abc", "def", "g"]
+    assert chunks(["ab", "cd", "efg"], True) == ["abc", "def", "g"]
+    assert chunks(["abc", "def", "g"], True) == ["abc", "def", "g"]
+    assert chunks(["abcd", "ef", "g"], True) == ["abc", "def", "g"]
 
 
 def test_backslashescape_errors():
