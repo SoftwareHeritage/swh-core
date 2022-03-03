@@ -14,6 +14,7 @@ import subprocess
 from typing import Collection, Dict, List, Optional, Tuple, Union
 
 import psycopg2
+import psycopg2.errors
 import psycopg2.extensions
 from psycopg2.extensions import connection as pgconnection
 from psycopg2.extensions import encodings as pgencodings
@@ -624,15 +625,22 @@ def create_database_for_package(
 
 
 def execute_sqlfiles(
-    sqlfiles: Collection[pathlib.Path], conninfo: str, flavor: Optional[str] = None
+    sqlfiles: Collection[pathlib.Path],
+    db_or_conninfo: Union[str, pgconnection],
+    flavor: Optional[str] = None,
 ):
-    """Execute a list of SQL files on the database pointed at with ``conninfo``.
+    """Execute a list of SQL files on the database pointed at with ``db_or_conninfo``.
 
     Args:
       sqlfiles: List of SQL files to execute
-      conninfo: connection info string for the SQL database
+      db_or_conninfo: A database connection, or a database connection info string
       flavor: the database flavor to initialize
     """
+    if isinstance(db_or_conninfo, str):
+        conninfo = db_or_conninfo
+    else:
+        conninfo = db_or_conninfo.dsn
+
     psql_command = [
         "psql",
         "--quiet",
