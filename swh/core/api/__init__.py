@@ -179,7 +179,7 @@ class MetaRPCClient(type):
             post_data.pop("db", None)
 
             # Send the request.
-            return self.post(meth._endpoint_path, post_data)
+            return self._post(meth._endpoint_path, post_data)
 
         if meth_name not in attributes:
             attributes[meth_name] = meth_

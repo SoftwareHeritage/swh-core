@@ -104,7 +104,7 @@ def test_client_connexion_error(rpc_client, requests_mock):
     )
 
     with pytest.raises(APIError) as exc_info:
-        rpc_client.post("connection_error", data={})
+        rpc_client._post("connection_error", data={})
 
     assert type(exc_info.value.args[0]) == ConnectionError
     assert str(exc_info.value.args[0]) == error_message
@@ -142,7 +142,7 @@ def test_client_reraise_exception(rpc_client, requests_mock, old_exception_schem
     )
 
     with pytest.raises(ReraiseException) as exc_info:
-        rpc_client.post(endpoint, data={})
+        rpc_client._post(endpoint, data={})
 
     assert str(exc_info.value) == error_message
 
@@ -171,7 +171,7 @@ def test_client_raise_remote_exception(
     )
 
     with pytest.raises(RemoteException) as exc_info:
-        rpc_client.post(endpoint, data={})
+        rpc_client._post(endpoint, data={})
 
     assert str(exc_info.value.args[0]["type"]) == "Exception"
     assert str(exc_info.value.args[0]["message"]) == error_message
