@@ -5,6 +5,7 @@ pytz
 requests-mock
 types-click
 types-flask
+types-psycopg2
 types-pytz
 types-pyyaml
 types-requests
