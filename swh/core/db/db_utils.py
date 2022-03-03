@@ -14,6 +14,7 @@ import subprocess
 from typing import Collection, Dict, List, Optional, Tuple, Union
 
 import psycopg2
+import psycopg2.errors
 import psycopg2.extensions
 from psycopg2.extensions import connection as pgconnection
 from psycopg2.extensions import encodings as pgencodings
