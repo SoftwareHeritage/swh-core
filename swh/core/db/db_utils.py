@@ -11,7 +11,7 @@ from os import path
 import pathlib
 import re
 import subprocess
-from typing import Collection, Dict, List, Optional, Tuple, Union
+from typing import Collection, Dict, List, Optional, Tuple, Union, cast
 
 import psycopg2
 import psycopg2.errors
@@ -143,7 +143,7 @@ def swh_db_versions(
             )
             try:
                 c.execute(query)
-                return c.fetchall()
+                return cast(List[Tuple[int, datetime, str]], c.fetchall())
             except psycopg2.errors.UndefinedTable:
                 return None
     except Exception:
@@ -184,6 +184,9 @@ def swh_db_upgrade(
         for fname in get_sql_for_package(modname, upgrade=True)
         if db_version < int(fname.stem) <= to_version
     ]
+
+    if not sqlfiles:
+        return db_version
 
     for sqlfile in sqlfiles:
         new_version = int(path.splitext(path.basename(sqlfile))[0])

@@ -389,13 +389,19 @@ def db_upgrade(ctx, module, to_version):
             f"{ds_version} of the datastore backend {db_module}"
         )
 
-    new_db_version = swh_db_upgrade(dbname, module, to_version)
-    click.secho(f"Migration to version {new_db_version} done", fg="green")
-    if new_db_version < ds_version:
+    if to_version == db_version:
         click.secho(
-            f"Warning: migration was not complete: the current version is {ds_version}",
-            fg="yellow",
+            f"No migration needed: the current version is {db_version}", fg="yellow",
         )
+    else:
+        new_db_version = swh_db_upgrade(dbname, module, to_version)
+        click.secho(f"Migration to version {new_db_version} done", fg="green")
+        if new_db_version < ds_version:
+            click.secho(
+                "Warning: migration was not complete: "
+                f"the current version is {ds_version}",
+                fg="yellow",
+            )
 
 
 def get_dburl_from_config(cfg):
