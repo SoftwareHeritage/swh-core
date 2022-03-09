@@ -1,3 +1,12 @@
+swh-core (2.2.2-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.2.2     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2022-03-09 17:44:25 +0100)
+  * Upstream changes:     - v2.2.2     - small fixes in the `swh db
+    upgrade` command
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 09 Mar 2022 16:48:21 +0000
+
 swh-core (2.2.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.2.1     - (tagged by Nicolas Dandrimont
