@@ -190,7 +190,7 @@ def swh_db_upgrade(
 
     for sqlfile in sqlfiles:
         new_version = int(path.splitext(path.basename(sqlfile))[0])
-        logger.info("Executing migration script {sqlfile}")
+        logger.info("Executing migration script '%s'", sqlfile)
         if db_version is not None and (new_version - db_version) > 1:
             logger.error(
                 f"There are missing migration steps between {db_version} and "
