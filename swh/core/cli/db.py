@@ -323,8 +323,13 @@ def db_version(ctx, module, show_all):
     metavar="VERSION",
     default=None,
 )
+@click.option(
+    "--interactive/--non-interactive",
+    help="Do not ask questions (use default answer to all questions)",
+    default=True,
+)
 @click.pass_context
-def db_upgrade(ctx, module, to_version):
+def db_upgrade(ctx, module, to_version, interactive):
     """Upgrade the database for given module (to a given version if specified).
 
     Examples::
@@ -360,7 +365,7 @@ def db_upgrade(ctx, module, to_version):
             fg="yellow",
             bold=True,
         )
-        if not click.confirm(
+        if interactive and not click.confirm(
             f"Write the module information ({module}) in the database?", default=True
         ):
             raise click.BadParameter("Migration aborted.")
