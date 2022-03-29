@@ -1,12 +1,12 @@
-# Copyright (C) 2015-2018  The Software Heritage developers
+# Copyright (C) 2015-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import abc
 import multiprocessing
-import os
 import time
+import unittest.mock
 from urllib.request import urlopen
 
 import aiohttp
@@ -116,8 +116,8 @@ class ServerTestFixture(ServerTestFixtureBaseClass):
     def define_worker_function(self):
         def worker(app, port):
             # Make Flask 1.0 stop printing its server banner
-            os.environ["WERKZEUG_RUN_MAIN"] = "true"
-            return app.run(port=port, use_reloader=False)
+            with unittest.mock.patch("flask.cli.show_server_banner"):
+                return app.run(port=port, use_reloader=False)
 
         return worker
 
