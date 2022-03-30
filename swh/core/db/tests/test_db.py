@@ -415,3 +415,45 @@ def test_db_transaction_generator_signature():
     actual_sig = inspect.signature(g)
 
     assert actual_sig == expected_sig
+
+
+@pytest.mark.parametrize(
+    "query_options", (None, {"something": 42, "statement_timeout": 200})
+)
+@pytest.mark.parametrize("use_generator", (True, False))
+def test_db_transaction_query_options(mocker, use_generator, query_options):
+    class Storage:
+        @db_transaction(statement_timeout=100)
+        def endpoint(self, cur=None, db=None):
+            return [None]
+
+        @db_transaction_generator(statement_timeout=100)
+        def gen_endpoint(self, cur=None, db=None):
+            yield None
+
+    storage = Storage()
+
+    # mockers
+    mocked_apply = mocker.patch("swh.core.db.common.apply_options")
+    # 'with storage.get_db().transaction() as cur:' should cause
+    # 'cur' to be 'expected_cur'
+    expected_cur = object()
+    db_mock = MagicMock()
+    db_mock.transaction.return_value.__enter__.return_value = expected_cur
+    mocker.patch.object(storage, "get_db", return_value=db_mock, create=True)
+    mocker.patch.object(storage, "put_db", create=True)
+
+    if query_options:
+        storage.query_options = {
+            "endpoint": query_options,
+            "gen_endpoint": query_options,
+        }
+    if use_generator:
+        list(storage.gen_endpoint())
+    else:
+        list(storage.endpoint())
+
+    mocked_apply.assert_called_once_with(
+        expected_cur,
+        query_options if query_options is not None else {"statement_timeout": 100},
+    )
