@@ -11,7 +11,6 @@ import re
 from typing import Dict, List, Optional
 from urllib.parse import unquote, urlparse
 
-from _pytest.fixtures import FixtureRequest
 import pytest
 import requests
 from requests.adapters import BaseAdapter
@@ -119,7 +118,7 @@ def get_response_cb(
 
 
 @pytest.fixture
-def datadir(request: FixtureRequest) -> str:
+def datadir(request: pytest.FixtureRequest) -> str:
     """By default, returns the test directory's data directory.
 
     This can be overridden on a per file tree basis. Add an override
@@ -135,7 +134,9 @@ def datadir(request: FixtureRequest) -> str:
 
 
     """
-    return path.join(path.dirname(str(request.fspath)), "data")
+    # pytest >= 7 renamed FixtureRequest fspath attribute to path
+    path_ = request.path if hasattr(request, "path") else request.fspath  # type: ignore
+    return path.join(path.dirname(str(path_)), "data")
 
 
 def requests_mock_datadir_factory(
@@ -310,7 +311,7 @@ def flask_app_client(app):
 # stolen from pytest-flask, required to have url_for() working within tests
 # using flask_app_client fixture.
 @pytest.fixture(autouse=True)
-def _push_request_context(request: FixtureRequest):
+def _push_request_context(request: pytest.FixtureRequest):
     """During tests execution request context has been pushed, e.g. `url_for`,
     `session`, etc. can be used in tests as is::
 
