@@ -122,8 +122,7 @@ documented at https://docs.python.org/3/library/logging.config.html.
 )
 @click.pass_context
 def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
-    """Command line interface for Software Heritage.
-    """
+    """Command line interface for Software Heritage."""
     import signal
 
     import yaml

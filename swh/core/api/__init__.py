@@ -186,9 +186,7 @@ class MetaRPCClient(type):
 
 
 class RPCClient(metaclass=MetaRPCClient):
-    """Proxy to an internal SWH RPC
-
-    """
+    """Proxy to an internal SWH RPC"""
 
     backend_class = None  # type: ClassVar[Optional[type]]
     """For each method of `backend_class` decorated with
@@ -392,7 +390,10 @@ def encode_data_server(
     data, content_type="application/x-msgpack", extra_type_encoders=None
 ):
     encoded_data = ENCODERS[content_type](data, extra_encoders=extra_type_encoders)
-    return Response(encoded_data, mimetype=content_type,)
+    return Response(
+        encoded_data,
+        mimetype=content_type,
+    )
 
 
 def decode_request(request, extra_decoders=None):

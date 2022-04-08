@@ -42,9 +42,7 @@ def render_json(request, data, extra_encoders=None):
 
 
 def decode_data(data, content_type, extra_decoders=None):
-    """Decode data according to content type, eventually using some extra decoders.
-
-    """
+    """Decode data according to content type, eventually using some extra decoders."""
     if not data:
         return {}
     if content_type == "application/x-msgpack":
@@ -58,9 +56,7 @@ def decode_data(data, content_type, extra_decoders=None):
 
 
 async def decode_request(request, extra_decoders=None):
-    """Decode asynchronously the request
-
-    """
+    """Decode asynchronously the request"""
     data = await request.read()
     return decode_data(data, request.content_type, extra_decoders=extra_decoders)
 
@@ -118,7 +114,10 @@ class RPCServerApp(aiohttp.web.Application):
         nego_middleware = negotiation.negotiation_middleware(
             renderers=self._renderers(), force_rendering=True
         )
-        middlewares = (nego_middleware, error_middleware,) + middlewares
+        middlewares = (
+            nego_middleware,
+            error_middleware,
+        ) + middlewares
         super().__init__(middlewares=middlewares, **kwargs)
 
         # swh decorations starts here
@@ -164,9 +163,7 @@ class RPCServerApp(aiohttp.web.Application):
         )
 
     def _endpoint(self, meth_name, meth, backend_factory):
-        """Create endpoint out of the method `meth`.
-
-        """
+        """Create endpoint out of the method `meth`."""
 
         @functools.wraps(meth)  # Copy signature and doc
         async def decorated_meth(request, *args, **kwargs):

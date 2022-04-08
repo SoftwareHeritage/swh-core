@@ -22,7 +22,9 @@ test_postgresql_proc = factories.postgresql_proc(
 
 # db with special policy for tables dbversion and people
 postgres_fun = postgresql_fact(
-    "test_postgresql_proc", no_db_drop=True, no_truncate_tables={"dbversion", "people"},
+    "test_postgresql_proc",
+    no_db_drop=True,
+    no_truncate_tables={"dbversion", "people"},
 )
 
 postgres_fun2 = postgresql_fact(
@@ -35,9 +37,7 @@ postgres_fun2 = postgresql_fact(
 
 
 def test_smoke_test_fun_db_is_up(postgres_fun):
-    """This ensures the db is created and configured according to its dumps files.
-
-    """
+    """This ensures the db is created and configured according to its dumps files."""
     with BaseDb.connect(postgres_fun.dsn).cursor() as cur:
         cur.execute("select count(*) from dbversion")
         nb_rows = cur.fetchone()[0]
@@ -58,9 +58,7 @@ def test_smoke_test_fun_db_is_up(postgres_fun):
 
 
 def test_smoke_test_fun2_db_is_up(postgres_fun2):
-    """This ensures the db is created and configured according to its dumps files.
-
-    """
+    """This ensures the db is created and configured according to its dumps files."""
     with BaseDb.connect(postgres_fun2.dsn).cursor() as cur:
         cur.execute("select count(*) from dbversion")
         nb_rows = cur.fetchone()[0]
@@ -125,9 +123,7 @@ def test_gen_dump_files():
 
 
 def test_smoke_test_people_db_up(postgres_people):
-    """'people' db is up and configured
-
-    """
+    """'people' db is up and configured"""
     with BaseDb.connect(postgres_people.dsn).cursor() as cur:
         cur.execute("select count(*) from dbversion")
         nb_rows = cur.fetchone()[0]
@@ -147,9 +143,7 @@ def test_smoke_test_people_db_up(postgres_people):
 
 
 def test_smoke_test_people_db_up_and_reset(postgres_people):
-    """'people' db is up and got reset on every tables and sequences
-
-    """
+    """'people' db is up and got reset on every tables and sequences"""
     with BaseDb.connect(postgres_people.dsn).cursor() as cur:
         # tables are truncated after the first round
         cur.execute("select count(*) from dbversion")
@@ -176,9 +170,7 @@ postgres_no_init = postgresql_fact("postgresql_proc", dbname="something")
 
 
 def test_smoke_test_db_no_init(postgres_no_init):
-    """We can connect to the db nonetheless
-
-    """
+    """We can connect to the db nonetheless"""
     with BaseDb.connect(postgres_no_init.dsn).cursor() as cur:
         cur.execute("select now()")
         data = cur.fetchone()[0]

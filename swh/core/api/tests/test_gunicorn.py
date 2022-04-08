@@ -89,7 +89,11 @@ def test_post_fork_no_flask():
             gunicorn_config.post_fork(None, None, flask=False)
 
     sentry_sdk_init.assert_called_once_with(
-        dsn="test_dsn", integrations=[], debug=False, release=None, environment=None,
+        dsn="test_dsn",
+        integrations=[],
+        debug=False,
+        release=None,
+        environment=None,
     )
 
 

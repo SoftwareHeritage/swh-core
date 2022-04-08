@@ -65,9 +65,7 @@ def _unpack_zip(zippath: str, extract_dir: str) -> str:
 
 
 def register_new_archive_formats():
-    """Register new archive formats to uncompress
-
-    """
+    """Register new archive formats to uncompress"""
     registered_formats = [f[0] for f in shutil.get_unpack_formats()]
     for name, extensions, function in ADDITIONAL_ARCHIVE_FORMATS:
         if name in registered_formats:
@@ -145,9 +143,7 @@ def normalize_permissions(path: str):
 
 
 def _ls(rootdir):
-    """Generator of filepath, filename from rootdir.
-
-    """
+    """Generator of filepath, filename from rootdir."""
     for dirpath, dirnames, fnames in os.walk(rootdir):
         for fname in dirnames + fnames:
             fpath = os.path.join(dirpath, fname)
@@ -156,18 +152,14 @@ def _ls(rootdir):
 
 
 def _compress_zip(tarpath, files):
-    """Compress dirpath's content as tarpath.
-
-    """
+    """Compress dirpath's content as tarpath."""
     with zipfile.ZipFile(tarpath, "w") as z:
         for fpath, fname in files:
             z.write(fpath, arcname=fname)
 
 
 def _compress_tar(tarpath, files):
-    """Compress dirpath's content as tarpath.
-
-    """
+    """Compress dirpath's content as tarpath."""
     with tarfile.open(tarpath, "w:bz2") as t:
         for fpath, fname in files:
             t.add(fpath, arcname=fname, recursive=False)

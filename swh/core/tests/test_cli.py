@@ -21,7 +21,15 @@ help_msg_snippets = (
             "Command line interface for Software Heritage.",
         ),
     ),
-    ("Options", ("-l, --log-level", "--log-config", "--sentry-dsn", "-h, --help",)),
+    (
+        "Options",
+        (
+            "-l, --log-level",
+            "--log-config",
+            "--sentry-dsn",
+            "-h, --help",
+        ),
+    ),
 )
 
 
@@ -142,7 +150,11 @@ def test_sentry(swhmain):
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
-        dsn="test_dsn", debug=False, integrations=[], release=None, environment=None,
+        dsn="test_dsn",
+        debug=False,
+        integrations=[],
+        release=None,
+        environment=None,
     )
 
 
@@ -160,7 +172,11 @@ def test_sentry_debug(swhmain):
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
-        dsn="test_dsn", debug=True, integrations=[], release=None, environment=None,
+        dsn="test_dsn",
+        debug=True,
+        integrations=[],
+        release=None,
+        environment=None,
     )
 
 
@@ -180,7 +196,11 @@ def test_sentry_env(swhmain):
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
-        dsn="test_dsn", debug=True, integrations=[], release=None, environment=None,
+        dsn="test_dsn",
+        debug=True,
+        integrations=[],
+        release=None,
+        environment=None,
     )
 
 
@@ -252,7 +272,14 @@ def test_log_config(log_config_path, swhmain):
         logging.getLogger("dontshowdebug").info("Shown")
 
     runner = CliRunner()
-    result = runner.invoke(swhmain, ["--log-config", log_config_path, "test",],)
+    result = runner.invoke(
+        swhmain,
+        [
+            "--log-config",
+            log_config_path,
+            "test",
+        ],
+    )
 
     assert result.exit_code == 0
     assert result.output.strip() == "\n".join(
@@ -275,7 +302,14 @@ def test_log_config_log_level_interaction(log_config_path, swhmain):
 
     runner = CliRunner()
     result = runner.invoke(
-        swhmain, ["--log-config", log_config_path, "--log-level", "INFO", "test",],
+        swhmain,
+        [
+            "--log-config",
+            log_config_path,
+            "--log-level",
+            "INFO",
+            "test",
+        ],
     )
 
     assert result.exit_code == 0
@@ -297,7 +331,14 @@ def test_multiple_log_level_behavior(swhmain):
 
     runner = CliRunner()
     result = runner.invoke(
-        swhmain, ["--log-level", "DEBUG", "--log-level", "dontshowdebug:INFO", "test",]
+        swhmain,
+        [
+            "--log-level",
+            "DEBUG",
+            "--log-level",
+            "dontshowdebug:INFO",
+            "test",
+        ],
     )
 
     assert result.exit_code == 0, result.output

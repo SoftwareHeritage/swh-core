@@ -163,7 +163,12 @@ FIELDS = (
         in_wrapper=tuple_2d_to_list_2d,
         out_converter=list_2d_to_tuple_2d,
     ),
-    Field("ts", "timestamptz", now(), pg_tstz(),),
+    Field(
+        "ts",
+        "timestamptz",
+        now(),
+        pg_tstz(),
+    ),
     Field(
         "dict",
         "jsonb",
@@ -197,7 +202,9 @@ FIELDS = (
         "tstz_range",
         "tstzrange",
         psycopg2.extras.DateTimeTZRange(
-            lower=now(), upper=now() + datetime.timedelta(days=1), bounds="[)",
+            lower=now(),
+            upper=now() + datetime.timedelta(days=1),
+            bounds="[)",
         ),
         strategies.tuples(
             # generate two sorted timestamptzs for use as bounds
@@ -207,7 +214,9 @@ FIELDS = (
         ).map(
             # and build the actual DateTimeTZRange object from these args
             lambda args: psycopg2.extras.DateTimeTZRange(
-                lower=args[0][0], upper=args[0][1], bounds=args[1],
+                lower=args[0][0],
+                upper=args[0][1],
+                bounds=args[1],
             )
         ),
     ),
@@ -240,9 +249,7 @@ test_db = postgresql_fact("postgresql_proc", dbname="test-db2")
 
 @pytest.fixture
 def db_with_data(test_db, request):
-    """Fixture to initialize a db with some data out of the "INIT_SQL above
-
-    """
+    """Fixture to initialize a db with some data out of the "INIT_SQL above"""
     db = BaseDb.connect(test_db.dsn)
     with db.cursor() as cur:
         psycopg2.extras.register_default_jsonb(cur)
@@ -299,7 +306,7 @@ def test_db_copy_to(db_with_data, data):
 
 
 def test_db_copy_to_thread_exception(db_with_data):
-    data = [(2 ** 65, "foo", b"bar")]
+    data = [(2**65, "foo", b"bar")]
 
     items = [dict(zip(COLUMNS, item)) for item in data]
     with pytest.raises(psycopg2.errors.NumericValueOutOfRange):

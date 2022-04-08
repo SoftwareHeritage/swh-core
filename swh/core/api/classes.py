@@ -32,9 +32,7 @@ def _stream_results(f, *args, page_token, **kwargs):
 def stream_results(
     f: Callable[..., PagedResult[TResult, TToken]], *args, **kwargs
 ) -> Iterable[TResult]:
-    """Consume the paginated result and stream the page results
-
-    """
+    """Consume the paginated result and stream the page results"""
     if "page_token" in kwargs:
         raise TypeError('stream_results has no argument "page_token".')
     yield from _stream_results(f, *args, page_token=None, **kwargs)
@@ -43,9 +41,7 @@ def stream_results(
 def stream_results_optional(
     f: Callable[..., Optional[PagedResult[TResult, TToken]]], *args, **kwargs
 ) -> Optional[Iterable[TResult]]:
-    """Like stream_results(), but for functions ``f`` that return an Optional.
-
-    """
+    """Like stream_results(), but for functions ``f`` that return an Optional."""
     if "page_token" in kwargs:
         raise TypeError('stream_results_optional has no argument "page_token".')
     res = f(*args, page_token=None, **kwargs)

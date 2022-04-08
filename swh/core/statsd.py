@@ -443,7 +443,8 @@ class Statsd(object):
         return {
             str(k): str(v)
             for k, v in itertools.chain(
-                self.constant_tags.items(), (tags if tags else {}).items(),
+                self.constant_tags.items(),
+                (tags if tags else {}).items(),
             )
         }
 

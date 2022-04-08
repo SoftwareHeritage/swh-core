@@ -412,7 +412,7 @@ def _split_sql(sql):
     """
     curr = pre = []
     post = []
-    tokens = re.split(br"(%.)", sql)
+    tokens = re.split(rb"(%.)", sql)
     for token in tokens:
         if len(token) != 2 or token[:1] != b"%":
             curr.append(token)
@@ -671,5 +671,6 @@ def execute_sqlfiles(
 
     if flavor is not None and not flavor_set:
         logger.warn(
-            "Asked for flavor %s, but module does not support database flavors", flavor,
+            "Asked for flavor %s, but module does not support database flavors",
+            flavor,
         )

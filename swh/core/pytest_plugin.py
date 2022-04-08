@@ -332,7 +332,7 @@ def _push_request_context(request: pytest.FixtureRequest):
 
 
 class FakeSocket(object):
-    """ A fake socket for testing. """
+    """A fake socket for testing."""
 
     def __init__(self):
         self.payloads = deque()
