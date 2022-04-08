@@ -366,7 +366,9 @@ def swh_db_flavor(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
             query = "select swh_get_dbflavor()"
             try:
                 c.execute(query)
-                return c.fetchone()[0]
+                result = c.fetchone()
+                assert result is not None  # to keep mypy happy
+                return result[0]
             except psycopg2.errors.UndefinedFunction:
                 # function not found: no flavor
                 return None
