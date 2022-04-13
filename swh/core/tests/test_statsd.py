@@ -219,12 +219,13 @@ def test_timed_exception(statsd):
         func(1, 0)
 
     packet = statsd.socket.recv()
-    name_value, type_ = packet.split("|")
+    name_value, type_, tags = packet.split("|")
     name, value = name_value.split(":")
 
     assert type_ == "c"
     assert name == "timed.test_error_count"
     assert int(value) == 1
+    assert tags == "#error_type:ZeroDivisionError"
 
 
 def test_timed_no_metric(statsd):
@@ -322,12 +323,13 @@ def test_timed_context_exception(statsd):
 
     # Ensure the timing was recorded.
     packet = statsd.socket.recv()
-    name_value, type_ = packet.split("|")
+    name_value, type_, tags = packet.split("|")
     name, value = name_value.split(":")
 
     assert type_ == "c"
     assert name == "timed_context.test_error_count"
     assert int(value) == 1
+    assert tags == "#error_type:ContextException"
 
 
 def test_timed_context_no_metric_name_exception(statsd):
