@@ -5,9 +5,44 @@
 
 import logging
 
+import pytest
 from sentry_sdk import capture_message
 
-from swh.core.sentry import init_sentry
+from swh.core.sentry import init_sentry, override_with_bool_envvar
+
+
+@pytest.mark.parametrize(
+    "envvalue,retval",
+    (
+        ("y", True),
+        ("n", False),
+        ("0", False),
+        ("true", True),
+        ("FaLsE", False),
+        ("1", True),
+    ),
+)
+def test_override_with_bool_envvar(monkeypatch, envvalue: str, retval: bool):
+    """Test if the override_with_bool_envvar function returns appropriate results"""
+    envvar = "OVERRIDE_WITH_BOOL_ENVVAR"
+    monkeypatch.setenv(envvar, envvalue)
+    for default in (True, False):
+        assert override_with_bool_envvar(envvar, default) == retval
+
+
+def test_override_with_bool_envvar_logging(monkeypatch, caplog):
+    envvar = "OVERRIDE_WITH_BOOL_ENVVAR"
+    monkeypatch.setenv(envvar, "not a boolean env value")
+    for default in (True, False):
+        caplog.clear()
+        assert override_with_bool_envvar(envvar, default) == default
+        assert len(caplog.records) == 1
+        assert (
+            "OVERRIDE_WITH_BOOL_ENVVAR='not a boolean env value'"
+            in caplog.records[0].getMessage()
+        )
+        assert f"using default value {default}" in caplog.records[0].getMessage()
+        assert caplog.records[0].levelname == "WARNING"
 
 
 def test_sentry():

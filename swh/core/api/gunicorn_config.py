@@ -34,7 +34,7 @@ def post_fork(
         sentry_integrations.append(FlaskIntegration())
 
     init_sentry(
-        default_sentry_dsn,
+        sentry_dsn=default_sentry_dsn,
         integrations=sentry_integrations,
         extra_kwargs=extra_sentry_kwargs,
         disable_logging_events=disable_logging_events,

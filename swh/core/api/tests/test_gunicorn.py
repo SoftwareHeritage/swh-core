@@ -117,6 +117,23 @@ def test_post_fork_no_flask():
     )
 
 
+def test_post_fork_override_logging_events_envvar():
+
+    with patch("sentry_sdk.init") as sentry_sdk_init, patch.dict(
+        os.environ,
+        {"SWH_SENTRY_DSN": "test_dsn", "SWH_SENTRY_DISABLE_LOGGING_EVENTS": "false"},
+    ):
+        gunicorn_config.post_fork(None, None, flask=False)
+
+    sentry_sdk_init.assert_called_once_with(
+        dsn="test_dsn",
+        integrations=[],
+        debug=False,
+        release=None,
+        environment=None,
+    )
+
+
 def test_post_fork_extras():
     flask_integration = object()  # unique object to check for equality
     with patch(

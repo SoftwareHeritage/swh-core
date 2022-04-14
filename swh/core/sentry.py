@@ -3,10 +3,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import logging
 import os
 from typing import Dict, List, Optional
 
 import pkg_resources
+
+logger = logging.getLogger(__name__)
 
 
 def get_sentry_release():
@@ -18,30 +21,45 @@ def get_sentry_release():
         return None
 
 
-def envvar_is_positive(envvar: str) -> bool:
-    """Check whether a given environment variable looks like a positive boolean value"""
-    return os.environ.get(envvar, "false").lower() in ("t", "true", "y", "yes", "1")
+def override_with_bool_envvar(envvar: str, default: bool) -> bool:
+    """Override the `default` with the environment variable `envvar` parsed as a boolean"""
+    envvalue = os.environ.get(envvar, "")
+    if envvalue.lower() in ("t", "true", "y", "yes", "1"):
+        return True
+    elif envvalue.lower() in ("f", "false", "n", "no", "0"):
+        return False
+    else:
+        if envvalue:
+            logger.warning(
+                "Could not interpret environment variable %s=%r as boolean, "
+                "using default value %s",
+                envvar,
+                envvalue,
+                default,
+            )
+        return default
 
 
 def init_sentry(
-    sentry_dsn: str,
+    sentry_dsn: Optional[str] = None,
     *,
-    debug: Optional[bool] = None,
-    disable_logging_events: Optional[bool] = None,
+    environment: Optional[str] = None,
+    debug: bool = False,
+    disable_logging_events: bool = False,
     integrations: Optional[List] = None,
     extra_kwargs: Optional[Dict] = None,
 ):
     """Configure the sentry integration
 
     Args:
-      sentry_dsn: sentry DSN; where sentry report will be sent (if empty, pulled from
-        :envvar:`SWH_SENTRY_DSN`)
-      debug: turn on sentry SDK debug mode (if ``None``, pulled from
-        :envvar:`SWH_SENTRY_DEBUG`)
+      sentry_dsn: Sentry DSN; where sentry report will be sent. Overridden by
+        :envvar:`SWH_SENTRY_DSN`
+      environment: Sentry environment. Overridden by :envvar:`SWH_SENTRY_ENVIRONMENT`
+      debug: turn on Sentry SDK debug mode. Overridden by :envvar:`SWH_SENTRY_DEBUG`
       disable_logging_events: if set, disable the automatic reporting of error/exception
-        log entries as sentry events (if ``None``, pulled from
-        :envvar:`SWH_SENTRY_DISABLE_LOGGING_EVENTS`)
-      integrations: list of dedicated sentry integrations objects
+        log entries as Sentry events. Overridden by
+        :envvar:`SWH_SENTRY_DISABLE_LOGGING_EVENTS`
+      integrations: list of dedicated Sentry integrations to include
       extra_kwargs: dict of additional parameters passed to :func:`sentry_sdk.init`
 
     """
@@ -50,13 +68,13 @@ def init_sentry(
     if extra_kwargs is None:
         extra_kwargs = {}
 
-    sentry_dsn = sentry_dsn or os.environ.get("SWH_SENTRY_DSN", "")
-    environment = os.environ.get("SWH_SENTRY_ENVIRONMENT")
+    sentry_dsn = os.environ.get("SWH_SENTRY_DSN", sentry_dsn)
+    environment = os.environ.get("SWH_SENTRY_ENVIRONMENT", environment)
 
-    if debug is None:
-        debug = envvar_is_positive("SWH_SENTRY_DEBUG")
-    if disable_logging_events is None:
-        disable_logging_events = envvar_is_positive("SWH_SENTRY_DISABLE_LOGGING_EVENTS")
+    debug = override_with_bool_envvar("SWH_SENTRY_DEBUG", debug)
+    disable_logging_events = override_with_bool_envvar(
+        "SWH_SENTRY_DISABLE_LOGGING_EVENTS", disable_logging_events
+    )
 
     if sentry_dsn:
         import sentry_sdk
