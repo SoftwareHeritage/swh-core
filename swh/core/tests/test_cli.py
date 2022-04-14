@@ -12,6 +12,7 @@ import click
 from click.testing import CliRunner
 import pkg_resources
 import pytest
+import yaml
 
 help_msg_snippets = (
     (
@@ -68,6 +69,18 @@ def assert_section_contains(cli_output: str, section: str, snippet: str) -> bool
             section,
             cli_output,
         )
+
+
+@pytest.fixture(autouse=True)
+def reset_root_loglevel():
+    root_level = logging.root.level
+    yield
+    logging.root.setLevel(root_level)
+
+
+@pytest.fixture
+def patched_dictconfig(mocker):
+    yield mocker.patch("logging.config.dictConfig", autospec=True)
 
 
 def test_swh_help(swhmain):
@@ -262,14 +275,17 @@ def log_config_path(tmp_path):
     yield str(tmp_path / "log_config.yml")
 
 
-def test_log_config(log_config_path, swhmain):
+def test_log_config(log_config_path, swhmain, patched_dictconfig):
+    """Check that --log-config properly calls :func:`logging.config.dictConfig`."""
+
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
-        logging.debug("Root log debug")
-        logging.info("Root log info")
-        logging.getLogger("dontshowdebug").debug("Not shown")
-        logging.getLogger("dontshowdebug").info("Shown")
+        patched_dictconfig.assert_called_once_with(
+            yaml.safe_load(open(log_config_path, "r"))
+        )
+
+        click.echo("Hello SWH!")
 
     runner = CliRunner()
     result = runner.invoke(
@@ -282,23 +298,24 @@ def test_log_config(log_config_path, swhmain):
     )
 
     assert result.exit_code == 0
-    assert result.output.strip() == "\n".join(
-        [
-            "custom format:root:DEBUG:Root log debug",
-            "custom format:root:INFO:Root log info",
-            "custom format:dontshowdebug:INFO:Shown",
-        ]
-    )
+    assert result.output.strip() == "Hello SWH!"
 
 
-def test_log_config_log_level_interaction(log_config_path, swhmain):
+def test_log_config_log_level_interaction(log_config_path, swhmain, patched_dictconfig):
+    """Check that --log-config and --log-level work properly together, by calling
+    :func:`logging.config.dictConfig` then setting the loglevel of the root logger."""
+
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
-        logging.debug("Root log debug")
-        logging.info("Root log info")
-        logging.getLogger("dontshowdebug").debug("Not shown")
-        logging.getLogger("dontshowdebug").info("Shown")
+        assert logging.root.level == logging.DEBUG
+        patched_dictconfig.assert_called_once_with(
+            yaml.safe_load(open(log_config_path, "r"))
+        )
+
+        click.echo("Hello SWH!")
+
+    assert logging.root.level != logging.DEBUG
 
     runner = CliRunner()
     result = runner.invoke(
@@ -307,18 +324,13 @@ def test_log_config_log_level_interaction(log_config_path, swhmain):
             "--log-config",
             log_config_path,
             "--log-level",
-            "INFO",
+            "DEBUG",
             "test",
         ],
     )
 
     assert result.exit_code == 0
-    assert result.output.strip() == "\n".join(
-        [
-            "custom format:root:INFO:Root log info",
-            "custom format:dontshowdebug:INFO:Shown",
-        ]
-    )
+    assert result.output.strip() == "Hello SWH!"
 
 
 def test_multiple_log_level_behavior(swhmain):
