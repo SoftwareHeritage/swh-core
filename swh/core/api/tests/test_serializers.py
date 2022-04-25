@@ -53,7 +53,16 @@ TZ = datetime.timezone(datetime.timedelta(minutes=118))
 DATA_BYTES = b"123456789\x99\xaf\xff\x00\x12"
 ENCODED_DATA_BYTES = {"swhtype": "bytes", "d": "F)}kWH8wXmIhn8j01^"}
 
-DATA_DATETIME = datetime.datetime(2015, 3, 4, 18, 25, 13, 1234, tzinfo=TZ,)
+DATA_DATETIME = datetime.datetime(
+    2015,
+    3,
+    4,
+    18,
+    25,
+    13,
+    1234,
+    tzinfo=TZ,
+)
 ENCODED_DATA_DATETIME = {
     "swhtype": "datetime",
     "d": "2015-03-04T18:25:13.001234+01:58",
@@ -74,12 +83,17 @@ TestPagedResultStr = PagedResult[
 ]
 
 DATA_PAGED_RESULT = TestPagedResultStr(
-    results=[DATA_UUID, DATA_DATETIME, DATA_TIMEDELTA], next_page_token="10",
+    results=[DATA_UUID, DATA_DATETIME, DATA_TIMEDELTA],
+    next_page_token="10",
 )
 
 ENCODED_DATA_PAGED_RESULT = {
     "d": {
-        "results": [ENCODED_DATA_UUID, ENCODED_DATA_DATETIME, ENCODED_DATA_TIMEDELTA,],
+        "results": [
+            ENCODED_DATA_UUID,
+            ENCODED_DATA_DATETIME,
+            ENCODED_DATA_TIMEDELTA,
+        ],
         "next_page_token": "10",
     },
     "swhtype": "paged_result",
@@ -91,12 +105,17 @@ TestPagedResultTuple = PagedResult[
 
 
 DATA_PAGED_RESULT2 = TestPagedResultTuple(
-    results=["data0", DATA_BYTES, DATA_DATETIME], next_page_token=["10", DATA_UUID],
+    results=["data0", DATA_BYTES, DATA_DATETIME],
+    next_page_token=["10", DATA_UUID],
 )
 
 ENCODED_DATA_PAGED_RESULT2 = {
     "d": {
-        "results": ["data0", ENCODED_DATA_BYTES, ENCODED_DATA_DATETIME,],
+        "results": [
+            "data0",
+            ENCODED_DATA_BYTES,
+            ENCODED_DATA_DATETIME,
+        ],
         "next_page_token": ["10", ENCODED_DATA_UUID],
     },
     "swhtype": "paged_result",
@@ -120,7 +139,10 @@ DATA = {
 ENCODED_DATA = {
     "bytes": ENCODED_DATA_BYTES,
     "datetime_tz": ENCODED_DATA_DATETIME,
-    "datetime_utc": {"swhtype": "datetime", "d": "2015-03-04T18:25:13.001234+00:00",},
+    "datetime_utc": {
+        "swhtype": "datetime",
+        "d": "2015-03-04T18:25:13.001234+00:00",
+    },
     "datetime_delta": ENCODED_DATA_TIMEDELTA,
     "swhtype": "fake",
     "swh_dict": {"swhtype": 42, "d": "test"},
@@ -152,7 +174,9 @@ def test_serializers_round_trip_json_extra_types():
 
 def test_exception_serializer_round_trip_json():
     error_message = "unreachable host"
-    json_data = json_dumps({"exception": ConnectionError(error_message)},)
+    json_data = json_dumps(
+        {"exception": ConnectionError(error_message)},
+    )
     actual_data = json_loads(json_data)
     assert "exception" in actual_data
     assert type(actual_data["exception"]) == ConnectionError

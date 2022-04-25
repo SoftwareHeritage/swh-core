@@ -1,3 +1,4 @@
+.git-blame-ignore-revs
 .gitignore
 .pre-commit-config.yaml
 AUTHORS
@@ -104,6 +105,7 @@ swh/core/tests/test_collections.py
 swh/core/tests/test_config.py
 swh/core/tests/test_logger.py
 swh/core/tests/test_pytest_plugin.py
+swh/core/tests/test_sentry.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_tarball.py
 swh/core/tests/test_utils.py

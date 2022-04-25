@@ -134,7 +134,9 @@ def db_init_admin(module: str, dbname: str) -> None:
     show_default=False,
 )
 @click.option(
-    "--flavor", help="Database flavor.", default=None,
+    "--flavor",
+    help="Database flavor.",
+    default=None,
 )
 @click.option(
     "--initial-version", help="Database initial version.", default=1, show_default=True
@@ -396,7 +398,8 @@ def db_upgrade(ctx, module, to_version, interactive):
 
     if to_version == db_version:
         click.secho(
-            f"No migration needed: the current version is {db_version}", fg="yellow",
+            f"No migration needed: the current version is {db_version}",
+            fg="yellow",
         )
     else:
         new_db_version = swh_db_upgrade(dbname, module, to_version)

@@ -24,6 +24,7 @@ from typing import (
 from deprecated import deprecated
 from flask import Flask, Request, Response, abort, request
 import requests
+import sentry_sdk
 from werkzeug.exceptions import HTTPException
 
 from .negotiation import Formatter as FormatterBase
@@ -186,9 +187,7 @@ class MetaRPCClient(type):
 
 
 class RPCClient(metaclass=MetaRPCClient):
-    """Proxy to an internal SWH RPC
-
-    """
+    """Proxy to an internal SWH RPC"""
 
     backend_class = None  # type: ClassVar[Optional[type]]
     """For each method of `backend_class` decorated with
@@ -392,7 +391,10 @@ def encode_data_server(
     data, content_type="application/x-msgpack", extra_type_encoders=None
 ):
     encoded_data = ENCODERS[content_type](data, extra_encoders=extra_type_encoders)
-    return Response(encoded_data, mimetype=content_type,)
+    return Response(
+        encoded_data,
+        mimetype=content_type,
+    )
 
 
 def decode_request(request, extra_decoders=None):
@@ -414,7 +416,25 @@ def decode_request(request, extra_decoders=None):
 
 
 def error_handler(exception, encoder, status_code=500):
+    """Error handler to be registered using flask's error-handling decorator
+    ``app.errorhandler``.
+
+    This is used for exceptions that are expected in the normal execution flow of the
+    RPC-ed API, in which case the status code should be set to a value in the 4xx range,
+    as well as for exceptions that are unexpected (generally, a bare
+    :class:`Exception`), and for which the status code should be kept in the 5xx class.
+
+    This function only captures exceptions as sentry errors if the status code is in the
+    5xx range, as "expected exceptions" in the 4xx range are more likely to be handled
+    on the client side.
+
+    """
     logging.exception(exception)
+
+    status_class = status_code // 100
+    if status_class == 5:
+        sentry_sdk.capture_exception(exception)
+
     response = encoder(exception_to_dict(exception))
     if isinstance(exception, HTTPException):
         response.status_code = exception.code

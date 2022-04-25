@@ -56,7 +56,7 @@ def test_cli_swh_db_help(swhmain, cli_runner):
 @pytest.fixture
 def swh_db_cli(cli_runner, monkeypatch, postgresql):
     """This initializes a cli_runner and sets the correct environment variable expected by
-       the cli to run appropriately (when not specifying the --dbname flag)
+    the cli to run appropriately (when not specifying the --dbname flag)
 
     """
     db_params = postgresql.get_dsn_parameters()
@@ -80,9 +80,7 @@ def craft_conninfo(test_db, dbname=None) -> str:
 
 
 def test_cli_swh_db_create_and_init_db(cli_runner, postgresql, mock_import_swhmodule):
-    """Create a db then initializing it should be ok
-
-    """
+    """Create a db then initializing it should be ok"""
     module_name = "test.cli"
 
     conninfo = craft_conninfo(postgresql, "new-db")
@@ -106,9 +104,7 @@ def test_cli_swh_db_create_and_init_db(cli_runner, postgresql, mock_import_swhmo
 def test_cli_swh_db_initialization_fail_without_creation_first(
     cli_runner, postgresql, mock_import_swhmodule
 ):
-    """Init command on an inexisting db cannot work
-
-    """
+    """Init command on an inexisting db cannot work"""
     module_name = "test.cli"  # it's mocked here
     conninfo = craft_conninfo(postgresql, "inexisting-db")
 
@@ -122,7 +118,7 @@ def test_cli_swh_db_initialization_fail_without_extension(
 ):
     """Init command cannot work without privileged extension.
 
-       In this test, the schema needs privileged extension to work.
+    In this test, the schema needs privileged extension to work.
 
     """
     module_name = "test.cli"  # it's mocked here
@@ -137,9 +133,7 @@ def test_cli_swh_db_initialization_fail_without_extension(
 def test_cli_swh_db_initialization_works_with_flags(
     cli_runner, postgresql, mock_import_swhmodule
 ):
-    """Init commands with carefully crafted libpq conninfo works
-
-    """
+    """Init commands with carefully crafted libpq conninfo works"""
     module_name = "test.cli"  # it's mocked here
     conninfo = craft_conninfo(postgresql)
 
@@ -160,9 +154,7 @@ def test_cli_swh_db_initialization_works_with_flags(
 def test_cli_swh_db_initialization_with_env(
     swh_db_cli, mock_import_swhmodule, postgresql
 ):
-    """Init commands with standard environment variables works
-
-    """
+    """Init commands with standard environment variables works"""
     module_name = "test.cli"  # it's mocked here
     cli_runner, db_params = swh_db_cli
     result = cli_runner.invoke(
@@ -186,9 +178,7 @@ def test_cli_swh_db_initialization_with_env(
 def test_cli_swh_db_initialization_idempotent(
     swh_db_cli, mock_import_swhmodule, postgresql
 ):
-    """Multiple runs of the init commands are idempotent
-
-    """
+    """Multiple runs of the init commands are idempotent"""
     module_name = "test.cli"  # mocked
     cli_runner, db_params = swh_db_cli
 
@@ -223,9 +213,7 @@ def test_cli_swh_db_initialization_idempotent(
 def test_cli_swh_db_create_and_init_db_new_api(
     cli_runner, postgresql, mock_import_swhmodule, mocker, tmp_path
 ):
-    """Create a db then initializing it should be ok for a "new style" datastore
-
-    """
+    """Create a db then initializing it should be ok for a "new style" datastore"""
     module_name = "test.cli_new"
 
     conninfo = craft_conninfo(postgresql)
@@ -250,9 +238,7 @@ def test_cli_swh_db_create_and_init_db_new_api(
 
 
 def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp_path):
-    """Upgrade scenario for a "new style" datastore
-
-    """
+    """Upgrade scenario for a "new style" datastore"""
     module_name = "test.cli_new"
 
     # the `current_version` variable is the version that will be returned by

@@ -358,7 +358,10 @@ def test_load_from_envvar_with_default_config(swh_config, monkeypatch):
 
     expected_config = config.read(config_path)
     expected_config.update(
-        {"number": 666, "something-cool": ["something", "cool"],}
+        {
+            "number": 666,
+            "something-cool": ["something", "cool"],
+        }
     )
 
     assert actual_config == expected_config
