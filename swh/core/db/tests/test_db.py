@@ -182,7 +182,7 @@ FIELDS = (
         TestIntEnum.foo,
         strategies.sampled_from(TestIntEnum),
         in_wrapper=int,
-        out_converter=TestIntEnum,
+        out_converter=lambda x: TestIntEnum(x),  # lambda needed by mypy
     ),
     Field("uuid", "uuid", uuid.uuid4(), strategies.uuids()),
     Field(
