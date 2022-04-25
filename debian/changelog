@@ -1,3 +1,18 @@
+swh-core (2.5.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.5.0     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2022-04-25 13:51:26 +0200)
+  * Upstream changes:     - v2.5.0     - * Make db_transaction's
+    client_options configurable at run time     - * sentry: always
+    override init settings with the environment variables     - * Add
+    support for disabling logging-based events in sentry     - * RPC
+    server: explicitly handle sentry exception capture (instead of
+    gunicorn)     - * statsd: add an error_type tag to @timed error
+    counters     - * cli: Ensure tests don't mess with the global
+    logging setup     - * mypy/pre-commit/pytest maintenance
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 25 Apr 2022 11:56:02 +0000
+
 swh-core (2.4.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.4.0     - (tagged by Valentin Lorentz
