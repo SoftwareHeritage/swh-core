@@ -14,9 +14,7 @@ from swh.core import tarball
 
 @pytest.fixture
 def prepare_shutil_state():
-    """Reset any shutil modification in its current state
-
-    """
+    """Reset any shutil modification in its current state"""
     import shutil
 
     registered_formats = [f[0] for f in shutil.get_unpack_formats()]
@@ -117,9 +115,7 @@ def test_compress_uncompress_tar_modes(tmp_path):
 
 
 def test_uncompress_tar_failure(tmp_path, datadir):
-    """Unpack inexistent tarball should fail
-
-    """
+    """Unpack inexistent tarball should fail"""
     tarpath = os.path.join(datadir, "archives", "inexistent-archive.tar.Z")
 
     assert not os.path.exists(tarpath)
@@ -129,9 +125,7 @@ def test_uncompress_tar_failure(tmp_path, datadir):
 
 
 def test_uncompress_tar(tmp_path, datadir):
-    """Unpack supported tarball into an existent folder should be ok
-
-    """
+    """Unpack supported tarball into an existent folder should be ok"""
     filename = "groff-1.02.tar.Z"
     tarpath = os.path.join(datadir, "archives", filename)
 
@@ -145,9 +139,7 @@ def test_uncompress_tar(tmp_path, datadir):
 
 
 def test_register_new_archive_formats(prepare_shutil_state):
-    """Registering new archive formats should be fine
-
-    """
+    """Registering new archive formats should be fine"""
     unpack_formats_v1 = [f[0] for f in shutil.get_unpack_formats()]
     for format_id in tarball.ADDITIONAL_ARCHIVE_FORMATS:
         assert format_id[0] not in unpack_formats_v1
@@ -162,9 +154,7 @@ def test_register_new_archive_formats(prepare_shutil_state):
 
 
 def test_uncompress_archives(tmp_path, datadir):
-    """High level call uncompression on supported archives
-
-    """
+    """High level call uncompression on supported archives"""
     archive_dir = os.path.join(datadir, "archives")
     archive_files = os.listdir(archive_dir)
 

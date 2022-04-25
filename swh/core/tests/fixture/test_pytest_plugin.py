@@ -12,9 +12,7 @@ from .conftest import DATADIR
 
 
 def test_requests_mock_datadir_with_datadir_fixture_override(requests_mock_datadir):
-    """Override datadir fixture should retrieve data from elsewhere
-
-    """
+    """Override datadir fixture should retrieve data from elsewhere"""
     response = requests.get("https://example.com/file.json")
     assert response.ok
     assert response.json() == {"welcome": "you"}

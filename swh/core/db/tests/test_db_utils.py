@@ -104,9 +104,7 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule, module
 def test_db_utils_upgrade(
     cli_runner, postgresql, mock_import_swhmodule, module, datadir
 ):
-    """Check swh_db_upgrade
-
-    """
+    """Check swh_db_upgrade"""
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -146,9 +144,7 @@ def test_db_utils_upgrade(
 def test_db_utils_swh_db_upgrade_sanity_checks(
     cli_runner, postgresql, mock_import_swhmodule, module, datadir
 ):
-    """Check swh_db_upgrade
-
-    """
+    """Check swh_db_upgrade"""
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"

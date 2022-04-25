@@ -87,7 +87,8 @@ def test_get_response_cb_query_params(requests_mock_datadir):
 
 
 requests_mock_datadir_ignore = requests_mock_datadir_factory(
-    ignore_urls=["https://example.com/file.json"], has_multi_visit=False,
+    ignore_urls=["https://example.com/file.json"],
+    has_multi_visit=False,
 )
 
 
@@ -98,7 +99,8 @@ def test_get_response_cb_ignore_url(requests_mock_datadir_ignore):
 
 
 requests_mock_datadir_ignore_and_visit = requests_mock_datadir_factory(
-    ignore_urls=["https://example.com/file.json"], has_multi_visit=True,
+    ignore_urls=["https://example.com/file.json"],
+    has_multi_visit=True,
 )
 
 

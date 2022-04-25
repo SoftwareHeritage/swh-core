@@ -141,7 +141,10 @@ def test_api_negotiate_no_extra_encoders(app, flask_app_client):
     def endpoint():
         return "test"
 
-    res = flask_app_client.post(url, headers=[("Content-Type", "application/json")],)
+    res = flask_app_client.post(
+        url,
+        headers=[("Content-Type", "application/json")],
+    )
     assert res.status_code == 200
     assert res.mimetype == "application/json"
     assert res.data == b'"test"'

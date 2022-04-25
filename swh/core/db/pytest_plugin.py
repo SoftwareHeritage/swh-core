@@ -87,11 +87,12 @@ class SWHDatabaseJanitor(DatabaseJanitor):
         )
 
     def db_reset(self) -> None:
-        """Truncate tables (all but self.no_truncate_tables set) and sequences
-
-        """
+        """Truncate tables (all but self.no_truncate_tables set) and sequences"""
         with psycopg2.connect(
-            dbname=self.dbname, user=self.user, host=self.host, port=self.port,
+            dbname=self.dbname,
+            user=self.user,
+            host=self.host,
+            port=self.port,
         ) as cnx:
             with cnx.cursor() as cur:
                 cur.execute(
@@ -266,9 +267,7 @@ def initialize_database_for_module(modname, version, **kwargs):
 
 
 def gen_dump_files(dump_files: Union[str, Iterable[str]]) -> Iterator[str]:
-    """Generate files potentially resolving glob patterns if any
-
-    """
+    """Generate files potentially resolving glob patterns if any"""
     if isinstance(dump_files, str):
         dump_files = [dump_files]
     for dump_file in dump_files:

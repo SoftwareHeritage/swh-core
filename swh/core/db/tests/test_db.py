@@ -163,7 +163,12 @@ FIELDS = (
         in_wrapper=tuple_2d_to_list_2d,
         out_converter=list_2d_to_tuple_2d,
     ),
-    Field("ts", "timestamptz", now(), pg_tstz(),),
+    Field(
+        "ts",
+        "timestamptz",
+        now(),
+        pg_tstz(),
+    ),
     Field(
         "dict",
         "jsonb",
@@ -177,7 +182,7 @@ FIELDS = (
         TestIntEnum.foo,
         strategies.sampled_from(TestIntEnum),
         in_wrapper=int,
-        out_converter=TestIntEnum,
+        out_converter=lambda x: TestIntEnum(x),  # lambda needed by mypy
     ),
     Field("uuid", "uuid", uuid.uuid4(), strategies.uuids()),
     Field(
@@ -197,7 +202,9 @@ FIELDS = (
         "tstz_range",
         "tstzrange",
         psycopg2.extras.DateTimeTZRange(
-            lower=now(), upper=now() + datetime.timedelta(days=1), bounds="[)",
+            lower=now(),
+            upper=now() + datetime.timedelta(days=1),
+            bounds="[)",
         ),
         strategies.tuples(
             # generate two sorted timestamptzs for use as bounds
@@ -207,7 +214,9 @@ FIELDS = (
         ).map(
             # and build the actual DateTimeTZRange object from these args
             lambda args: psycopg2.extras.DateTimeTZRange(
-                lower=args[0][0], upper=args[0][1], bounds=args[1],
+                lower=args[0][0],
+                upper=args[0][1],
+                bounds=args[1],
             )
         ),
     ),
@@ -240,9 +249,7 @@ test_db = postgresql_fact("postgresql_proc", dbname="test-db2")
 
 @pytest.fixture
 def db_with_data(test_db, request):
-    """Fixture to initialize a db with some data out of the "INIT_SQL above
-
-    """
+    """Fixture to initialize a db with some data out of the "INIT_SQL above"""
     db = BaseDb.connect(test_db.dsn)
     with db.cursor() as cur:
         psycopg2.extras.register_default_jsonb(cur)
@@ -299,7 +306,7 @@ def test_db_copy_to(db_with_data, data):
 
 
 def test_db_copy_to_thread_exception(db_with_data):
-    data = [(2 ** 65, "foo", b"bar")]
+    data = [(2**65, "foo", b"bar")]
 
     items = [dict(zip(COLUMNS, item)) for item in data]
     with pytest.raises(psycopg2.errors.NumericValueOutOfRange):
@@ -415,3 +422,45 @@ def test_db_transaction_generator_signature():
     actual_sig = inspect.signature(g)
 
     assert actual_sig == expected_sig
+
+
+@pytest.mark.parametrize(
+    "query_options", (None, {"something": 42, "statement_timeout": 200})
+)
+@pytest.mark.parametrize("use_generator", (True, False))
+def test_db_transaction_query_options(mocker, use_generator, query_options):
+    class Storage:
+        @db_transaction(statement_timeout=100)
+        def endpoint(self, cur=None, db=None):
+            return [None]
+
+        @db_transaction_generator(statement_timeout=100)
+        def gen_endpoint(self, cur=None, db=None):
+            yield None
+
+    storage = Storage()
+
+    # mockers
+    mocked_apply = mocker.patch("swh.core.db.common.apply_options")
+    # 'with storage.get_db().transaction() as cur:' should cause
+    # 'cur' to be 'expected_cur'
+    expected_cur = object()
+    db_mock = MagicMock()
+    db_mock.transaction.return_value.__enter__.return_value = expected_cur
+    mocker.patch.object(storage, "get_db", return_value=db_mock, create=True)
+    mocker.patch.object(storage, "put_db", create=True)
+
+    if query_options:
+        storage.query_options = {
+            "endpoint": query_options,
+            "gen_endpoint": query_options,
+        }
+    if use_generator:
+        list(storage.gen_endpoint())
+    else:
+        list(storage.endpoint())
+
+    mocked_apply.assert_called_once_with(
+        expected_cur,
+        query_options if query_options is not None else {"statement_timeout": 100},
+    )
