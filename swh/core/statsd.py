@@ -83,7 +83,7 @@ class TimedContextManagerDecorator(object):
         self.statsd = statsd
         self.metric = metric
         self.error_metric = error_metric
-        self.tags = tags
+        self.tags = tags or {}
         self.sample_rate = sample_rate
         self.elapsed = None  # this is for testing purpose
 
@@ -104,8 +104,8 @@ class TimedContextManagerDecorator(object):
                 start = monotonic()
                 try:
                     result = await func(*args, **kwargs)
-                except:  # noqa
-                    self._send_error()
+                except BaseException as e:
+                    self._send_error(error_type=type(e).__name__)
                     raise
                 self._send(start)
                 return result
@@ -118,8 +118,8 @@ class TimedContextManagerDecorator(object):
             start = monotonic()
             try:
                 result = func(*args, **kwargs)
-            except:  # noqa
-                self._send_error()
+            except BaseException as e:
+                self._send_error(error_type=type(e).__name__)
                 raise
             self._send(start)
             return result
@@ -137,7 +137,7 @@ class TimedContextManagerDecorator(object):
         if type is None:
             self._send(self._start)
         else:
-            self._send_error()
+            self._send_error(error_type=type.__name__)
 
     def _send(self, start):
         elapsed = (monotonic() - start) * 1000
@@ -146,10 +146,14 @@ class TimedContextManagerDecorator(object):
         )
         self.elapsed = elapsed
 
-    def _send_error(self):
+    def _send_error(self, error_type=None):
         if self.error_metric is None:
             self.error_metric = self.metric + "_error_count"
-        self.statsd.increment(self.error_metric, tags=self.tags)
+        if error_type is not None:
+            tags = {**self.tags, "error_type": error_type}
+        else:
+            tags = self.tags
+        self.statsd.increment(self.error_metric, tags=tags)
 
     def start(self):
         """Start the timer"""
@@ -443,7 +447,8 @@ class Statsd(object):
         return {
             str(k): str(v)
             for k, v in itertools.chain(
-                self.constant_tags.items(), (tags if tags else {}).items(),
+                self.constant_tags.items(),
+                (tags if tags else {}).items(),
             )
         }
 

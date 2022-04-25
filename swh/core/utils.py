@@ -158,9 +158,7 @@ def decode_with_escape(value):
 
 
 def commonname(path0, path1, as_str=False):
-    """Compute the commonname between the path0 and path1.
-
-    """
+    """Compute the commonname between the path0 and path1."""
     return path1.split(path0)[1]
 
 

@@ -145,9 +145,9 @@ def priority_read(
     conf_filenames: List[str], default_conf: Optional[Dict[str, Tuple[str, Any]]] = None
 ):
     """Try reading the configuration files from conf_filenames, in order,
-       and return the configuration from the first one that exists.
+    and return the configuration from the first one that exists.
 
-       default_conf has the same specification as it does in read.
+    default_conf has the same specification as it does in read.
     """
 
     # Try all the files in order
@@ -243,14 +243,13 @@ def merge_configs(base: Optional[Dict[str, Any]], other: Optional[Dict[str, Any]
 
 def swh_config_paths(base_filename: str) -> List[str]:
     """Return the Software Heritage specific configuration paths for the given
-       filename."""
+    filename."""
 
     return [os.path.join(dirname, base_filename) for dirname in SWH_CONFIG_DIRECTORIES]
 
 
 def prepare_folders(conf, *keys):
-    """Prepare the folder mentioned in config under keys.
-    """
+    """Prepare the folder mentioned in config under keys."""
 
     def makedir(folder):
         if not os.path.exists(folder):
@@ -264,16 +263,17 @@ def load_global_config():
     """Load the global Software Heritage config"""
 
     return priority_read(
-        swh_config_paths(SWH_GLOBAL_CONFIG), SWH_DEFAULT_GLOBAL_CONFIG,
+        swh_config_paths(SWH_GLOBAL_CONFIG),
+        SWH_DEFAULT_GLOBAL_CONFIG,
     )
 
 
 def load_named_config(name, default_conf=None, global_conf=True):
     """Load the config named `name` from the Software Heritage
-       configuration paths.
+    configuration paths.
 
-       If global_conf is True (default), read the global configuration
-       too.
+    If global_conf is True (default), read the global configuration
+    too.
     """
 
     conf = {}

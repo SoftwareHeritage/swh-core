@@ -366,7 +366,9 @@ def swh_db_flavor(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
             query = "select swh_get_dbflavor()"
             try:
                 c.execute(query)
-                return c.fetchone()[0]
+                result = c.fetchone()
+                assert result is not None  # to keep mypy happy
+                return result[0]
             except psycopg2.errors.UndefinedFunction:
                 # function not found: no flavor
                 return None
@@ -412,7 +414,7 @@ def _split_sql(sql):
     """
     curr = pre = []
     post = []
-    tokens = re.split(br"(%.)", sql)
+    tokens = re.split(rb"(%.)", sql)
     for token in tokens:
         if len(token) != 2 or token[:1] != b"%":
             curr.append(token)
@@ -671,5 +673,6 @@ def execute_sqlfiles(
 
     if flavor is not None and not flavor_set:
         logger.warn(
-            "Asked for flavor %s, but module does not support database flavors", flavor,
+            "Asked for flavor %s, but module does not support database flavors",
+            flavor,
         )

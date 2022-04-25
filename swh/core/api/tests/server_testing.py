@@ -53,14 +53,11 @@ class ServerTestFixtureBaseClass(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def define_worker_function(self, app, port):
-        """Define how the actual implementation server will run.
-
-        """
+        """Define how the actual implementation server will run."""
         pass
 
     def start_server(self):
-        """ Spawn the API server using multiprocessing.
-        """
+        """Spawn the API server using multiprocessing."""
         self.process = None
 
         self.process_config()
@@ -85,8 +82,7 @@ class ServerTestFixtureBaseClass(metaclass=abc.ABCMeta):
                 return
 
     def stop_server(self):
-        """ Terminate the API server's process.
-        """
+        """Terminate the API server's process."""
         if self.process:
             self.process.terminate()
 

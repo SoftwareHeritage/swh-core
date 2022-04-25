@@ -149,7 +149,12 @@ def test_client_reraise_exception(rpc_client, requests_mock, old_exception_schem
 
 @pytest.mark.parametrize(
     "status_code, old_exception_schema",
-    [(400, False), (500, False), (400, True), (500, True),],
+    [
+        (400, False),
+        (500, False),
+        (400, True),
+        (500, True),
+    ],
 )
 def test_client_raise_remote_exception(
     rpc_client, requests_mock, status_code, old_exception_schema

@@ -36,7 +36,10 @@ def _encode_paged_result(obj: PagedResult) -> Dict[str, Any]:
 
 def _decode_paged_result(obj: Dict[str, Any]) -> PagedResult:
     """Deserialize Dict into PagedResult"""
-    return PagedResult(results=obj["results"], next_page_token=obj["next_page_token"],)
+    return PagedResult(
+        results=obj["results"],
+        next_page_token=obj["next_page_token"],
+    )
 
 
 def exception_to_dict(exception: Exception) -> Dict[str, Any]:
