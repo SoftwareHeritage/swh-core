@@ -290,7 +290,7 @@ def test_db_copy_to_static(db_with_data):
         assert EXPECTED_ROW_OUT == output[0]
 
 
-@settings(suppress_health_check=function_scoped_fixture_check)
+@settings(suppress_health_check=function_scoped_fixture_check, max_examples=5)
 @given(db_rows)
 def test_db_copy_to(db_with_data, data):
     items = [dict(zip(COLUMNS, item)) for item in data]
