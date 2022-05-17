@@ -57,6 +57,7 @@ setup(
         "logging": parse_requirements("logging"),
         "db": parse_requirements("db", "db-pytestplugin"),
         "http": parse_requirements("http"),
+        "github": parse_requirements("github"),
         # kitchen sink, please do not use
         "testing": parse_requirements(
             "test", "db", "db-pytestplugin", "http", "logging"
