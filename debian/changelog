@@ -1,8 +1,12 @@
-swh-core (2.6.0-1~swh2~bpo10+1) buster-swh; urgency=medium
+swh-core (2.7.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 2.7.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2022-05-20 15:26:30
+    +0200)
+  * Upstream changes:     - v2.7.0     - Use GitHubSession to make
+    canonical computation deal with rate limit
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 20 May 2022 08:35:36 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 20 May 2022 13:30:15 +0000
 
 swh-core (2.6.0-1~swh2) unstable-swh; urgency=medium
 
