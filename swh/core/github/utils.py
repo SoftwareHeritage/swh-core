@@ -40,25 +40,19 @@ def _sanitize_github_url(url: str) -> str:
     return url.lower().rstrip("/").rstrip(".git").rstrip("/")
 
 
-def get_canonical_github_origin_url(url: str) -> Optional[str]:
+def get_canonical_github_origin_url(
+    url: str, credentials: Optional[List[Dict[str, str]]] = None
+) -> Optional[str]:
     """Retrieve canonical github url out of an url if any or None otherwise.
 
-    This triggers an anonymous http request to the github api url to determine the
-    canonical repository url.
+    This triggers an http request to the github api url to determine the canonical
+    repository url (if no credentials is provided, the http request is anonymous. Either
+    way that request can be rate-limited by github.)
 
     """
-    url_ = url.lower()
-
-    match = GITHUB_PATTERN.match(url_)
-    if not match:
-        return url
-
-    user_repo = _sanitize_github_url(match.groupdict()["user_repo"])
-    response = requests.get(_url_github_api(user_repo))
-    if response.status_code != 200:
-        return None
-    data = response.json()
-    return data["html_url"]
+    return GitHubSession(
+        user_agent="SWH core library", credentials=credentials
+    ).get_canonical_url(url)
 
 
 class RateLimited(Exception):
@@ -212,3 +206,25 @@ class GitHubSession:
                 sleep_time,
             )
             time.sleep(sleep_time)
+
+    def get_canonical_url(self, url: str) -> Optional[str]:
+        """Retrieve canonical github url out of an url if any or None otherwise.
+
+        This triggers an http request to the github api url to determine the
+        canonical repository url.
+
+        Returns
+            The canonical url if any, None otherwise.
+        """
+        url_ = url.lower()
+
+        match = GITHUB_PATTERN.match(url_)
+        if not match:
+            return url
+
+        user_repo = _sanitize_github_url(match.groupdict()["user_repo"])
+        response = self.request(_url_github_api(user_repo))
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        return data["html_url"]
