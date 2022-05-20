@@ -1,3 +1,19 @@
+swh-core (2.6.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.6.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2022-05-20 08:54:46
+    +0200)
+  * Upstream changes:     - v2.6.0     - Extract reusable github tests
+    fixtures into its own pytest_plugin     - test_db/test_db_copy_to:
+    Fix hypothesis FailedHealthCheck error     - Refactor
+    swh.lister.github.utils to swh.core.github.utils     - Add utility
+    function to retrieve canonical github urls     - Make 'python -m
+    swh' work as cli entry point     - db_utils: Make
+    connect_to_conninfo use through contextmanager     - Upgrade mypy to
+    0.942 to fix support of types-psycopg2 >= 2.9.12
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 20 May 2022 06:58:23 +0000
+
 swh-core (2.5.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.5.0     - (tagged by Valentin Lorentz
