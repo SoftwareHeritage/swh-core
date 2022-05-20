@@ -19,15 +19,10 @@ from tenacity import (
     wait_exponential,
 )
 
-GITHUB_PATTERN = re.compile(r"https?://github.com/(?P<user_repo>.*)")
+GITHUB_PATTERN = re.compile(r"(git|https?)://github.com/(?P<user_repo>.*)")
 
 
 logger = logging.getLogger(__name__)
-
-
-def _url_github_html(user_repo: str) -> str:
-    """Given the user repo, returns the expected github html url."""
-    return f"https://github.com/{user_repo}"
 
 
 def _url_github_api(user_repo: str) -> str:

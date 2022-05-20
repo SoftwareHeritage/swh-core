@@ -12,11 +12,15 @@ from swh.core.github.utils import (
     GitHubSession,
     _sanitize_github_url,
     _url_github_api,
-    _url_github_html,
     get_canonical_github_origin_url,
 )
 
 KNOWN_GH_REPO = "https://github.com/user/repo"
+
+
+def _url_github_html(user_repo: str, protocol: str = "https") -> str:
+    """Given the user repo, returns the expected github html url."""
+    return f"{protocol}://github.com/{user_repo}"
 
 
 @pytest.mark.parametrize(
@@ -27,51 +31,54 @@ KNOWN_GH_REPO = "https://github.com/user/repo"
         ("user/repo/", KNOWN_GH_REPO),
         ("user/repo", KNOWN_GH_REPO),
         ("user/repo/.git", KNOWN_GH_REPO),
-        # edge cases
-        ("https://github.com/unknown-page", None),  # unknown gh origin returns None
-        ("user/repo/with/some/deps", None),  # url kind is not dealt with for now
+        ("unknown/page", None),  # unknown gh origin returns None
+        ("user/with/deps", None),  # url kind is not dealt with
     ],
 )
 def test_get_canonical_github_origin_url(
     user_repo, expected_url, requests_mock, github_credentials
 ):
     """It should return a canonical github origin when it exists, None otherwise"""
-    html_url = _url_github_html(user_repo)
-    api_url = _url_github_api(_sanitize_github_url(user_repo))
+    for protocol in ["https", "git", "http"]:
+        html_input_url = _url_github_html(user_repo, protocol=protocol)
+        html_url = _url_github_html(user_repo)
+        api_url = _url_github_api(_sanitize_github_url(user_repo))
 
-    if expected_url is not None:
-        status_code = 200
-        response = {"html_url": _sanitize_github_url(html_url)}
-    else:
-        status_code = 404
-        response = {}
+        if expected_url is not None:
+            status_code = 200
+            response = {"html_url": _sanitize_github_url(html_url)}
+        else:
+            status_code = 404
+            response = {}
 
-    requests_mock.get(api_url, [{"status_code": status_code, "json": response}])
+        requests_mock.get(api_url, [{"status_code": status_code, "json": response}])
 
-    # anonymous
-    assert get_canonical_github_origin_url(html_url) == expected_url
+        # anonymous
+        assert get_canonical_github_origin_url(html_input_url) == expected_url
 
-    # with credentials
-    assert (
-        get_canonical_github_origin_url(html_url, credentials=github_credentials)
-        == expected_url
-    )
+        # with credentials
+        assert (
+            get_canonical_github_origin_url(
+                html_input_url, credentials=github_credentials
+            )
+            == expected_url
+        )
 
-    # anonymous
-    assert (
-        GitHubSession(
-            user_agent="GitHub Session Test",
-        ).get_canonical_url(html_url)
-        == expected_url
-    )
+        # anonymous
+        assert (
+            GitHubSession(
+                user_agent="GitHub Session Test",
+            ).get_canonical_url(html_input_url)
+            == expected_url
+        )
 
-    # with credentials
-    assert (
-        GitHubSession(
-            user_agent="GitHub Session Test", credentials=github_credentials
-        ).get_canonical_url(html_url)
-        == expected_url
-    )
+        # with credentials
+        assert (
+            GitHubSession(
+                user_agent="GitHub Session Test", credentials=github_credentials
+            ).get_canonical_url(html_input_url)
+            == expected_url
+        )
 
 
 def test_get_canonical_github_origin_url_not_gh_origin():
