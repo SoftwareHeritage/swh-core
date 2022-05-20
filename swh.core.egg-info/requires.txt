@@ -9,6 +9,10 @@ psycopg2
 typing-extensions
 pytest-postgresql<4.0.0,>=3
 
+[github]
+requests
+tenacity
+
 [http]
 aiohttp
 aiohttp_utils>=3.1.1
