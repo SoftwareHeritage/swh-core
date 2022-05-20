@@ -6,6 +6,8 @@ import pytest
 settings.register_profile("fast", max_examples=5, deadline=5000)
 settings.register_profile("slow", max_examples=20, deadline=5000)
 
+pytest_plugins = ["swh.core.github.pytest_plugin"]
+
 
 @pytest.fixture
 def swhmain():
