@@ -114,8 +114,8 @@ conditions are expected:
   returning an instance of the datastore object. Normally, this datastore
   object uses ``swh.core.db.BaseDb`` to interact with the actual database.
 
-- The datastore object should provide a ``get_current_version()`` method
-  returning the database version expected by the code.
+- The datastore object should provide a ``current_version`` attribute returning the
+  database version expected by the code.
 
 See existing ``swh`` packages like ``swh.storage`` or ``swh.scheduler`` for
 usage examples.
