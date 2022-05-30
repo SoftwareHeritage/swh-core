@@ -254,7 +254,7 @@ def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp
             dirname = modname.split(".", 1)[1]
 
             def get_datastore(cls, **kw):
-                return mocker.MagicMock(get_current_version=lambda: current_version)
+                return mocker.MagicMock(current_version=current_version)
 
             return mocker.MagicMock(
                 __name__=modname,
