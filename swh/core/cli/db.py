@@ -13,7 +13,7 @@ import click
 from swh.core.cli import CONTEXT_SETTINGS
 from swh.core.cli import swh as swh_cli_group
 
-warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
+warnings.filterwarnings("ignore")  # noqa prevent psycopg from side-tracking us
 
 
 logger = logging.getLogger(__name__)
@@ -256,20 +256,24 @@ def db_init(ctx, module, dbname, flavor, initial_version):
     default=False,
     show_default=True,
 )
+@click.option("--module-config-key", help="Module config key to lookup.", default=None)
 @click.pass_context
-def db_version(ctx, module, show_all):
+def db_version(ctx, module, show_all, module_config_key=None):
     """Print the database version for the Software Heritage.
 
     Example::
 
         swh db version -d swh-test
+        swh db version scheduler
+        swh db version scrubber --module-config-key=scrubber_db
 
     """
     from swh.core.db.db_utils import get_database_info, import_swhmodule
 
-    # use the db cnx from the config file; the expected config entry is the
-    # given module name
-    cfg = ctx.obj["config"].get(module, {})
+    # use the db cnx from the config file; the expected config entry is either the given
+    # module_config_key or defaulting to the module name (if module_config_key is not
+    # provided)
+    cfg = ctx.obj["config"].get(module_config_key or module, {})
     dbname = get_dburl_from_config(cfg)
 
     if not dbname:
@@ -328,14 +332,18 @@ def db_version(ctx, module, show_all):
     help="Do not ask questions (use default answer to all questions)",
     default=True,
 )
+@click.option(
+    "--module-config-key", help="Module configuration key to lookup.", default=None
+)
 @click.pass_context
-def db_upgrade(ctx, module, to_version, interactive):
+def db_upgrade(ctx, module, to_version, interactive, module_config_key):
     """Upgrade the database for given module (to a given version if specified).
 
     Examples::
 
         swh db upgrade storage
         swh db upgrade scheduler --to-version=10
+        swh db upgrade scrubber --to-version=10 --module-config-key=scrubber_db
 
     """
     from swh.core.db.db_utils import (
@@ -345,9 +353,10 @@ def db_upgrade(ctx, module, to_version, interactive):
         swh_set_db_module,
     )
 
-    # use the db cnx from the config file; the expected config entry is the
-    # given module name
-    cfg = ctx.obj["config"].get(module, {})
+    # use the db cnx from the config file; the expected config entry is either the given
+    # module_config_key or defaulting to the module name (if module_config_key is not
+    # provided)
+    cfg = ctx.obj["config"].get(module_config_key or module, {})
     dbname = get_dburl_from_config(cfg)
 
     if not dbname:
