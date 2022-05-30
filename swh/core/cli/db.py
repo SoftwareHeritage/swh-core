@@ -337,7 +337,7 @@ def db_upgrade(ctx, module, to_version, interactive):
     Examples::
 
         swh db upgrade storage
-        swg db upgrade scheduler --to-version=10
+        swh db upgrade scheduler --to-version=10
 
     """
     from swh.core.db.db_utils import (
