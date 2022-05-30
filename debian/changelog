@@ -1,3 +1,14 @@
+swh-core (2.8.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.8.1     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2022-05-30 17:06:11
+    +0200)
+  * Upstream changes:     - v2.8.1     - cli.db: Use attribute
+    current_version instead of undeclared getter     - cli.db: Fix help
+    message typo
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 30 May 2022 15:10:17 +0000
+
 swh-core (2.8.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.8.0     - (tagged by Antoine R. Dumont
