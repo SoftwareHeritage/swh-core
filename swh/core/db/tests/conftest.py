@@ -35,7 +35,7 @@ def mock_import_swhmodule(mocker, datadir):
     set to `<mod>` and __file__ pointing to `data/<mod>/__init__.py`.
 
     The Mock object also defines a `get_datastore()` attribute on which the
-    `get_current_version()` exists and will return 42.
+    `current_version` attribute is set to 42.
 
     Typical usage::
 
@@ -54,7 +54,7 @@ def mock_import_swhmodule(mocker, datadir):
             dirname = modname.split(".", 1)[1]
 
             def get_datastore(*args, **kw):
-                return mock(get_current_version=lambda: 42)
+                return mock(current_version=42)
 
             return mock(
                 __name__=modname,

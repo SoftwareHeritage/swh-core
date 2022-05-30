@@ -198,16 +198,14 @@ def db_init(ctx, module, dbname, flavor, initial_version):
             datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
             if datastore_factory:
                 datastore = datastore_factory(**cfg)
-                try:
-                    get_current_version = datastore.get_current_version
-                except AttributeError:
+                if not hasattr(datastore, "current_version"):
                     logger.warning(
-                        "Datastore %s does not implement the "
-                        "'get_current_version()' method",
+                        "Datastore %s does not declare the "
+                        "'current_version' attribute",
                         datastore,
                     )
                 else:
-                    code_version = get_current_version()
+                    code_version = datastore.current_version
                     logger.info(
                         "Initializing database version to %s from the %s datastore",
                         code_version,
@@ -299,7 +297,7 @@ def db_version(ctx, module, show_all):
     datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
     if datastore_factory:
         datastore = datastore_factory(**cfg)
-        code_version = datastore.get_current_version()
+        code_version = datastore.current_version
         click.secho(
             f"current code version: {code_version}",
             fg="green" if code_version == db_version else "red",
@@ -387,7 +385,7 @@ def db_upgrade(ctx, module, to_version, interactive):
             "You cannot use this command on old-style datastore backend {db_module}"
         )
     datastore = datastore_factory(**cfg)
-    ds_version = datastore.get_current_version()
+    ds_version = datastore.current_version
     if to_version is None:
         to_version = ds_version
     if to_version > ds_version:
