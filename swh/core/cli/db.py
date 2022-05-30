@@ -13,7 +13,7 @@ import click
 from swh.core.cli import CONTEXT_SETTINGS
 from swh.core.cli import swh as swh_cli_group
 
-warnings.filterwarnings("ignore")  # noqa prevent psycopg from telling us sh*t
+warnings.filterwarnings("ignore")  # noqa prevent psycopg from side-tracking us
 
 
 logger = logging.getLogger(__name__)
