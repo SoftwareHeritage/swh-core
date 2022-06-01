@@ -548,6 +548,33 @@ def populate_database_for_package(
     return True, current_db_version, dbflavor
 
 
+def initialize_database_for_module(modname: str, version: int, **kwargs):
+    """Helper function to initialize and populate a database for the given module
+
+    This aims at helping the usage of pytest_postgresql for swh.core.db based datastores.
+    Typical usage will be (here for swh.storage)::
+
+      from pytest_postgresql import factories
+
+      storage_postgresql_proc = factories.postgresql_proc(
+        load=[partial(initialize_database_for_module, modname="storage", version=42)]
+      )
+      storage_postgresql = factories.postgresql("storage_postgresql_proc")
+
+    """
+    conninfo = psycopg2.connect(**kwargs).dsn
+    init_admin_extensions(modname, conninfo)
+    populate_database_for_package(modname, conninfo)
+    try:
+        swh_set_db_version(conninfo, version)
+    except psycopg2.errors.UniqueViolation:
+        logger.warn(
+            "Version already set by db init scripts. "
+            f"This generally means the swh.{modname} package needs to be "
+            "updated for swh.core>=1.2"
+        )
+
+
 def get_database_info(
     conninfo: str,
 ) -> Tuple[Optional[str], Optional[int], Optional[str]]:
