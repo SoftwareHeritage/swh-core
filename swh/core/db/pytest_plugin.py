@@ -8,6 +8,7 @@ from importlib import import_module
 import logging
 import subprocess
 from typing import Callable, Iterable, Iterator, List, Optional, Sequence, Set, Union
+import warnings
 
 from _pytest.fixtures import FixtureRequest
 from deprecated import deprecated
@@ -37,6 +38,11 @@ initialize_database_for_module = deprecated(
     version="2.10",
     reason="Use swh.core.db.db_utils.initialize_database_for_module instead.",
 )(initialize_database_for_module)
+
+warnings.warn(
+    "This pytest plugin is deprecated, it should not be used any more.",
+    category=DeprecationWarning,
+)
 
 
 class SWHDatabaseJanitor(DatabaseJanitor):
