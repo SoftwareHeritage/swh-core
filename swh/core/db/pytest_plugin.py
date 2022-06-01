@@ -10,6 +10,7 @@ import subprocess
 from typing import Callable, Iterable, Iterator, List, Optional, Sequence, Set, Union
 
 from _pytest.fixtures import FixtureRequest
+from deprecated import deprecated
 import psycopg2
 import pytest
 from pytest_postgresql.compat import check_for_psycopg2, connection
@@ -169,6 +170,7 @@ class SWHDatabaseJanitor(DatabaseJanitor):
 # the postgres_fact factory fixture below is mostly a copy of the code
 # from pytest-postgresql. We need a custom version here to be able to
 # specify our version of the DBJanitor we use.
+@deprecated(version="2.10", reason="Use stock pytest_postgresql factory instead")
 def postgresql_fact(
     process_fixture_name: str,
     dbname: Optional[str] = None,
