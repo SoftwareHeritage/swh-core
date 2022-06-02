@@ -19,7 +19,9 @@ from tenacity import (
     wait_exponential,
 )
 
-GITHUB_PATTERN = re.compile(r"(git|https?)://github.com/(?P<user_repo>.*)")
+GITHUB_PATTERN = re.compile(
+    r"(//|git://|git@|git//|https?://|ssh://|.*@)github.com[/:](?P<user_repo>.*)"
+)
 
 
 logger = logging.getLogger(__name__)
