@@ -8,8 +8,10 @@ from importlib import import_module
 import logging
 import subprocess
 from typing import Callable, Iterable, Iterator, List, Optional, Sequence, Set, Union
+import warnings
 
 from _pytest.fixtures import FixtureRequest
+from deprecated import deprecated
 import psycopg2
 import pytest
 from pytest_postgresql.compat import check_for_psycopg2, connection
@@ -17,11 +19,7 @@ from pytest_postgresql.executor import PostgreSQLExecutor
 from pytest_postgresql.executor_noop import NoopExecutor
 from pytest_postgresql.janitor import DatabaseJanitor
 
-from swh.core.db.db_utils import (
-    init_admin_extensions,
-    populate_database_for_package,
-    swh_set_db_version,
-)
+from swh.core.db.db_utils import initialize_database_for_module
 from swh.core.utils import basename_sortkey
 
 # to keep mypy happy regardless pytest-postgresql version
@@ -35,6 +33,16 @@ _pytest_postgresql_get_config = getattr(_pytest_pgsql_get_config_module, "get_co
 
 
 logger = logging.getLogger(__name__)
+
+initialize_database_for_module = deprecated(
+    version="2.10",
+    reason="Use swh.core.db.db_utils.initialize_database_for_module instead.",
+)(initialize_database_for_module)
+
+warnings.warn(
+    "This pytest plugin is deprecated, it should not be used any more.",
+    category=DeprecationWarning,
+)
 
 
 class SWHDatabaseJanitor(DatabaseJanitor):
@@ -169,6 +177,7 @@ class SWHDatabaseJanitor(DatabaseJanitor):
 # the postgres_fact factory fixture below is mostly a copy of the code
 # from pytest-postgresql. We need a custom version here to be able to
 # specify our version of the DBJanitor we use.
+@deprecated(version="2.10", reason="Use stock pytest_postgresql factory instead")
 def postgresql_fact(
     process_fixture_name: str,
     dbname: Optional[str] = None,
@@ -250,20 +259,6 @@ def postgresql_fact(
                 db_connection.close()
 
     return postgresql_factory
-
-
-def initialize_database_for_module(modname, version, **kwargs):
-    conninfo = psycopg2.connect(**kwargs).dsn
-    init_admin_extensions(modname, conninfo)
-    populate_database_for_package(modname, conninfo)
-    try:
-        swh_set_db_version(conninfo, version)
-    except psycopg2.errors.UniqueViolation:
-        logger.warn(
-            "Version already set by db init scripts. "
-            "This generally means the swh.{modname} package needs to be "
-            "updated for swh.core>=1.2"
-        )
 
 
 def gen_dump_files(dump_files: Union[str, Iterable[str]]) -> Iterator[str]:

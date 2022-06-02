@@ -16,11 +16,11 @@ from hypothesis import given, settings, strategies
 from hypothesis.extra.pytz import timezones
 import psycopg2
 import pytest
+from pytest_postgresql import factories
 from typing_extensions import Protocol
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction, db_transaction_generator
-from swh.core.db.pytest_plugin import postgresql_fact
 from swh.core.db.tests.conftest import function_scoped_fixture_check
 
 
@@ -244,7 +244,7 @@ def convert_lines(cur):
     ]
 
 
-test_db = postgresql_fact("postgresql_proc", dbname="test-db2")
+test_db = factories.postgresql("postgresql_proc", dbname="test-db2")
 
 
 @pytest.fixture
