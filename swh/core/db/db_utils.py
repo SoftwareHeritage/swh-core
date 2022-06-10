@@ -689,3 +689,12 @@ def execute_sqlfiles(
             "Asked for flavor %s, but module does not support database flavors",
             flavor,
         )
+
+    # Grant read-access to guest user on all tables of the schema (if possible)
+    with connect_to_conninfo(db_or_conninfo) as db:
+        try:
+            with db.cursor() as c:
+                query = "grant select on all tables in schema public to guest"
+                c.execute(query)
+        except Exception:
+            logger.warning("Grant read-only access to guest user failed. Skipping.")
