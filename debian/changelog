@@ -1,8 +1,14 @@
-swh-core (2.10-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (2.11-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 2.11     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2022-06-10 10:20:37
+    +0200)
+  * Upstream changes:     - v2.11     - tarball: Use standard Python
+    module zipfile to extract jar archive     - Add missing coverage on
+    `swh db version` cli     - db: Grant read access to guest user on
+    all schema tables
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 02 Jun 2022 14:41:01 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Fri, 10 Jun 2022 08:24:24 +0000
 
 swh-core (2.10-1~swh1) unstable-swh; urgency=medium
 

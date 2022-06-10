@@ -64,6 +64,29 @@ def _unpack_zip(zippath: str, extract_dir: str) -> str:
         )
 
 
+def _unpack_jar(jarpath: str, extract_dir: str) -> str:
+    """Unpack jar files using standard Python module zipfile.
+
+    This expects the `extract_dir` to exist.
+
+    Raises:
+        shutil.ReadError in case of issue uncompressing the archive (jarpath
+        does not exist, extract_dir does not exist, etc...)
+
+    Returns:
+        full path to the uncompressed directory.
+
+    """
+    try:
+        with zipfile.ZipFile(jarpath) as jar:
+            jar.extractall(path=extract_dir)
+        return extract_dir
+    except Exception as e:
+        raise shutil.ReadError(
+            f"Unable to uncompress {jarpath} to {extract_dir}. Reason: {e}"
+        )
+
+
 def register_new_archive_formats():
     """Register new archive formats to uncompress"""
     registered_formats = [f[0] for f in shutil.get_unpack_formats()]
@@ -80,6 +103,7 @@ _mime_to_archive_format = {
     "application/gzip": "gztar",
     "application/x-lzip": "tar.lz",
     "application/zip": "zip",
+    "application/java-archive": "jar",
 }
 
 
@@ -192,7 +216,7 @@ def compress(tarpath, nature, dirpath_or_files):
 ADDITIONAL_ARCHIVE_FORMATS = [
     # name, extensions, function
     ("tar.Z|x", [".tar.Z", ".tar.x"], _unpack_tar),
-    ("jar", [".jar"], _unpack_zip),
+    ("jar", [".jar"], _unpack_jar),
     ("tbz2", [".tbz", "tbz2"], _unpack_tar),
     # FIXME: make this optional depending on the runtime lzip package install
     ("tar.lz", [".tar.lz"], _unpack_tar),
