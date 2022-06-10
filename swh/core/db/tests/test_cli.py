@@ -334,3 +334,26 @@ def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp
         in result.output
     )
     assert swh_db_module(conninfo) == module_name
+
+
+def test_cli_swh_db_version(swh_db_cli, mock_import_swhmodule, postgresql):
+    module_name = "test.cli"
+    cli_runner, db_params = swh_db_cli
+
+    conninfo = craft_conninfo(postgresql, "test-db-version")
+    # This creates the db and installs the necessary admin extensions
+    result = cli_runner.invoke(swhdb, ["create", module_name, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+
+    # This initializes the schema and data
+    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
+
+    actual_db_version = swh_db_version(conninfo)
+
+    with BaseDb.connect(conninfo).cursor() as cur:
+        cur.execute("select version from dbversion order by version desc limit 1")
+        expected_version = cur.fetchone()[0]
+        assert actual_db_version == expected_version
+
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert f"initialized at version {expected_version}" in result.output

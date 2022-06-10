@@ -7,7 +7,9 @@ import os
 
 from click.testing import CliRunner
 from hypothesis import HealthCheck
+import psycopg2
 import pytest
+from pytest_postgresql import factories
 
 from swh.core.db.db_utils import import_swhmodule
 
@@ -18,6 +20,17 @@ function_scoped_fixture_check = (
     [getattr(HealthCheck, "function_scoped_fixture")]
     if hasattr(HealthCheck, "function_scoped_fixture")
     else []
+)
+
+
+def create_role_guest(**kwargs):
+    with psycopg2.connect(**kwargs) as conn:
+        with conn.cursor() as cur:
+            cur.execute("CREATE ROLE guest LOGIN PASSWORD 'guest'")
+
+
+postgresql_proc = factories.postgresql_proc(
+    load=[create_role_guest],
 )
 
 
