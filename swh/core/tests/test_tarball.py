@@ -138,6 +138,20 @@ def test_uncompress_tar(tmp_path, datadir):
     assert len(os.listdir(extract_dir)) > 0
 
 
+def test_uncompress_tarzst(tmp_path, datadir):
+    """Unpack supported zst tarball into an existent folder should be ok"""
+    filename = "ca-certificates-20210603-1-any.pkg.tar.zst"
+    tarpath = os.path.join(datadir, "archives", filename)
+
+    assert os.path.exists(tarpath)
+
+    extract_dir = os.path.join(tmp_path, filename)
+
+    tarball.uncompress(tarpath, extract_dir)
+
+    assert len(os.listdir(extract_dir)) > 0
+
+
 def test_register_new_archive_formats(prepare_shutil_state):
     """Registering new archive formats should be fine"""
     unpack_formats_v1 = [f[0] for f in shutil.get_unpack_formats()]

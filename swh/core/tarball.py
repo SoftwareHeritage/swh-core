@@ -87,6 +87,27 @@ def _unpack_jar(jarpath: str, extract_dir: str) -> str:
         )
 
 
+def _unpack_zst(zstpath: str, extract_dir: str) -> str:
+    """Unpack zst files unsupported by the standard python library. Example
+    include tar.zst
+
+    This expects the `extract_dir` to exist.
+
+    Raises:
+        shutil.ReadError in case of issue uncompressing the archive (zstpath
+    """
+    try:
+        run(
+            ["tar", "--force-local", "-I 'zstd'", "-xf", zstpath, "-C", extract_dir],
+            check=True,
+        )
+        return extract_dir
+    except Exception as e:
+        raise shutil.ReadError(
+            f"Unable to uncompress {zstpath} to {extract_dir}. Reason: {e}"
+        )
+
+
 def register_new_archive_formats():
     """Register new archive formats to uncompress"""
     registered_formats = [f[0] for f in shutil.get_unpack_formats()]
@@ -104,6 +125,8 @@ _mime_to_archive_format = {
     "application/x-lzip": "tar.lz",
     "application/zip": "zip",
     "application/java-archive": "jar",
+    "application/zstd": "tar.zst",
+    "application/x-zstd": "tar.zst",
 }
 
 
@@ -221,6 +244,7 @@ ADDITIONAL_ARCHIVE_FORMATS = [
     # FIXME: make this optional depending on the runtime lzip package install
     ("tar.lz", [".tar.lz"], _unpack_tar),
     ("crate", [".crate"], _unpack_tar),
+    ("tar.zst", [".tar.zst", ".tar.zstd"], _unpack_zst),
 ]
 
 register_new_archive_formats()
