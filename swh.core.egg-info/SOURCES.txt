@@ -117,6 +117,7 @@ swh/core/tests/test_sentry.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_tarball.py
 swh/core/tests/test_utils.py
+swh/core/tests/data/archives/ca-certificates-20210603-1-any.pkg.tar.zst
 swh/core/tests/data/archives/groff-1.02.tar.Z
 swh/core/tests/data/archives/hello.jar
 swh/core/tests/data/archives/hello.tar
