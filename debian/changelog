@@ -1,3 +1,12 @@
+swh-core (2.12-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.12     - (tagged by Nicolas Dandrimont
+    <nicolas@dandrimont.eu> on 2022-06-16 13:38:52 +0200)
+  * Upstream changes:     - Release swh.core v2.12     - Add support for
+    zstandard compressed tarballs
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 16 Jun 2022 11:42:04 +0000
+
 swh-core (2.11-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.11     - (tagged by Antoine R. Dumont
