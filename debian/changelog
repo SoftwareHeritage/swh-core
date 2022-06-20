@@ -1,3 +1,9 @@
+swh-core (2.12-1~swh2) unstable-swh; urgency=medium
+
+  * Bump new release with correct deps.
+
+ -- Antoine R. Dumont (@ardumont) <ardumont@softwareheritage.org>  Mon, 20 Jun 2022 10:13:14 +0200
+
 swh-core (2.12-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.12     - (tagged by Nicolas Dandrimont
