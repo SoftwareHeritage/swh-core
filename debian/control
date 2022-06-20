@@ -32,7 +32,8 @@ Build-Depends: debhelper (>= 9),
                python3-tenacity,
                python3-yaml,
                python3-hypothesis (>= 3.11.0~),
-               unzip
+               unzip,
+               zstd
 Standards-Version: 3.9.6
 Homepage: https://forge.softwareheritage.org/diffusion/DCORE/
 
