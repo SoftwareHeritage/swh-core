@@ -2,10 +2,12 @@
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
+from __future__ import annotations
 
 import datetime
 import logging
-from typing import Any, Dict, Generator, List, Tuple
+import os
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Tuple
 
 from systemd.journal import JournalHandler as _JournalHandler
 from systemd.journal import send
@@ -131,3 +133,38 @@ class JournalHandler(_JournalHandler):
             )
         except Exception:
             self.handleError(record)
+
+
+try:
+    from aiohttp.web_log import AccessLogger
+except ImportError:
+    pass
+else:
+
+    if TYPE_CHECKING:
+        from aiohttp.web_request import BaseRequest
+        from aiohttp.web_response import StreamResponse
+
+    class FilteredIPAccessLogger(AccessLogger):
+        """Don't log successful requests from the set of IP addresses set in
+        :envvar:``SWH_AIOHTTP_ACCESSLOG_IGNORE_IPS`` (comma-separated)"""
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            self.ignored_ips: List[str] = []
+            env_value = os.environ.get("SWH_AIOHTTP_ACCESSLOG_IGNORE_IPS")
+            if env_value:
+                self.ignored_ips = env_value.split(",")
+
+        def log(
+            self, request: BaseRequest, response: StreamResponse, time: float
+        ) -> None:
+            if (
+                request
+                and request.remote in self.ignored_ips
+                and response
+                and response.status < 400
+            ):
+                return
+            super().log(request, response, time)
