@@ -356,4 +356,6 @@ def test_cli_swh_db_version(swh_db_cli, mock_import_swhmodule, postgresql):
         assert actual_db_version == expected_version
 
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
-    assert f"initialized at version {expected_version}" in result.output
+    assert (
+        f"initialized (flavor default) at version {expected_version}" in result.output
+    )
