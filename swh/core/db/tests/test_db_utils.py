@@ -30,6 +30,7 @@ def test_get_sql_for_package(mock_import_swhmodule, module):
     assert files
     assert [f.name for f in files] == [
         "0-superuser-init.sql",
+        "15-flavor.sql",
         "30-schema.sql",
         "40-funcs.sql",
         "50-data.sql",
@@ -64,7 +65,7 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule, module
 
     assert dbmodule == module
     assert dbversion == 10
-    assert dbflavor is None
+    assert dbflavor == "default"
     # check also the swh_db_versions() function
     versions = swh_db_versions(conninfo)
     assert len(versions) == 1
@@ -89,7 +90,7 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule, module
     dbmodule, dbversion, dbflavor = get_database_info(conninfo)
     assert dbmodule == module
     assert dbversion == 14
-    assert dbflavor is None
+    assert dbflavor == "default"
 
     versions = swh_db_versions(conninfo)
     assert len(versions) == 5
@@ -183,3 +184,25 @@ def test_db_utils_swh_db_upgrade_sanity_checks(
     # an upgrade should fail due to missing stored version
     with pytest.raises(ValueError):
         swh_db_upgrade(conninfo, module)
+
+
+@pytest.mark.parametrize("module", ["test.cli", "test.cli_new"])
+@pytest.mark.parametrize("flavor", [None, "default", "flavorA", "flavorB"])
+def test_db_utils_flavor(cli_runner, postgresql, mock_import_swhmodule, module, flavor):
+    """Check populate_database_for_package handle db flavor properly"""
+    conninfo = craft_conninfo(postgresql)
+    result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    cmd = ["init", module, "--dbname", conninfo]
+    if flavor:
+        cmd.extend(["--flavor", flavor])
+    result = cli_runner.invoke(swhdb, cmd)
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+
+    # check the swh_db_module() function
+    assert swh_db_module(conninfo) == module
+
+    # the dbversion and dbmodule tables exists and are populated
+    dbmodule, _dbversion, dbflavor = get_database_info(conninfo)
+    assert dbmodule == module
+    assert dbflavor == (flavor or "default")

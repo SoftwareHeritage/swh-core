@@ -305,21 +305,11 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
         # Fallthrough
         return obj
 
-    try:
-        try:
-            return msgpack.unpackb(
-                data,
-                raw=False,
-                object_hook=decode_types,
-                ext_hook=ext_hook,
-                strict_map_key=False,
-                timestamp=3,  # convert Timestamp in datetime objects (tz UTC)
-            )
-        except TypeError:  # msgpack < 0.6.0
-            return msgpack.unpackb(
-                data, raw=False, object_hook=decode_types, ext_hook=ext_hook
-            )
-    except TypeError:  # msgpack < 0.5.2
-        return msgpack.unpackb(
-            data, encoding="utf-8", object_hook=decode_types, ext_hook=ext_hook
-        )
+    return msgpack.unpackb(
+        data,
+        raw=False,
+        object_hook=decode_types,
+        ext_hook=ext_hook,
+        strict_map_key=False,
+        timestamp=3,  # convert Timestamp in datetime objects (tz UTC)
+    )
