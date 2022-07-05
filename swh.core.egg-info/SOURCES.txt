@@ -84,10 +84,12 @@ swh/core/db/tests/test_cli.py
 swh/core/db/tests/test_db.py
 swh/core/db/tests/test_db_utils.py
 swh/core/db/tests/data/cli/sql/0-superuser-init.sql
+swh/core/db/tests/data/cli/sql/15-flavor.sql
 swh/core/db/tests/data/cli/sql/30-schema.sql
 swh/core/db/tests/data/cli/sql/40-funcs.sql
 swh/core/db/tests/data/cli/sql/50-data.sql
 swh/core/db/tests/data/cli_new/sql/0-superuser-init.sql
+swh/core/db/tests/data/cli_new/sql/15-flavor.sql
 swh/core/db/tests/data/cli_new/sql/30-schema.sql
 swh/core/db/tests/data/cli_new/sql/40-funcs.sql
 swh/core/db/tests/data/cli_new/sql/50-data.sql

@@ -548,7 +548,9 @@ def populate_database_for_package(
     return True, current_db_version, dbflavor
 
 
-def initialize_database_for_module(modname: str, version: int, **kwargs):
+def initialize_database_for_module(
+    modname: str, version: int, flavor: Optional[str] = None, **kwargs
+):
     """Helper function to initialize and populate a database for the given module
 
     This aims at helping the usage of pytest_postgresql for swh.core.db based datastores.
@@ -564,7 +566,7 @@ def initialize_database_for_module(modname: str, version: int, **kwargs):
     """
     conninfo = psycopg2.connect(**kwargs).dsn
     init_admin_extensions(modname, conninfo)
-    populate_database_for_package(modname, conninfo)
+    populate_database_for_package(modname, conninfo, flavor)
     try:
         swh_set_db_version(conninfo, version)
     except psycopg2.errors.UniqueViolation:
