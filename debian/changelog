@@ -1,3 +1,11 @@
+swh-core (2.13-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.13     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2022-07-05 14:22:04 +0200)
+  * Upstream changes:     - v2.13
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 05 Jul 2022 12:38:24 +0000
+
 swh-core (2.12-1~swh2) unstable-swh; urgency=medium
 
   * Bump new release with correct deps.
