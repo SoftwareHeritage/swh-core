@@ -255,8 +255,8 @@ def swh_rpc_adapter(app):
     See swh/core/api/tests/test_rpc_client_server.py for an example of usage.
 
     """
-    with app.test_client() as client:
-        yield RPCTestAdapter(client)
+    client = app.test_client()
+    yield RPCTestAdapter(client)
 
 
 class RPCTestAdapter(BaseAdapter):
