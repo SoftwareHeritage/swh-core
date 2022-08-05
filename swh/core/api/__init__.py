@@ -429,10 +429,9 @@ def error_handler(exception, encoder, status_code=500):
     on the client side.
 
     """
-    logging.exception(exception)
-
     status_class = status_code // 100
     if status_class == 5:
+        logging.exception(exception)
         sentry_sdk.capture_exception(exception)
 
     response = encoder(exception_to_dict(exception))
