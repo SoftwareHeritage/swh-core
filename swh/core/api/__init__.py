@@ -431,7 +431,7 @@ def error_handler(exception, encoder, status_code=500):
     """
     status_class = status_code // 100
     if status_class == 5:
-        logging.exception(exception)
+        logger.exception(exception)
         sentry_sdk.capture_exception(exception)
 
     response = encoder(exception_to_dict(exception))

@@ -21,6 +21,8 @@ from .serializers import (
     msgpack_loads,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def encode_msgpack(data, **kwargs):
     return aiohttp.web.Response(
@@ -68,7 +70,7 @@ async def error_middleware(app, handler):
         except Exception as e:
             if isinstance(e, aiohttp.web.HTTPException):
                 raise
-            logging.exception(e)
+            logger.exception(e)
             res = exception_to_dict(e)
             if isinstance(e, app.client_exception_classes):
                 status = 400
