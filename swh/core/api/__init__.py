@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -7,7 +7,6 @@ from collections import abc
 import functools
 import inspect
 import logging
-import pickle
 from typing import (
     Any,
     Callable,
@@ -325,36 +324,18 @@ class RPCClient(metaclass=MetaRPCClient):
 
         exception = None
 
-        # TODO: only old servers send pickled error; stop trying to unpickle
-        # after they are all upgraded
-        try:
-            if status_class == 4:
-                data = self._decode_response(response, check_status=False)
-                if isinstance(data, dict):
-                    # TODO: remove "exception" key check once all servers
-                    # are using new schema
-                    exc_data = data["exception"] if "exception" in data else data
-                    for exc_type in self.reraise_exceptions:
-                        if exc_type.__name__ == exc_data["type"]:
-                            exception = exc_type(*exc_data["args"])
-                            break
-                    else:
-                        exception = RemoteException(payload=exc_data, response=response)
-                else:
-                    exception = pickle.loads(data)
+        if status_class == 4:
+            exc_data = self._decode_response(response, check_status=False)
+            for exc_type in self.reraise_exceptions:
+                if exc_type.__name__ == exc_data["type"]:
+                    exception = exc_type(*exc_data["args"])
+                    break
+            else:
+                exception = RemoteException(payload=exc_data, response=response)
 
-            elif status_class == 5:
-                data = self._decode_response(response, check_status=False)
-                if "exception_pickled" in data:
-                    exception = pickle.loads(data["exception_pickled"])
-                else:
-                    # TODO: remove "exception" key check once all servers
-                    # are using new schema
-                    exc_data = data["exception"] if "exception" in data else data
-                    exception = RemoteException(payload=exc_data, response=response)
-
-        except (TypeError, pickle.UnpicklingError):
-            raise RemoteException(payload=data, response=response)
+        elif status_class == 5:
+            exc_data = self._decode_response(response, check_status=False)
+            exception = RemoteException(payload=exc_data, response=response)
 
         if exception:
             raise exception from None

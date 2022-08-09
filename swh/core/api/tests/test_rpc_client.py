@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2019  The Software Heritage developers
+# Copyright (C) 2018-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -110,13 +110,11 @@ def test_client_connexion_error(rpc_client, requests_mock):
     assert str(exc_info.value.args[0]) == error_message
 
 
-def _exception_response(exception, status_code, old_exception_schema=False):
+def _exception_response(exception, status_code):
     def callback(request, context):
         assert request.headers["Content-Type"] == "application/x-msgpack"
         context.headers["Content-Type"] = "application/x-msgpack"
         exc_dict = exception_to_dict(exception)
-        if old_exception_schema:
-            exc_dict = {"exception": exc_dict}
         context.content = msgpack_dumps(exc_dict)
         context.status_code = status_code
         return context.content
@@ -124,8 +122,7 @@ def _exception_response(exception, status_code, old_exception_schema=False):
     return callback
 
 
-@pytest.mark.parametrize("old_exception_schema", [False, True])
-def test_client_reraise_exception(rpc_client, requests_mock, old_exception_schema):
+def test_client_reraise_exception(rpc_client, requests_mock):
     """
     Exception caught server-side and whitelisted will be raised again client-side.
     """
@@ -137,7 +134,6 @@ def test_client_reraise_exception(rpc_client, requests_mock, old_exception_schem
         content=_exception_response(
             exception=ReraiseException(error_message),
             status_code=400,
-            old_exception_schema=old_exception_schema,
         ),
     )
 
@@ -147,18 +143,8 @@ def test_client_reraise_exception(rpc_client, requests_mock, old_exception_schem
     assert str(exc_info.value) == error_message
 
 
-@pytest.mark.parametrize(
-    "status_code, old_exception_schema",
-    [
-        (400, False),
-        (500, False),
-        (400, True),
-        (500, True),
-    ],
-)
-def test_client_raise_remote_exception(
-    rpc_client, requests_mock, status_code, old_exception_schema
-):
+@pytest.mark.parametrize("status_code", [400, 500])
+def test_client_raise_remote_exception(rpc_client, requests_mock, status_code):
     """
     Exception caught server-side and not whitelisted will be wrapped and raised
     as a RemoteException client-side.
@@ -171,7 +157,6 @@ def test_client_raise_remote_exception(
         content=_exception_response(
             exception=Exception(error_message),
             status_code=status_code,
-            old_exception_schema=old_exception_schema,
         ),
     )
 
