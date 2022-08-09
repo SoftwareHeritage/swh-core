@@ -8,7 +8,13 @@ import re
 import pytest
 from requests.exceptions import ConnectionError
 
-from swh.core.api import APIError, RemoteException, RPCClient, remote_api_endpoint
+from swh.core.api import (
+    APIError,
+    RemoteException,
+    RPCClient,
+    TransientRemoteException,
+    remote_api_endpoint,
+)
 from swh.core.api.serializers import exception_to_dict, msgpack_dumps
 
 from .test_serializers import ExtraType, extra_decoders, extra_encoders
@@ -143,7 +149,7 @@ def test_client_reraise_exception(rpc_client, requests_mock):
     assert str(exc_info.value) == error_message
 
 
-@pytest.mark.parametrize("status_code", [400, 500])
+@pytest.mark.parametrize("status_code", [400, 500, 503])
 def test_client_raise_remote_exception(rpc_client, requests_mock, status_code):
     """
     Exception caught server-side and not whitelisted will be wrapped and raised
@@ -165,3 +171,7 @@ def test_client_raise_remote_exception(rpc_client, requests_mock, status_code):
 
     assert str(exc_info.value.args[0]["type"]) == "Exception"
     assert str(exc_info.value.args[0]["message"]) == error_message
+    if status_code == 503:
+        assert isinstance(exc_info.value, TransientRemoteException)
+    else:
+        assert not isinstance(exc_info.value, TransientRemoteException)

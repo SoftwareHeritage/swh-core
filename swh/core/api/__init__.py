@@ -121,6 +121,12 @@ class RemoteException(Exception):
             return super().__str__()
 
 
+class TransientRemoteException(RemoteException):
+    """Subclass of RemoteException representing errors which are expected
+    to be temporary.
+    """
+
+
 F = TypeVar("F", bound=Callable)
 
 
@@ -334,8 +340,16 @@ class RPCClient(metaclass=MetaRPCClient):
                 exception = RemoteException(payload=exc_data, response=response)
 
         elif status_class == 5:
+            cls: Type[RemoteException]
+            if status_code == 503:
+                # This isn't a generic HTTP client and we know the server does
+                # not support the Retry-After header, so we do not implement
+                # it here either.
+                cls = TransientRemoteException
+            else:
+                cls = RemoteException
             exc_data = self._decode_response(response, check_status=False)
-            exception = RemoteException(payload=exc_data, response=response)
+            exception = cls(payload=exc_data, response=response)
 
         if exception:
             raise exception from None
