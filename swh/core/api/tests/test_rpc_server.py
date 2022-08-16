@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2019  The Software Heritage developers
+# Copyright (C) 2018-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -13,11 +13,17 @@ from swh.core.api import (
     JSONFormatter,
     MsgpackFormatter,
     RPCServerApp,
+    encode_data_server,
+    error_handler,
     negotiate,
     remote_api_endpoint,
 )
 
 from .test_serializers import ExtraType, extra_decoders, extra_encoders
+
+
+class MyCustomException(Exception):
+    pass
 
 
 class MyRPCServerApp(RPCServerApp):
@@ -40,10 +46,28 @@ class TestStorage:
         assert data == ["foo", ExtraType("bar", b"baz")]
         return ExtraType({"spam": "egg"}, "qux")
 
+    @remote_api_endpoint("crashy/builtin")
+    def crashy(self, data, db=None, cur=None):
+        raise ValueError("this is an unexpected exception")
+
+    @remote_api_endpoint("crashy/custom")
+    def custom_crashy(self, data, db=None, cur=None):
+        raise MyCustomException("try again later!")
+
 
 @pytest.fixture
 def app():
-    return MyRPCServerApp("testapp", backend_class=TestStorage)
+    app = MyRPCServerApp("testapp", backend_class=TestStorage)
+
+    @app.errorhandler(MyCustomException)
+    def custom_error_handler(exception):
+        return error_handler(exception, encode_data_server, status_code=503)
+
+    @app.errorhandler(Exception)
+    def default_error_handler(exception):
+        return error_handler(exception, encode_data_server)
+
+    return app
 
 
 def test_api_rpc_server_app_ok(app):
@@ -112,6 +136,52 @@ def test_rpc_server(flask_app_client):
     assert res.status_code == 200
     assert res.mimetype == "application/x-msgpack"
     assert res.data == b"\xa3egg"
+
+
+def test_rpc_server_exception(flask_app_client):
+    res = flask_app_client.post(
+        url_for("crashy"),
+        headers=[
+            ("Content-Type", "application/x-msgpack"),
+            ("Accept", "application/x-msgpack"),
+        ],
+        data=msgpack.dumps({"data": "toto"}),
+    )
+
+    assert res.status_code == 500
+    assert res.mimetype == "application/x-msgpack", res.data
+    data = msgpack.loads(res.data)
+    assert (
+        data.items()
+        >= {
+            "type": "ValueError",
+            "module": "builtins",
+            "args": ["this is an unexpected exception"],
+        }.items()
+    ), data
+
+
+def test_rpc_server_custom_exception(flask_app_client):
+    res = flask_app_client.post(
+        url_for("custom_crashy"),
+        headers=[
+            ("Content-Type", "application/x-msgpack"),
+            ("Accept", "application/x-msgpack"),
+        ],
+        data=msgpack.dumps({"data": "toto"}),
+    )
+
+    assert res.status_code == 503
+    assert res.mimetype == "application/x-msgpack", res.data
+    data = msgpack.loads(res.data)
+    assert (
+        data.items()
+        >= {
+            "type": "MyCustomException",
+            "module": "swh.core.api.tests.test_rpc_server",
+            "args": ["try again later!"],
+        }.items()
+    ), data
 
 
 def test_rpc_server_extra_serializers(flask_app_client):
