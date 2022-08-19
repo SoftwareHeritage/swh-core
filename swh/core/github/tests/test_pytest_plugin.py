@@ -3,8 +3,10 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import pytest
 import time
+
+import pytest
+
 from swh.core.github.pytest_plugin import fake_time_sleep, fake_time_time
 
 
