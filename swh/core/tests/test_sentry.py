@@ -6,7 +6,7 @@
 import logging
 
 import pytest
-from sentry_sdk import capture_message
+from sentry_sdk import capture_exception, capture_message, set_tag
 
 from swh.core.sentry import init_sentry, override_with_bool_envvar
 
@@ -101,3 +101,35 @@ def test_sentry_logging_from_venv(monkeypatch):
     logging.error("Stupid error")
 
     assert len(reports) == 2
+
+
+def test_sentry_events_fixture_capture_message(sentry_events):
+    message = "Something went wrong"
+    capture_message(message)
+    assert sentry_events
+    assert "message" in sentry_events[0]
+    assert sentry_events[0]["message"] == message
+
+
+def test_sentry_events_fixture_capture_exception(sentry_events):
+    message = "Invalid value"
+    exception = ValueError(message)
+    capture_exception(exception)
+    assert sentry_events
+    assert "exception" in sentry_events[0]
+    assert "values" in sentry_events[0]["exception"]
+    exception_data = sentry_events[0]["exception"]["values"]
+    assert exception_data
+    assert exception_data[0].get("type") == type(exception).__name__
+    assert exception_data[0].get("value") == message
+
+
+def test_sentry_events_fixture_set_tag(sentry_events):
+    tag_name = "swh.test"
+    tag_value = "test"
+    set_tag(tag_name, tag_value)
+    message = "Something went wrong"
+    capture_message(message)
+    assert sentry_events
+    assert "tags" in sentry_events[0]
+    sentry_events[0]["tags"] == {tag_name: tag_value}
