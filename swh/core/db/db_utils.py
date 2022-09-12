@@ -79,12 +79,12 @@ def connect_to_conninfo(
             # Database name
             db_or_conninfo = f"dbname={db_or_conninfo}"
 
-    try:
-        db = psycopg2.connect(db_or_conninfo)
-    except psycopg2.Error:
-        logger.exception("Failed to connect to `%s`", db_or_conninfo)
-    else:
-        yield db
+        try:
+            db = psycopg2.connect(db_or_conninfo)
+        except psycopg2.Error:
+            logger.exception("Failed to connect to `%s`", db_or_conninfo)
+        else:
+            yield db
 
 
 def swh_db_version(db_or_conninfo: Union[str, pgconnection]) -> Optional[int]:
