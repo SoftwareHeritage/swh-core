@@ -1,3 +1,11 @@
+swh-core (2.14.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.14.1     - (tagged by Antoine Lambert
+    <anlambert@softwareheritage.org> on 2022-09-12 11:46:16 +0200)
+  * Upstream changes:     - version 2.14.1
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 12 Sep 2022 09:51:15 +0000
+
 swh-core (2.14.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.14.0     - (tagged by Valentin Lorentz
