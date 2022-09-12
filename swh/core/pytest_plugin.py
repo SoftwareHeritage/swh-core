@@ -16,6 +16,7 @@ import requests
 from requests.adapters import BaseAdapter
 from requests.structures import CaseInsensitiveDict
 from requests.utils import get_encoding_from_headers
+import sentry_sdk
 
 logger = logging.getLogger(__name__)
 
@@ -367,3 +368,40 @@ def statsd():
     statsd = Statsd()
     statsd._socket = FakeSocket()
     yield statsd
+
+
+@pytest.fixture
+def monkeypatch_sentry_transport():
+    # Inspired by
+    # https://github.com/getsentry/sentry-python/blob/1.5.9/tests/conftest.py#L168-L184
+
+    initialized = False
+
+    def setup_sentry_transport_monkeypatch(*a, **kw):
+        nonlocal initialized
+        assert not initialized, "already initialized"
+        initialized = True
+        hub = sentry_sdk.Hub.current
+        client = sentry_sdk.Client(*a, **kw)
+        hub.bind_client(client)
+        client.transport = TestTransport()
+
+    class TestTransport:
+        def __init__(self):
+            self.events = []
+            self.envelopes = []
+
+        def capture_event(self, event):
+            self.events.append(event)
+
+        def capture_envelope(self, envelope):
+            self.envelopes.append(envelope)
+
+    with sentry_sdk.Hub(None):
+        yield setup_sentry_transport_monkeypatch
+
+
+@pytest.fixture
+def sentry_events(monkeypatch_sentry_transport):
+    monkeypatch_sentry_transport()
+    return sentry_sdk.Hub.current.client.transport.events

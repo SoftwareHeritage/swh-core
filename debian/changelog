@@ -1,8 +1,10 @@
-swh-core (2.14.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (2.14.1-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 2.14.1     - (tagged by Antoine Lambert
+    <anlambert@softwareheritage.org> on 2022-09-12 11:46:16 +0200)
+  * Upstream changes:     - version 2.14.1
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 16 Aug 2022 11:53:53 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 12 Sep 2022 09:51:15 +0000
 
 swh-core (2.14.0-1~swh1) unstable-swh; urgency=medium
 
