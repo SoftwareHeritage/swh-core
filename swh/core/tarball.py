@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2021  The Software Heritage developers
+# Copyright (C) 2015-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -13,6 +13,18 @@ import zipfile
 import magic
 
 from . import utils
+
+MIMETYPE_TO_ARCHIVE_FORMAT = {
+    "application/x-compress": "tar.Z|x",
+    "application/x-tar": "tar",
+    "application/x-bzip2": "bztar",
+    "application/gzip": "gztar",
+    "application/x-lzip": "tar.lz",
+    "application/zip": "zip",
+    "application/java-archive": "jar",
+    "application/zstd": "tar.zst",
+    "application/x-zstd": "tar.zst",
+}
 
 
 def _unpack_tar(tarpath: str, extract_dir: str) -> str:
@@ -117,19 +129,6 @@ def register_new_archive_formats():
         shutil.register_unpack_format(name, extensions, function)
 
 
-_mime_to_archive_format = {
-    "application/x-compress": "tar.Z|x",
-    "application/x-tar": "tar",
-    "application/x-bzip2": "bztar",
-    "application/gzip": "gztar",
-    "application/x-lzip": "tar.lz",
-    "application/zip": "zip",
-    "application/java-archive": "jar",
-    "application/zstd": "tar.zst",
-    "application/x-zstd": "tar.zst",
-}
-
-
 def uncompress(tarpath: str, dest: str):
     """Uncompress tarpath to dest folder if tarball is supported.
 
@@ -157,7 +156,7 @@ def uncompress(tarpath: str, dest: str):
         if format is None:
             m = magic.Magic(mime=True)
             mime = m.from_file(tarpath)
-            format = _mime_to_archive_format.get(mime)
+            format = MIMETYPE_TO_ARCHIVE_FORMAT.get(mime)
         shutil.unpack_archive(tarpath, extract_dir=dest, format=format)
     except shutil.ReadError as e:
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
