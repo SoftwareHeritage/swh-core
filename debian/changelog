@@ -1,3 +1,14 @@
+swh-core (2.15.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.15.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2022-10-03 17:04:49
+    +0200)
+  * Upstream changes:     - v2.15.0     - Make mimetype to archive
+    format dictionary public     - api/asynchronous: Do not log/report
+    client exception
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 03 Oct 2022 15:07:52 +0000
+
 swh-core (2.14.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.14.1     - (tagged by Antoine Lambert
