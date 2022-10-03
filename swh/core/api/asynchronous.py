@@ -70,11 +70,11 @@ async def error_middleware(app, handler):
         except Exception as e:
             if isinstance(e, aiohttp.web.HTTPException):
                 raise
-            logger.exception(e)
             res = exception_to_dict(e)
             if isinstance(e, app.client_exception_classes):
                 status = 400
             else:
+                logger.exception(e)
                 status = 500
             return encode_data_server(res, status=status)
 
