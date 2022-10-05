@@ -19,6 +19,7 @@ MIMETYPE_TO_ARCHIVE_FORMAT = {
     "application/x-tar": "tar",
     "application/x-bzip2": "bztar",
     "application/gzip": "gztar",
+    "application/x-gzip": "gztar",
     "application/x-lzip": "tar.lz",
     "application/zip": "zip",
     "application/java-archive": "jar",
