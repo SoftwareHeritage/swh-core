@@ -179,8 +179,11 @@ def normalize_permissions(path: str):
     Args:
       path: the path under which permissions should be normalized
     """
-    for dirpath, _, fnames in os.walk(path):
-        os.chmod(dirpath, 0o0755)
+    os.chmod(path, 0o0755)
+    for dirpath, dnames, fnames in os.walk(path):
+        for dname in dnames:
+            dpath = os.path.join(dirpath, dname)
+            os.chmod(dpath, 0o0755)
         for fname in fnames:
             fpath = os.path.join(dirpath, fname)
             if not os.path.islink(fpath):

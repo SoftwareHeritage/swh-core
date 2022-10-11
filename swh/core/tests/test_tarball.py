@@ -6,6 +6,7 @@
 import hashlib
 import os
 import shutil
+import stat
 
 import pytest
 
@@ -186,16 +187,26 @@ def test_normalize_permissions(tmp_path):
         file_path.touch()
         file_path.chmod(perms)
 
+    # add directory without any permission
+    dir_path = tmp_path / "dir"
+    dir_path.mkdir(mode=stat.S_IFDIR)
+
     for file in tmp_path.iterdir():
-        assert file.stat().st_mode == 0o100000 | int(file.name)
+        if file.is_dir():
+            assert file.stat().st_mode == stat.S_IFDIR
+        else:
+            assert file.stat().st_mode == 0o100000 | int(file.name)
 
     tarball.normalize_permissions(str(tmp_path))
 
     for file in tmp_path.iterdir():
-        if int(file.name) & 0o100:  # original file was executable for its owner
-            assert file.stat().st_mode == 0o100755
+        if file.is_dir():
+            assert file.stat().st_mode == stat.S_IFDIR + 0o000755
         else:
-            assert file.stat().st_mode == 0o100644
+            if int(file.name) & 0o100:  # original file was executable for its owner
+                assert file.stat().st_mode == 0o100755
+            else:
+                assert file.stat().st_mode == 0o100644
 
 
 def test_unpcompress_zip_imploded(tmp_path, datadir):
