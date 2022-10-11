@@ -166,6 +166,13 @@ def uncompress(tarpath: str, dest: str):
             _unpack_zip(tarpath, dest)
         else:
             raise
+    except NotADirectoryError:
+        if format and "tar" in format:
+            # some old tarballs might fail to be unpacked by shutil.unpack_archive,
+            # fallback using the tar command as last resort
+            _unpack_tar(tarpath, dest)
+        else:
+            raise
 
     normalize_permissions(dest)
 
