@@ -1,11 +1,14 @@
-# Copyright (C) 2019-2021  The Software Heritage developers
+# Copyright (C) 2019-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import hashlib
+import io
 import os
 import shutil
+import stat
+import tarfile
 
 import pytest
 
@@ -186,33 +189,60 @@ def test_normalize_permissions(tmp_path):
         file_path.touch()
         file_path.chmod(perms)
 
+    # add directory without any permission
+    dir_path = tmp_path / "dir"
+    dir_path.mkdir(mode=stat.S_IFDIR)
+
     for file in tmp_path.iterdir():
-        assert file.stat().st_mode == 0o100000 | int(file.name)
+        if file.is_dir():
+            assert file.stat().st_mode == stat.S_IFDIR
+        else:
+            assert file.stat().st_mode == 0o100000 | int(file.name)
 
     tarball.normalize_permissions(str(tmp_path))
 
     for file in tmp_path.iterdir():
-        if int(file.name) & 0o100:  # original file was executable for its owner
-            assert file.stat().st_mode == 0o100755
+        if file.is_dir():
+            assert file.stat().st_mode == stat.S_IFDIR + 0o000755
         else:
-            assert file.stat().st_mode == 0o100644
+            if int(file.name) & 0o100:  # original file was executable for its owner
+                assert file.stat().st_mode == 0o100755
+            else:
+                assert file.stat().st_mode == 0o100644
 
 
-def test_unpcompress_zip_imploded(tmp_path, datadir):
+def uncompress_archive_test(archive_path, tmp_path):
+    assert os.path.exists(archive_path)
+
+    extract_dir = os.path.join(tmp_path, "unpack", os.path.basename(archive_path))
+    tarball.uncompress(archive_path, extract_dir)
+    assert len(os.listdir(extract_dir)) > 0
+
+
+def test_uncompress_tar_fallback_when_unpack_archive_failed(tmp_path):
+    """shutil.unpack_archive can fail unpacking a tarball with missing
+    directory bit set on folder contained in it while the tar command
+    succeeds to perform the same task so check the fallback of using
+    tar command works for such edge case.
+    """
+    archive_path = os.path.join(tmp_path, "repro.tar.gz")
+    tf = tarfile.open(archive_path, "w:gz")
+    ti = tarfile.TarInfo("dir")
+    ti.mode = 0o777
+    ti.type = tarfile.DIRTYPE
+    tf.addfile(ti)
+    ti = tarfile.TarInfo("dir/file")
+    tf.addfile(ti, io.BytesIO(b"hello world"))
+    tf.close()
+    uncompress_archive_test(archive_path, tmp_path)
+
+
+def test_uncompress_zip_imploded(tmp_path, datadir):
     """Unpack a zip archive with compression type 6 (implode),
     not supported by python zipfile module.
-
     """
-    filename = "msk316src.zip"
-    zippath = os.path.join(datadir, "archives", filename)
-
-    assert os.path.exists(zippath)
-
-    extract_dir = os.path.join(tmp_path, filename)
-
-    tarball.uncompress(zippath, extract_dir)
-
-    assert len(os.listdir(extract_dir)) > 0
+    archive_path = os.path.join(datadir, "archives", "msk316src.zip")
+    uncompress_archive_test(archive_path, tmp_path)
 
 
 def test_uncompress_upper_archive_extension(tmp_path, datadir):
