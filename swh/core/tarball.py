@@ -19,6 +19,7 @@ MIMETYPE_TO_ARCHIVE_FORMAT = {
     "application/x-tar": "tar",
     "application/x-bzip2": "bztar",
     "application/gzip": "gztar",
+    "application/x-gzip": "gztar",
     "application/x-lzip": "tar.lz",
     "application/zip": "zip",
     "application/java-archive": "jar",
@@ -165,6 +166,13 @@ def uncompress(tarpath: str, dest: str):
             _unpack_zip(tarpath, dest)
         else:
             raise
+    except NotADirectoryError:
+        if format and "tar" in format:
+            # some old tarballs might fail to be unpacked by shutil.unpack_archive,
+            # fallback using the tar command as last resort
+            _unpack_tar(tarpath, dest)
+        else:
+            raise
 
     normalize_permissions(dest)
 
@@ -178,8 +186,11 @@ def normalize_permissions(path: str):
     Args:
       path: the path under which permissions should be normalized
     """
-    for dirpath, _, fnames in os.walk(path):
-        os.chmod(dirpath, 0o0755)
+    os.chmod(path, 0o0755)
+    for dirpath, dnames, fnames in os.walk(path):
+        for dname in dnames:
+            dpath = os.path.join(dirpath, dname)
+            os.chmod(dpath, 0o0755)
         for fname in fnames:
             fpath = os.path.join(dirpath, fname)
             if not os.path.islink(fpath):
