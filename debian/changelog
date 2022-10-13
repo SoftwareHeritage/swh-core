@@ -1,3 +1,12 @@
+swh-core (2.16.1-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.16.1     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2022-10-13 16:41:59 +0200)
+  * Upstream changes:     - v2.16.1     - * Fix _sanitize_github_url
+    removing suffixes too greedily
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Thu, 13 Oct 2022 14:48:15 +0000
+
 swh-core (2.16.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.16.0     - (tagged by Antoine Lambert
