@@ -16,6 +16,7 @@ from swh.core.github.utils import (
 )
 
 KNOWN_GH_REPO = "https://github.com/user/repo"
+KNOWN_GH_REPO2 = "https://github.com/user/reposit"
 
 
 @pytest.mark.parametrize(
@@ -26,6 +27,11 @@ KNOWN_GH_REPO = "https://github.com/user/repo"
         ("user/repo/", KNOWN_GH_REPO),
         ("user/repo", KNOWN_GH_REPO),
         ("user/repo/.git", KNOWN_GH_REPO),
+        ("user/reposit.git", KNOWN_GH_REPO2),
+        ("user/reposit.git/", KNOWN_GH_REPO2),
+        ("user/reposit/", KNOWN_GH_REPO2),
+        ("user/reposit", KNOWN_GH_REPO2),
+        ("user/reposit/.git", KNOWN_GH_REPO2),
         ("unknown/page", None),  # unknown gh origin returns None
         ("user/with/deps", None),  # url kind is not dealt with
     ],

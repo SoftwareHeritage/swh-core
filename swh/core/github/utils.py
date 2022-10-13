@@ -32,9 +32,14 @@ def _url_github_api(user_repo: str) -> str:
     return f"https://api.github.com/repos/{user_repo}"
 
 
+_SANITIZATION_RE = re.compile(r"^(.*?)/?(\.git)?/?$")
+
+
 def _sanitize_github_url(url: str) -> str:
     """Sanitize github url."""
-    return url.lower().rstrip("/").rstrip(".git").rstrip("/")
+    m = _SANITIZATION_RE.match(url.lower())
+    assert m is not None, url  # impossible, but mypy doesn't know it
+    return m.group(1)
 
 
 def get_canonical_github_origin_url(
