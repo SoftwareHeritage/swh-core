@@ -1,3 +1,14 @@
+swh-core (2.17.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.17.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2022-10-26 14:42:33
+    +0200)
+  * Upstream changes:     - v2.17.0     - swh.core.tarball: Add support
+    for war files as well     - pre-commit, tox: Bump pre-commit,
+    codespell, black and flake8
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Wed, 26 Oct 2022 12:45:55 +0000
+
 swh-core (2.16.1-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.16.1     - (tagged by Valentin Lorentz
