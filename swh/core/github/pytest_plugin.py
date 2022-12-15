@@ -56,6 +56,7 @@ def ratelimit_reset() -> Optional[int]:
 def github_ratelimit_callback(
     request: requests_mock.request._RequestObjectProxy,
     context: requests_mock.response._Context,
+    remaining_requests: int,
     ratelimit_reset: Optional[int],
 ) -> Dict[str, str]:
     """Return a rate-limited GitHub API response."""
@@ -69,6 +70,7 @@ def github_ratelimit_callback(
 
     if ratelimit_reset is not None:
         context.headers["X-Ratelimit-Reset"] = str(ratelimit_reset)
+    context.headers["X-Ratelimit-Remaining"] = str(remaining_requests)
 
     return {
         "message": "API rate limit exceeded for <IP>.",
@@ -94,6 +96,7 @@ def github_repo(i: int) -> Dict[str, Union[int, str]]:
 def github_response_callback(
     request: requests_mock.request._RequestObjectProxy,
     context: requests_mock.response._Context,
+    remaining_requests: int,
     page_size: int = 1000,
     origin_count: int = 10000,
 ) -> List[Dict[str, Union[str, int]]]:
@@ -116,12 +119,13 @@ def github_response_callback(
         # header to the response
         next_url = f"{HTTP_GITHUB_API_URL}?per_page={page_size}&since={next_page}"
         context.headers["Link"] = f"<{next_url}>; rel=next"
+    context.headers["X-Ratelimit-Remaining"] = str(remaining_requests)
 
     return [github_repo(i) for i in range(since + 1, min(next_page, origin_count) + 1)]
 
 
 @pytest.fixture()
-def requests_ratelimited(
+def github_requests_ratelimited(
     num_before_ratelimit: int,
     num_ratelimit: Optional[int],
     ratelimit_reset: Optional[int],
@@ -151,13 +155,27 @@ def requests_ratelimited(
     def response_callback(request, context):
         nonlocal current_request
         current_request += 1
-        if num_before_ratelimit < current_request and (
-            num_ratelimit is None
-            or current_request < num_before_ratelimit + num_ratelimit + 1
+        if num_before_ratelimit >= current_request:
+            # case 1: not yet rate-limited
+            return github_response_callback(
+                request, context, (num_before_ratelimit or 1000) - current_request
+            )
+        elif (
+            num_ratelimit is not None
+            and current_request >= num_before_ratelimit + num_ratelimit + 1
         ):
-            return github_ratelimit_callback(request, context, ratelimit_reset)
+            # case 3: no longer rate-limited
+            return github_response_callback(
+                request, context, (num_before_ratelimit + 1000) - current_request
+            )
         else:
-            return github_response_callback(request, context)
+            # case 2: being rate-limited
+            return github_ratelimit_callback(
+                request,
+                context,
+                max(0, (num_before_ratelimit or 1000) - current_request),
+                ratelimit_reset,
+            )
 
     with requests_mock.Mocker() as mock:
         mock.get(HTTP_GITHUB_API_URL, json=response_callback)
