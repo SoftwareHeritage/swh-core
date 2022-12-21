@@ -10,4 +10,12 @@ Reference Documentation
 
    cli
    db
-   /apidoc/swh.core
+
+.. only:: standalone_package_doc
+
+   Indices and tables
+   ------------------
+
+   * :ref:`genindex`
+   * :ref:`modindex`
+   * :ref:`search`

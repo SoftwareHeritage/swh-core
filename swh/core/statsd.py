@@ -223,7 +223,7 @@ class Statsd(object):
                 continue
             if ":" not in tag:
                 warnings.warn(
-                    "STATSD_TAGS needs to be in key:value format, " "%s invalid" % tag,
+                    f"STATSD_TAGS needs to be in 'key:value' format, not {tag!r}",
                     UserWarning,
                 )
                 continue
