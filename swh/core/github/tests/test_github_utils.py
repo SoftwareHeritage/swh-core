@@ -3,7 +3,9 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import itertools
 import logging
+from unittest.mock import call
 
 import pytest
 
@@ -123,7 +125,8 @@ def test_github_session_anonymous_session():
 )
 def test_github_session_ratelimit_once_recovery(
     caplog,
-    requests_ratelimited,
+    mocker,
+    github_requests_ratelimited,
     num_ratelimit,
     monkeypatch_sleep_calls,
     github_credentials,
@@ -134,6 +137,8 @@ def test_github_session_ratelimit_once_recovery(
     github_session = GitHubSession(
         user_agent="GitHub Session Test", credentials=github_credentials
     )
+
+    statsd_report = mocker.patch.object(github_session.statsd, "_report")
 
     res = github_session.request(f"{HTTP_GITHUB_API_URL}?per_page=1000&since=10")
     assert res.status_code == 200
@@ -148,6 +153,25 @@ def test_github_session_ratelimit_once_recovery(
 
     # check that we slept for one second between our token uses
     assert monkeypatch_sleep_calls == [1]
+
+    username0 = github_session.credentials[0]["username"]
+    username1 = github_session.credentials[1]["username"]
+    tags0 = {"username": username0, "http_status": 429}
+    tags1 = {"username": username1, "http_status": 200}
+    assert [c for c in statsd_report.mock_calls] == [
+        call("requests_total", "c", 1, {"username": username0}, 1),
+        call("responses_total", "c", 1, tags0, 1),
+        call("remaining_requests", "g", 999, {"username": username0}, 1),
+        call("rate_limited_responses_total", "c", 1, {"username": username0}, 1),
+        call("sleep", "c", 1, None, 1),
+        call("requests_total", "c", 1, {"username": username1}, 1),
+        call("responses_total", "c", 1, tags1, 1),
+        call("remaining_requests", "g", 998, {"username": username1}, 1),
+    ]
+    assert github_session.statsd.constant_tags == {
+        "api_type": "github",
+        "api_instance": "github",
+    }
 
 
 def test_github_session_authenticated_credentials(
@@ -179,7 +203,8 @@ def test_github_session_authenticated_credentials(
 )
 def test_github_session_ratelimit_reset_sleep(
     caplog,
-    requests_ratelimited,
+    mocker,
+    github_requests_ratelimited,
     monkeypatch_sleep_calls,
     num_before_ratelimit,
     num_ratelimit,
@@ -192,6 +217,8 @@ def test_github_session_ratelimit_reset_sleep(
     github_session = GitHubSession(
         user_agent="GitHub Session Test", credentials=github_credentials
     )
+
+    statsd_report = mocker.patch.object(github_session.statsd, "_report")
 
     for _ in range(num_ratelimit):
         github_session.request(f"{HTTP_GITHUB_API_URL}?per_page=1000&since=10")
@@ -209,3 +236,126 @@ def test_github_session_ratelimit_reset_sleep(
                 break
 
     assert found_exhaustion_message is True
+
+    username0 = github_session.credentials[0]["username"]
+
+    def ok_request_calls(user, remaining):
+        return [
+            call("requests_total", "c", 1, {"username": user}, 1),
+            call("responses_total", "c", 1, {"username": user, "http_status": 200}, 1),
+            call("remaining_requests", "g", remaining, {"username": user}, 1),
+        ]
+
+    def ratelimited_request_calls(user):
+        return [
+            call("requests_total", "c", 1, {"username": user}, 1),
+            call("responses_total", "c", 1, {"username": user, "http_status": 429}, 1),
+            call("remaining_requests", "g", 0, {"username": user}, 1),
+            call("reset_seconds", "g", ratelimit_reset, {"username": user}, 1),
+            call("rate_limited_responses_total", "c", 1, {"username": user}, 1),
+            call("sleep", "c", 1, None, 1),
+        ]
+
+    expected_calls_groups = (
+        # Successful requests
+        [ok_request_calls(username0, n - 1) for n in range(num_before_ratelimit, 0, -1)]
+        # Then rate-limited failures, cycling through tokens
+        + [
+            ratelimited_request_calls(
+                github_session.credentials[n % len(github_credentials)]["username"]
+            )
+            for n in range(num_ratelimit)
+        ]
+        # And finally, a long sleep and the successful request
+        + [
+            [call("sleep", "c", ratelimit_reset + 1, None, 1)],
+            ok_request_calls(
+                github_session.credentials[num_ratelimit % len(github_credentials)][
+                    "username"
+                ],
+                1000 - num_ratelimit - 1,
+            ),
+        ]
+    )
+    expected_calls = list(itertools.chain.from_iterable(expected_calls_groups))
+    assert [c for c in statsd_report.mock_calls] == expected_calls
+    assert github_session.statsd.constant_tags == {
+        "api_type": "github",
+        "api_instance": "github",
+    }
+
+
+# Same as before, but with no credentials
+@pytest.mark.parametrize(
+    "num_before_ratelimit, num_ratelimit, ratelimit_reset",
+    [(5, 6, 123456)],
+)
+def test_github_session_ratelimit_reset_sleep_anonymous(
+    caplog,
+    mocker,
+    github_requests_ratelimited,
+    monkeypatch_sleep_calls,
+    num_before_ratelimit,
+    num_ratelimit,
+    ratelimit_reset,
+):
+    """GitHubSession should handle rate-limit with authentication tokens."""
+    caplog.set_level(logging.DEBUG, "swh.core.github.utils")
+
+    github_session = GitHubSession(user_agent="GitHub Session Test")
+
+    statsd_report = mocker.patch.object(github_session.statsd, "_report")
+
+    for _ in range(num_ratelimit):
+        github_session.request(f"{HTTP_GITHUB_API_URL}?per_page=1000&since=10")
+
+    # No credentials, so we immediately sleep for a long time
+    expected_sleep_calls = [ratelimit_reset + 1] * num_ratelimit
+    assert monkeypatch_sleep_calls == expected_sleep_calls
+
+    found_exhaustion_message = False
+    for record in caplog.records:
+        if record.levelname == "INFO":
+            if "Rate limits exhausted for all tokens" in record.message:
+                found_exhaustion_message = True
+                break
+
+    assert found_exhaustion_message is True
+
+    user = "anonymous"
+
+    def ok_request_calls(remaining):
+        return [
+            call("requests_total", "c", 1, {"username": user}, 1),
+            call("responses_total", "c", 1, {"username": user, "http_status": 200}, 1),
+            call("remaining_requests", "g", remaining, {"username": user}, 1),
+        ]
+
+    def ratelimited_request_calls():
+        return [
+            call("requests_total", "c", 1, {"username": user}, 1),
+            call("responses_total", "c", 1, {"username": user, "http_status": 403}, 1),
+            call("remaining_requests", "g", 0, {"username": user}, 1),
+            call("reset_seconds", "g", ratelimit_reset, {"username": user}, 1),
+            call("rate_limited_responses_total", "c", 1, {"username": user}, 1),
+            call("sleep", "c", ratelimit_reset + 1, None, 1),
+        ]
+
+    expected_calls_groups = (
+        # Successful requests
+        [ok_request_calls(n - 1) for n in range(num_before_ratelimit, 0, -1)]
+        # Then rate-limited failures, each with a long sleep
+        + [ratelimited_request_calls() for n in range(num_ratelimit)]
+        # And finally, the successful request
+        + [
+            ok_request_calls(
+                1000 - num_ratelimit - 1,
+            ),
+        ]
+    )
+    expected_calls = list(itertools.chain.from_iterable(expected_calls_groups))
+    assert [c for c in statsd_report.mock_calls] == expected_calls
+    assert github_session.statsd.constant_tags == {
+        "api_type": "github",
+        "api_instance": "github",
+    }
