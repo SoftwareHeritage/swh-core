@@ -19,6 +19,8 @@ from tenacity import (
     wait_exponential,
 )
 
+from ..statsd import Statsd
+
 GITHUB_PATTERN = re.compile(
     r"(//|git://|git@|git//|https?://|ssh://|.*@)github.com[/:](?P<user_repo>.*)"
 )
@@ -99,6 +101,11 @@ class GitHubSession:
             random.shuffle(creds)
             self.credentials = creds
 
+        self.statsd = Statsd(
+            namespace="swh_outbound_api",
+            constant_tags={"api_type": "github", "api_instance": "github"},
+        )
+
         self.session = requests.Session()
 
         self.session.headers.update(
@@ -147,7 +154,40 @@ class GitHubSession:
         ),
     )
     def _request(self, url: str) -> requests.Response:
+        # When anonymous, rate-limits are per-IP; but we cannot necessarily
+        # get the IP/hostname here as we may be containerized. Instead, we rely on
+        # statsd-exporter adding the hostname in the 'instance' tag.
+        tags = {"username": self.current_user or "anonymous"}
+
+        self.statsd.increment("requests_total", tags=tags)
+
         response = self.session.get(url)
+
+        # self.session.get(url) raises in case of non-HTTP error (DNS, TCP, TLS, ...),
+        # so responses_total may differ from requests_total.
+        self.statsd.increment(
+            "responses_total", tags={**tags, "http_status": response.status_code}
+        )
+
+        try:
+            ratelimit_remaining = int(response.headers["x-ratelimit-remaining"])
+        except (KeyError, ValueError):
+            logger.warning(
+                "Invalid x-ratelimit-remaining header from GitHub: %r",
+                response.headers.get("x-ratelimit-remaining"),
+            )
+        else:
+            self.statsd.gauge("remaining_requests", ratelimit_remaining, tags=tags)
+
+        try:
+            reset_seconds = int(response.headers["x-ratelimit-reset"]) - time.time()
+        except (KeyError, ValueError):
+            logger.warning(
+                "Invalid x-ratelimit-reset header from GitHub: %r",
+                response.headers.get("x-ratelimit-reset"),
+            )
+        else:
+            self.statsd.gauge("reset_seconds", reset_seconds, tags=tags)
 
         if (
             # GitHub returns inconsistent status codes between unauthenticated
@@ -155,6 +195,7 @@ class GitHubSession:
             response.status_code == 429
             or (self.anonymous and response.status_code == 403)
         ):
+            self.statsd.increment("rate_limited_responses_total", tags=tags)
             raise RateLimited(response)
 
         return response
@@ -191,6 +232,7 @@ class GitHubSession:
                         # Use next token in line
                         self.set_next_session_token()
                         # Wait one second to avoid triggering GitHub's abuse rate limits
+                        self.statsd.increment("sleep", 1)
                         time.sleep(1)
 
             # All tokens have been rate-limited. What do we do?
@@ -207,6 +249,7 @@ class GitHubSession:
                 "Rate limits exhausted for all tokens. Sleeping for %f seconds.",
                 sleep_time,
             )
+            self.statsd.increment("sleep", sleep_time)
             time.sleep(sleep_time)
 
     def get_canonical_url(self, url: str) -> Optional[str]:
