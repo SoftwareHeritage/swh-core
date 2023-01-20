@@ -80,7 +80,7 @@ def reset_root_loglevel():
 
 @pytest.fixture
 def patched_dictconfig(mocker):
-    yield mocker.patch("logging.config.dictConfig", autospec=True)
+    yield mocker.patch("swh.core.logging.dictConfig", autospec=True)
 
 
 def test_swh_help(swhmain):
