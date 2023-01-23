@@ -46,6 +46,7 @@ swh/core/api_async.py
 swh/core/collections.py
 swh/core/config.py
 swh/core/logger.py
+swh/core/logging.py
 swh/core/py.typed
 swh/core/pytest_plugin.py
 swh/core/sentry.py
@@ -114,11 +115,13 @@ swh/core/tests/test_cli.py
 swh/core/tests/test_collections.py
 swh/core/tests/test_config.py
 swh/core/tests/test_logger.py
+swh/core/tests/test_logging.py
 swh/core/tests/test_pytest_plugin.py
 swh/core/tests/test_sentry.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_tarball.py
 swh/core/tests/test_utils.py
+swh/core/tests/data/logging-config.yaml
 swh/core/tests/data/archives/ca-certificates-20210603-1-any.pkg.tar.zst
 swh/core/tests/data/archives/groff-1.02.tar.Z
 swh/core/tests/data/archives/hello.jar
