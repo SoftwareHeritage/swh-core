@@ -1,3 +1,13 @@
+swh-core (2.19.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.19.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <antoine.romain.dumont@gmail.com> on 2023-01-23 17:39:21
+    +0100)
+  * Upstream changes:     - v2.19.0     - Add new module to allow common
+    logging configuration from swh.core
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 23 Jan 2023 16:42:37 +0000
+
 swh-core (2.18.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.18.0     - (tagged by Valentin Lorentz
