@@ -1,17 +1,13 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import logging
-import logging.config
-from typing import Optional
 import warnings
 
 import click
 import pkg_resources
-
-LOG_LEVEL_NAMES = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -49,35 +45,18 @@ def clean_exit_on_signal(signal, frame):
     raise SystemExit(0)
 
 
-def validate_loglevel_params(ctx, param, value):
-    """Validate the --log-level parameters, with multiple values"""
-    if value is None:
+def validate_loglevel_params(ctx, param, values):
+    """Validate the --log-level parameters, with multiple values."""
+    if values is None:
         return None
-    return [validate_loglevel(ctx, param, v) for v in value]
 
+    from swh.core.logging import BadLogLevel, validate_loglevel
 
-def validate_loglevel(ctx, param, value):
-    """Validate a single loglevel specification, of the form LOGLEVEL or
-    module:LOGLEVEL."""
-    if ":" in value:
-        try:
-            module, log_level = value.split(":")
-        except ValueError:
-            raise click.BadParameter(
-                "Invalid log level specification `%s`, "
-                "needs to be in format `module:LOGLEVEL`" % value
-            )
-    else:
-        module = None
-        log_level = value
-
-    if log_level not in LOG_LEVEL_NAMES:
-        raise click.BadParameter(
-            "Log level %s unknown (in `%s`) needs to be one of %s"
-            % (log_level, value, ", ".join(LOG_LEVEL_NAMES))
-        )
-
-    return (module, log_level)
+    try:
+        module_log_levels = [validate_loglevel(value) for value in values]
+    except BadLogLevel as e:
+        raise click.BadParameter(e)
+    return module_log_levels
 
 
 @click.group(
@@ -108,7 +87,7 @@ documented at https://docs.python.org/3/library/logging.config.html.
 @click.option(
     "--log-config",
     default=None,
-    type=click.File("r"),
+    type=click.Path(exists=True, readable=True),
     help="Python yaml logging configuration file.",
 )
 @click.option(
@@ -125,7 +104,7 @@ def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
     """Command line interface for Software Heritage."""
     import signal
 
-    import yaml
+    from swh.core.logging import logging_configure
 
     from ..sentry import init_sentry
 
@@ -134,26 +113,7 @@ def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
 
     init_sentry(sentry_dsn=sentry_dsn, debug=sentry_debug)
 
-    set_default_loglevel: Optional[str] = None
-
-    if log_config:
-        logging.config.dictConfig(yaml.safe_load(log_config.read()))
-        set_default_loglevel = logging.root.getEffectiveLevel()
-
-    if not log_levels:
-        log_levels = []
-
-    for module, log_level in log_levels:
-        logger = logging.getLogger(module)
-        log_level = logging.getLevelName(log_level)
-        logger.setLevel(log_level)
-
-        if module is None:
-            set_default_loglevel = log_level
-
-    if not set_default_loglevel:
-        logging.root.setLevel("INFO")
-        set_default_loglevel = "INFO"
+    set_default_loglevel = logging_configure(log_levels, log_config)
 
     ctx.ensure_object(dict)
     ctx.obj["log_level"] = set_default_loglevel
