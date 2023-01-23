@@ -232,7 +232,7 @@ class GitHubSession:
                         # Use next token in line
                         self.set_next_session_token()
                         # Wait one second to avoid triggering GitHub's abuse rate limits
-                        self.statsd.increment("sleep", 1)
+                        self.statsd.increment("sleep_seconds_total", 1)
                         time.sleep(1)
 
             # All tokens have been rate-limited. What do we do?
@@ -249,7 +249,7 @@ class GitHubSession:
                 "Rate limits exhausted for all tokens. Sleeping for %f seconds.",
                 sleep_time,
             )
-            self.statsd.increment("sleep", sleep_time)
+            self.statsd.increment("sleep_seconds_total", sleep_time)
             time.sleep(sleep_time)
 
     def get_canonical_url(self, url: str) -> Optional[str]:

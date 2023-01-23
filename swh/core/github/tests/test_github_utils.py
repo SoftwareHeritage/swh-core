@@ -163,7 +163,7 @@ def test_github_session_ratelimit_once_recovery(
         call("responses_total", "c", 1, tags0, 1),
         call("remaining_requests", "g", 999, {"username": username0}, 1),
         call("rate_limited_responses_total", "c", 1, {"username": username0}, 1),
-        call("sleep", "c", 1, None, 1),
+        call("sleep_seconds_total", "c", 1, None, 1),
         call("requests_total", "c", 1, {"username": username1}, 1),
         call("responses_total", "c", 1, tags1, 1),
         call("remaining_requests", "g", 998, {"username": username1}, 1),
@@ -253,7 +253,7 @@ def test_github_session_ratelimit_reset_sleep(
             call("remaining_requests", "g", 0, {"username": user}, 1),
             call("reset_seconds", "g", ratelimit_reset, {"username": user}, 1),
             call("rate_limited_responses_total", "c", 1, {"username": user}, 1),
-            call("sleep", "c", 1, None, 1),
+            call("sleep_seconds_total", "c", 1, None, 1),
         ]
 
     expected_calls_groups = (
@@ -268,7 +268,7 @@ def test_github_session_ratelimit_reset_sleep(
         ]
         # And finally, a long sleep and the successful request
         + [
-            [call("sleep", "c", ratelimit_reset + 1, None, 1)],
+            [call("sleep_seconds_total", "c", ratelimit_reset + 1, None, 1)],
             ok_request_calls(
                 github_session.credentials[num_ratelimit % len(github_credentials)][
                     "username"
@@ -338,7 +338,7 @@ def test_github_session_ratelimit_reset_sleep_anonymous(
             call("remaining_requests", "g", 0, {"username": user}, 1),
             call("reset_seconds", "g", ratelimit_reset, {"username": user}, 1),
             call("rate_limited_responses_total", "c", 1, {"username": user}, 1),
-            call("sleep", "c", ratelimit_reset + 1, None, 1),
+            call("sleep_seconds_total", "c", ratelimit_reset + 1, None, 1),
         ]
 
     expected_calls_groups = (

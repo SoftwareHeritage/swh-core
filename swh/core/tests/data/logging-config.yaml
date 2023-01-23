@@ -1,0 +1,35 @@
+---
+version: 1
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: task
+    stream: ext://sys.stdout
+  systemd:
+    class: swh.core.logger.JournalHandler
+    formatter: task
+
+formatters:
+  task:
+    fmt: "[%(asctime)s: %(levelname)s/%(processName)s] %(task_name)s[%(task_id)s]: %(message)s"
+    use_color: false
+
+loggers:
+  # Only swh.core modules to ease testing to only present module locally
+  swh.core:
+    level: INFO
+  swh.core.sentry:
+    level: DEBUG
+  swh.core.api:
+    level: DEBUG
+  swh.core.cli:
+    level: WARNING
+  swh.core.github:
+    level: CRITICAL
+
+root:
+  level: DEBUG
+  handlers:
+  - console
+  - systemd
