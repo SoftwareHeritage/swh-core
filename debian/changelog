@@ -1,8 +1,11 @@
-swh-core (2.19.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (2.20.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 2.20.0     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2023-01-24 14:42:26 +0100)
+  * Upstream changes:     - v2.20.0     - * Add method
+    RPCServerApp.setup_psycopg2_errorhandlers
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 23 Jan 2023 16:47:28 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 24 Jan 2023 14:16:09 +0000
 
 swh-core (2.19.0-1~swh1) unstable-swh; urgency=medium
 
