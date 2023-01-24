@@ -30,14 +30,14 @@ from .negotiation import Formatter as FormatterBase
 from .negotiation import Negotiator as NegotiatorBase
 from .negotiation import negotiate as _negotiate
 from .serializers import (
+    decode_response,
+    encode_data_client,
     exception_to_dict,
     json_dumps,
     json_loads,
     msgpack_dumps,
     msgpack_loads,
 )
-from .serializers import decode_response
-from .serializers import encode_data_client as encode_data
 
 logger = logging.getLogger(__name__)
 
@@ -283,7 +283,7 @@ class RPCClient(metaclass=MetaRPCClient):
             return self._decode_response(response)
 
     def _encode_data(self, data):
-        return encode_data(data, extra_encoders=self.extra_type_encoders)
+        return encode_data_client(data, extra_encoders=self.extra_type_encoders)
 
     _post_stream = _post
 
@@ -512,3 +512,29 @@ class RPCServerApp(Flask):
             f = decorator(f)
 
         self.route("/" + meth._endpoint_path, methods=["POST"])(f)
+
+    def setup_psycopg2_errorhandlers(self) -> None:
+        """Configures error handlers for exceptions raised by psycopg2 to return 503
+        exceptions and skip Sentry reports for most exceptions derived from
+        :exc:`psycopg2.errors.OperationalError`."""
+        from psycopg2.errors import OperationalError, QueryCanceled
+
+        @self.errorhandler(OperationalError)
+        def operationalerror_exception_handler(exception):
+            # Same as error_handler(exception, encode_data); but does not log or send
+            # to Sentry.
+            # These errors are noisy, and are better logged on the caller's side after
+            # it retried a few times.
+            # Additionally, we return 503 instead of 500, telling clients they should
+            # retry.
+            response = encode_data_server(exception_to_dict(exception))
+            response.status_code = 503
+            return response
+
+        @self.errorhandler(QueryCanceled)
+        def querycancelled_exception_handler(exception):
+            # Ditto, but 500 instead of 503, because this is usually caused by the query
+            # size instead of a transient failure
+            response = encode_data_server(exception_to_dict(exception))
+            response.status_code = 500
+            return response

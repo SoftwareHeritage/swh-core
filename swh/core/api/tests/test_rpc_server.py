@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022  The Software Heritage developers
+# Copyright (C) 2018-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -54,6 +54,18 @@ class TestStorage:
     def custom_crashy(self, data, db=None, cur=None):
         raise MyCustomException("try again later!")
 
+    @remote_api_endpoint("crashy/adminshutdown")
+    def adminshutdown_crash(self, data, db=None, cur=None):
+        from psycopg2.errors import AdminShutdown
+
+        raise AdminShutdown("cluster is shutting down")
+
+    @remote_api_endpoint("crashy/querycancelled")
+    def querycancelled_crash(self, data, db=None, cur=None):
+        from psycopg2.errors import QueryCanceled
+
+        raise QueryCanceled("too big!")
+
 
 @pytest.fixture
 def app():
@@ -62,6 +74,13 @@ def app():
     @app.errorhandler(MyCustomException)
     def custom_error_handler(exception):
         return error_handler(exception, encode_data_server, status_code=503)
+
+    try:
+        import psycopg2  # noqa
+    except ImportError:
+        pass
+    else:
+        app.setup_psycopg2_errorhandlers()
 
     @app.errorhandler(Exception)
     def default_error_handler(exception):
@@ -180,6 +199,56 @@ def test_rpc_server_custom_exception(flask_app_client):
             "type": "MyCustomException",
             "module": "swh.core.api.tests.test_rpc_server",
             "args": ["try again later!"],
+        }.items()
+    ), data
+
+
+def test_rpc_server_psycopg2_adminshutdown(flask_app_client):
+    pytest.importorskip("psycopg2")
+
+    res = flask_app_client.post(
+        url_for("adminshutdown_crash"),
+        headers=[
+            ("Content-Type", "application/x-msgpack"),
+            ("Accept", "application/x-msgpack"),
+        ],
+        data=msgpack.dumps({"data": "toto"}),
+    )
+
+    assert res.status_code == 503
+    assert res.mimetype == "application/x-msgpack", res.data
+    data = msgpack.loads(res.data)
+    assert (
+        data.items()
+        >= {
+            "type": "AdminShutdown",
+            "module": "psycopg2.errors",
+            "args": ["cluster is shutting down"],
+        }.items()
+    ), data
+
+
+def test_rpc_server_psycopg2_querycancelled(flask_app_client):
+    pytest.importorskip("psycopg2")
+
+    res = flask_app_client.post(
+        url_for("querycancelled_crash"),
+        headers=[
+            ("Content-Type", "application/x-msgpack"),
+            ("Accept", "application/x-msgpack"),
+        ],
+        data=msgpack.dumps({"data": "toto"}),
+    )
+
+    assert res.status_code == 500
+    assert res.mimetype == "application/x-msgpack", res.data
+    data = msgpack.loads(res.data)
+    assert (
+        data.items()
+        >= {
+            "type": "QueryCanceled",
+            "module": "psycopg2.errors",
+            "args": ["too big!"],
         }.items()
     ), data
 
