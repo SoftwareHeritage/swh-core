@@ -8,7 +8,7 @@ import datetime
 from enum import IntEnum
 import inspect
 from string import printable
-from typing import Any
+from typing import Any, Callable
 from unittest.mock import MagicMock, Mock
 import uuid
 
@@ -17,17 +17,12 @@ from hypothesis.extra.pytz import timezones
 import psycopg2
 import pytest
 from pytest_postgresql import factories
-from typing_extensions import Protocol
 
 from swh.core.db import BaseDb
 from swh.core.db.common import db_transaction, db_transaction_generator
 from swh.core.db.tests.conftest import function_scoped_fixture_check
 
-
-# workaround mypy bug https://github.com/python/mypy/issues/5485
-class Converter(Protocol):
-    def __call__(self, x: Any) -> Any:
-        ...
+Converter = Callable[[Any], Any]
 
 
 @dataclass
