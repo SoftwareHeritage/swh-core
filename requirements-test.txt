@@ -5,7 +5,7 @@ pytz
 requests-mock
 types-click
 types-flask
-types-psycopg2
+types-psycopg2 <2.9.21.5  # v2.9.21.5 removed support for mypy <1.0.0
 types-pytz
 types-pyyaml
 types-requests
