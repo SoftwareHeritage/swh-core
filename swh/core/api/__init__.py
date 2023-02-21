@@ -483,6 +483,9 @@ class RPCServerApp(Flask):
         # (short of getting more cache hits) because this is usually caused by the query
         # size instead of a transient failure
         ("psycopg2.errors.QueryCanceled", 500),
+        # Often a transient error because of connectivity issue with, or restart of,
+        # the Kafka brokers:
+        ("swh.journal.writer.kafka.KafkaDeliveryError", 503),
     ]
     """Pairs of ``(exception, status_code)`` where ``exception`` is either an
     exception class or a a dotted exception name to be imported (and ignored if import
