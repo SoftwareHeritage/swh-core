@@ -1,10 +1,11 @@
-# Copyright (C) 2015-2022  The Software Heritage developers
+# Copyright (C) 2015-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from collections import abc
 import functools
+import importlib
 import inspect
 import logging
 from typing import (
@@ -19,6 +20,7 @@ from typing import (
     TypeVar,
     Union,
 )
+import warnings
 
 from deprecated import deprecated
 from flask import Flask, Request, Response, abort, request
@@ -410,7 +412,9 @@ def decode_request(request, extra_decoders=None):
     return r
 
 
-def error_handler(exception, encoder, status_code=500):
+def error_handler(
+    exception: BaseException, encoder=encode_data_server, status_code: int = 500
+):
     """Error handler to be registered using flask's error-handling decorator
     ``app.errorhandler``.
 
@@ -420,12 +424,13 @@ def error_handler(exception, encoder, status_code=500):
     :class:`Exception`), and for which the status code should be kept in the 5xx class.
 
     This function only captures exceptions as sentry errors if the status code is in the
-    5xx range, as "expected exceptions" in the 4xx range are more likely to be handled
-    on the client side.
+    5xx range and not 502/503/504, as "expected exceptions" in the 4xx range are more,
+    likely to be handled on the client side; and 502/503/504 are "transient" exceptions
+    that should be resolved with client retries.
 
     """
     status_class = status_code // 100
-    if status_class == 5:
+    if status_class == 5 and status_code not in (502, 503, 504):
         logger.exception(exception)
         sentry_sdk.capture_exception(exception)
 
@@ -433,7 +438,6 @@ def error_handler(exception, encoder, status_code=500):
     if isinstance(exception, HTTPException):
         response.status_code = exception.code
     else:
-        # TODO: differentiate between server errors and client errors
         response.status_code = status_code
     return response
 
@@ -469,9 +473,44 @@ class RPCServerApp(Flask):
     method_decorators: List[Callable[[Callable], Callable]] = []
     """List of decorators to all methods generated from the ``backend_class``."""
 
+    exception_status_codes: List[Tuple[Union[Type[BaseException], str], int]] = [
+        # Default to "Internal Server Error" for most exceptions:
+        (Exception, 500),
+        # These errors are noisy, and are better logged on the caller's side after
+        # it retried a few times:
+        ("psycopg2.errors.OperationalError", 503),
+        # Subclass of OperationalError; but it is unlikely to be solved after retries
+        # (short of getting more cache hits) because this is usually caused by the query
+        # size instead of a transient failure
+        ("psycopg2.errors.QueryCanceled", 500),
+    ]
+    """Pairs of ``(exception, status_code)`` where ``exception`` is either an
+    exception class or a a dotted exception name to be imported (and ignored if import
+    fails) and ``status_code`` is the HTTP code that should be returned when an instance
+    of this exception is raised.
+
+    If a raised exception is an instance of a subclass of two classes defined here,
+    the most specific class wins, according Flask's MRO-based resolution."""
+
     def __init__(self, *args, backend_class=None, backend_factory=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_backend_class(backend_class, backend_factory)
+        self._register_error_handlers()
+
+    def _register_error_handlers(self):
+        for (exception, status_code) in self.exception_status_codes:
+            if isinstance(exception, str):
+                (module_path, class_name) = exception.rsplit(".", 1)
+                try:
+                    module = importlib.import_module(module_path, package=__package__)
+                except ImportError as e:
+                    logger.debug("Could not import %s: %r", exception, e)
+                    continue
+                exception = getattr(module, class_name)
+
+            self.register_error_handler(
+                exception, functools.partial(error_handler, status_code=status_code)
+            )
 
     def add_backend_class(self, backend_class=None, backend_factory=None):
         if backend_class is None and backend_factory is not None:
@@ -514,27 +553,9 @@ class RPCServerApp(Flask):
         self.route("/" + meth._endpoint_path, methods=["POST"])(f)
 
     def setup_psycopg2_errorhandlers(self) -> None:
-        """Configures error handlers for exceptions raised by psycopg2 to return 503
-        exceptions and skip Sentry reports for most exceptions derived from
-        :exc:`psycopg2.errors.OperationalError`."""
-        from psycopg2.errors import OperationalError, QueryCanceled
-
-        @self.errorhandler(OperationalError)
-        def operationalerror_exception_handler(exception):
-            # Same as error_handler(exception, encode_data); but does not log or send
-            # to Sentry.
-            # These errors are noisy, and are better logged on the caller's side after
-            # it retried a few times.
-            # Additionally, we return 503 instead of 500, telling clients they should
-            # retry.
-            response = encode_data_server(exception_to_dict(exception))
-            response.status_code = 503
-            return response
-
-        @self.errorhandler(QueryCanceled)
-        def querycancelled_exception_handler(exception):
-            # Ditto, but 500 instead of 503, because this is usually caused by the query
-            # size instead of a transient failure
-            response = encode_data_server(exception_to_dict(exception))
-            response.status_code = 500
-            return response
+        """Deprecated method; error handlers are now setup in the constructor."""
+        warnings.warn(
+            "setup_psycopg2_errorhandlers has no effect; error handlers are now setup "
+            "by the constructor.",
+            DeprecationWarning,
+        )
