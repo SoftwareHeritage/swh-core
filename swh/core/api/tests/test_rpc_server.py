@@ -13,8 +13,6 @@ from swh.core.api import (
     JSONFormatter,
     MsgpackFormatter,
     RPCServerApp,
-    encode_data_server,
-    error_handler,
     negotiate,
     remote_api_endpoint,
 )
@@ -29,6 +27,10 @@ class MyCustomException(Exception):
 class MyRPCServerApp(RPCServerApp):
     extra_type_encoders = extra_encoders
     extra_type_decoders = extra_decoders
+    exception_status_codes = [
+        *RPCServerApp.exception_status_codes,
+        (MyCustomException, 503),
+    ]
 
 
 class TestStorage:
@@ -69,24 +71,7 @@ class TestStorage:
 
 @pytest.fixture
 def app():
-    app = MyRPCServerApp("testapp", backend_class=TestStorage)
-
-    @app.errorhandler(MyCustomException)
-    def custom_error_handler(exception):
-        return error_handler(exception, encode_data_server, status_code=503)
-
-    try:
-        import psycopg2  # noqa
-    except ImportError:
-        pass
-    else:
-        app.setup_psycopg2_errorhandlers()
-
-    @app.errorhandler(Exception)
-    def default_error_handler(exception):
-        return error_handler(exception, encode_data_server)
-
-    return app
+    return MyRPCServerApp("testapp", backend_class=TestStorage)
 
 
 def test_api_rpc_server_app_ok(app):
