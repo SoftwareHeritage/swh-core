@@ -19,7 +19,7 @@ class SortedList(Generic[SortedListKey, SortedListItem]):
 
     def __init__(
         self,
-        data: List[SortedListItem] = None,
+        data: List[SortedListItem] = [],
         key: Optional[Callable[[SortedListItem], SortedListKey]] = None,
     ):
         if key is None:
