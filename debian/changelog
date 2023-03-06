@@ -1,8 +1,13 @@
-swh-core (2.20.0-1~swh1~bpo10+1) buster-swh; urgency=medium
+swh-core (2.21.0-1~swh1) unstable-swh; urgency=medium
 
-  * Rebuild for buster-swh
+  * New upstream release 2.21.0     - (tagged by Valentin Lorentz
+    <vlorentz@softwareheritage.org> on 2023-02-21 15:28:25 +0100)
+  * Upstream changes:     - v2.21.0     - * switch to mypy 1.0     - *
+    api: deprecate `setup_psycopg2_errorhandlers`     - * api: define
+    `exception_status_codes` class attribute of `RPCServerApp`     - *
+    api: return 503 instead of 500 on KafkaDeliveryError
 
- -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 24 Jan 2023 14:40:30 +0000
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Tue, 21 Feb 2023 14:32:30 +0000
 
 swh-core (2.20.0-1~swh1) unstable-swh; urgency=medium
 

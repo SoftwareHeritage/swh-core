@@ -42,7 +42,7 @@ def _decode_paged_result(obj: Dict[str, Any]) -> PagedResult:
     )
 
 
-def exception_to_dict(exception: Exception) -> Dict[str, Any]:
+def exception_to_dict(exception: BaseException) -> Dict[str, Any]:
     tb = traceback.format_exception(None, exception, exception.__traceback__)
     exc_type = type(exception)
     return {
