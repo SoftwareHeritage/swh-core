@@ -258,14 +258,11 @@ def test_timed_no_metric(statsd):
 def test_timed_coroutine(statsd):
     """
     Measure the distribution of a coroutine function's run time.
-
-    Warning: Python >= 3.5 only.
     """
     import asyncio
 
     @statsd.timed("timed.test")
-    @asyncio.coroutine
-    def print_foo():
+    async def print_foo():
         """docstring"""
         time.sleep(0.5)
         print("foo")
