@@ -343,7 +343,7 @@ class RPCClient(metaclass=MetaRPCClient):
 
         elif status_class == 5:
             cls: Type[RemoteException]
-            if status_code == 503:
+            if status_code in (502, 503):
                 # This isn't a generic HTTP client and we know the server does
                 # not support the Retry-After header, so we do not implement
                 # it here either.
