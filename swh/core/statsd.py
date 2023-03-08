@@ -490,11 +490,12 @@ class Statsd(object):
             current_status = new_status
             self.gauge(metric_name, 1, {**tags, "status": current_status})
 
-        yield set_status
-
-        # reset gauges on exit
-        for status in statuses:
-            self.gauge(metric_name, 0, {**tags, "status": status})
+        try:
+            yield set_status
+        finally:
+            # reset gauges on exit
+            for status in statuses:
+                self.gauge(metric_name, 0, {**tags, "status": status})
 
 
 statsd = Statsd()
