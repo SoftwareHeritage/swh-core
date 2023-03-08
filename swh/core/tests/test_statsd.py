@@ -574,6 +574,19 @@ def test_status_gauge(statsd):
     assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s3"
 
 
+def test_status_gauge_error_on_exit(statsd):
+    with pytest.raises(Exception):
+        with statsd.status_gauge("test_status_gauge", ["s1"]) as set_status:
+            set_status("s1")
+            raise Exception()
+    # enter the context manager: initialisation of gauges for listed statuses
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s1"
+    # set_status("s1")
+    assert statsd.socket.recv() == "test_status_gauge:1|g|#status:s1"
+    # exit the context manager: cleanup gauges
+    assert statsd.socket.recv() == "test_status_gauge:0|g|#status:s1"
+
+
 def test_status_gauge_error(statsd):
     with statsd.status_gauge("test_status_gauge", ["s1", "s2", "s3"]) as set_status:
         with pytest.raises(ValueError):
