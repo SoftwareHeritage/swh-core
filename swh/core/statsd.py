@@ -193,6 +193,7 @@ class Statsd(object):
 
     def __init__(
         self,
+        *,
         host=None,
         port=None,
         max_buffer_size=50,

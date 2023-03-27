@@ -6,6 +6,7 @@
 import logging
 
 import pytest
+import sentry_sdk
 from sentry_sdk import capture_exception, capture_message, set_tag
 
 from swh.core.sentry import init_sentry, override_with_bool_envvar
@@ -133,3 +134,14 @@ def test_sentry_events_fixture_set_tag(sentry_events):
     assert sentry_events
     assert "tags" in sentry_events[0]
     sentry_events[0]["tags"] == {tag_name: tag_value}
+
+
+def test_sentry_main_package(mocker):
+    sentry_sdk_init = mocker.patch.object(sentry_sdk, "init")
+    init_sentry(
+        "http://example.org",
+    )
+    assert sentry_sdk_init.call_args_list[-1][1]["release"] is None
+
+    init_sentry("http://example.org", main_package="swh.core")
+    assert sentry_sdk_init.call_args_list[-1][1]["release"].startswith("swh.core@")
