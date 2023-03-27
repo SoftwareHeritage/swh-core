@@ -12,8 +12,8 @@ import pkg_resources
 logger = logging.getLogger(__name__)
 
 
-def get_sentry_release():
-    main_package = os.environ.get("SWH_MAIN_PACKAGE")
+def get_sentry_release(main_package: Optional[str] = None):
+    main_package = os.environ.get("SWH_MAIN_PACKAGE", main_package)
     if main_package:
         version = pkg_resources.get_distribution(main_package).version
         return f"{main_package}@{version}"
@@ -43,6 +43,7 @@ def override_with_bool_envvar(envvar: str, default: bool) -> bool:
 def init_sentry(
     sentry_dsn: Optional[str] = None,
     *,
+    main_package: Optional[str] = None,
     environment: Optional[str] = None,
     debug: bool = False,
     disable_logging_events: bool = False,
@@ -54,6 +55,8 @@ def init_sentry(
     Args:
       sentry_dsn: Sentry DSN; where sentry report will be sent. Overridden by
         :envvar:`SWH_SENTRY_DSN`
+      main_package: Full name of main Python package associated to Sentry DSN.
+        Overridden by :envvar:`SWH_MAIN_PACKAGE`.
       environment: Sentry environment. Overridden by :envvar:`SWH_SENTRY_ENVIRONMENT`
       debug: turn on Sentry SDK debug mode. Overridden by :envvar:`SWH_SENTRY_DEBUG`
       disable_logging_events: if set, disable the automatic reporting of error/exception
@@ -85,7 +88,7 @@ def init_sentry(
             integrations.append(LoggingIntegration(event_level=None))
 
         sentry_sdk.init(
-            release=get_sentry_release(),
+            release=get_sentry_release(main_package),
             environment=environment,
             dsn=sentry_dsn,
             integrations=integrations,
