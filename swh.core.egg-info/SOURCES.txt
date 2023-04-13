@@ -49,6 +49,7 @@ swh/core/logger.py
 swh/core/logging.py
 swh/core/py.typed
 swh/core/pytest_plugin.py
+swh/core/retry.py
 swh/core/sentry.py
 swh/core/statsd.py
 swh/core/tarball.py
@@ -117,6 +118,7 @@ swh/core/tests/test_config.py
 swh/core/tests/test_logger.py
 swh/core/tests/test_logging.py
 swh/core/tests/test_pytest_plugin.py
+swh/core/tests/test_retry.py
 swh/core/tests/test_sentry.py
 swh/core/tests/test_statsd.py
 swh/core/tests/test_tarball.py
