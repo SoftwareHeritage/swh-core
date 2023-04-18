@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022  The Software Heritage developers
+# Copyright (C) 2020-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -190,10 +190,17 @@ class GitHubSession:
             self.statsd.gauge("reset_seconds", reset_seconds, tags=tags)
 
         if (
-            # GitHub returns inconsistent status codes between unauthenticated
-            # rate limit and authenticated rate limits. Handle both.
+            # 429 status code was previously returned for authenticated users, keep the
+            # check for backward compatibility
             response.status_code == 429
-            or (self.anonymous and response.status_code == 403)
+            or (
+                # https://docs.github.com/en/rest/overview
+                # /resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
+                response.status_code == 403
+                and response.json()
+                .get("message", "")
+                .startswith("API rate limit exceeded")
+            )
         ):
             self.statsd.increment("rate_limited_responses_total", tags=tags)
             raise RateLimited(response)
