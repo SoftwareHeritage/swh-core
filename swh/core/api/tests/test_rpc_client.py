@@ -43,6 +43,10 @@ def rpc_client(requests_mock):
         def overridden_method(self, data):
             return "foo"
 
+        @remote_api_endpoint("request_too_large")
+        def request_too_large(self, data, db=None, cur=None):
+            ...
+
     class Testclient(RPCClient):
         backend_class = TestStorage
         extra_type_encoders = extra_encoders
@@ -64,6 +68,10 @@ def rpc_client(requests_mock):
                 b"\x82\xc4\x07swhtype\xa9extratype"
                 b"\xc4\x01d\x92\x81\xa4spam\xa3egg\xa3qux"
             )
+        elif request.path == "/request_too_large":
+            context.status_code = 413
+            context.headers["Content-Type"] = "text/html"
+            context.content = b"<h1>413 request entity too large</h1>\r\n"
         else:
             assert False
         return context.content
@@ -97,6 +105,14 @@ def test_client_extra_serializers(rpc_client):
 def test_client_overridden_method(rpc_client):
     res = rpc_client.overridden_method("foo")
     assert res == "bar"
+
+
+def test_client_request_too_large(rpc_client):
+    with pytest.raises(APIError) as exc_info:
+        rpc_client.request_too_large("foo")
+
+    assert exc_info.value.args[0] == "<h1>413 request entity too large</h1>\r\n"
+    assert exc_info.value.args[1].status_code == 413
 
 
 def test_client_connexion_error(rpc_client, requests_mock):
