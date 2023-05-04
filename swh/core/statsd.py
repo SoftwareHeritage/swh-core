@@ -348,8 +348,11 @@ class Statsd(object):
         sample_rate=1,
     ) -> Iterator[_TItem]:
         """
-        Wrapper for :meth:`swh.core.statsd.Statsd.timed`, which uses the standard
-        metric name and tag.
+        Given an iterator, returns another iterator which will call :meth:`timing` on
+        every ``next()`` call.
+
+        Calls under 1ms are discarded, in order to avoid flooding statsd with small
+        values.
         """
         with self.timed(metric, tags=tags, sample_rate=sample_rate):
             it = iter(it)
