@@ -302,7 +302,7 @@ def test_timed_context(statsd):
 
 def test_timed_context_exception(statsd):
     """
-    Exception bubbles out of the `timed` context manager and is
+    Exception bubbles out of the ``timed`` context manager and is
     reported to statsd as a dedicated counter.
     """
 
@@ -342,7 +342,7 @@ def test_timed_context_no_metric_name_exception(statsd):
     with pytest.raises(TypeError):
         func(statsd)
 
-    # Ensure the timing was recorded.
+    # Ensure the timing was not recorded.
     packet = statsd.socket.recv()
     assert packet is None
 
@@ -360,6 +360,179 @@ def test_timed_start_stop_calls(statsd):
     assert type_ == "ms"
     assert name == "timed_context.test"
     assert_almost_equal(500, float(value), 100)
+
+
+def test_timed_iter(statsd):
+    """
+    Measure the distribution of an iterator's run time.
+    """
+
+    def generator():
+        time.sleep(0.3)
+        yield 1
+        yield 2
+        time.sleep(0.5)
+        yield 3
+        time.sleep(0.5)
+
+    it = statsd.timed_iter("timed_context.test", generator())
+
+    packet = statsd.socket.recv()
+    assert packet is None, "got initial packet before first next()"
+
+    assert next(it) == 1
+
+    # timing of iter()
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(0, float(value), 100)
+
+    # timing of next()
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(300, float(value), 100)
+
+    assert next(it) == 2
+    packet = statsd.socket.recv()
+    assert packet is None, "got packet, despite negligeable run time"
+
+    assert next(it) == 3
+
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(500, float(value), 100)
+
+    with pytest.raises(StopIteration):
+        next(it)
+
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(500, float(value), 100)
+
+
+def test_timed_iter_exception_before_yield(statsd):
+    """
+    Exception bubbles out of the ``timed_iter`` generator and is
+    reported to statsd as a dedicated counter.
+    """
+
+    class GeneratorException(Exception):
+        pass
+
+    def generator():
+        time.sleep(0.5)
+        raise GeneratorException()
+        yield 1  # dead code, but needed to make this 'def' block a generator
+
+    it = statsd.timed_iter("timed_context.test", generator())
+
+    packet = statsd.socket.recv()
+    assert packet is None, "got initial packet before first next()"
+
+    with pytest.raises(GeneratorException):
+        next(it)
+
+    # timing of iter()
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(0, float(value), 100)
+
+    # timing of next()
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(500, float(value), 100)
+
+
+def test_timed_iter_exception_after_yield(statsd):
+    """
+    Exception bubbles out of the ``timed_iter`` generator and is
+    reported to statsd as a dedicated counter.
+    """
+
+    class GeneratorException(Exception):
+        pass
+
+    def generator():
+        time.sleep(0.3)
+        yield 1
+        time.sleep(0.5)
+        raise GeneratorException()
+
+    it = statsd.timed_iter("timed_context.test", generator())
+
+    packet = statsd.socket.recv()
+    assert packet is None, "got initial packet before first next()"
+
+    assert next(it) == 1
+
+    # timing of iter()
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(0, float(value), 100)
+
+    # timing of next()
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(300, float(value), 100)
+
+    # Ensure the exception was raised.
+    with pytest.raises(GeneratorException):
+        next(it)
+
+    packet = statsd.socket.recv()
+    name_value, type_ = packet.split("|")
+    name, value = name_value.split(":")
+    assert type_ == "ms"
+    assert name == "timed_context.test"
+    assert_almost_equal(500, float(value), 100)
+
+
+def test_timed_iter_no_metric_name_exception(statsd):
+    """Test that an exception occurs if using a context manager without a
+    metric name.
+    """
+
+    def generator():
+        time.sleep(0.5)
+        yield 1
+        yield 2
+
+    it = iter(generator())
+
+    # Ensure the exception was raised.
+    with pytest.raises(TypeError):
+        statsd.timed_iter(it)
+
+    # Ensure the timing was not recorded.
+    packet = statsd.socket.recv()
+    assert packet is None
+
+    # Ensure the iterator was not consumed
+    assert next(it) == 1
 
 
 def test_batched(statsd):

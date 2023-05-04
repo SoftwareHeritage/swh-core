@@ -62,10 +62,12 @@ import re
 import socket
 import threading
 from time import monotonic
-from typing import Collection, Dict, Optional
+from typing import Any, Collection, Dict, Iterable, Iterator, Optional, TypeVar
 import warnings
 
 log = logging.getLogger("swh.core.statsd")
+
+_TItem = TypeVar("_TItem")
 
 
 class TimedContextManagerDecorator(object):
@@ -337,6 +339,49 @@ class Statsd(object):
             tags=tags,
             sample_rate=sample_rate,
         )
+
+    def timed_iter(
+        self,
+        metric: str,
+        it: Iterable[_TItem],
+        tags: Dict[str, Any] = {},
+        sample_rate=1,
+    ) -> Iterator[_TItem]:
+        """
+        Wrapper for :meth:`swh.core.statsd.Statsd.timed`, which uses the standard
+        metric name and tag.
+        """
+        with self.timed(metric, tags=tags, sample_rate=sample_rate):
+            it = iter(it)
+
+        stop_iteration = False
+        while True:
+            start_time = monotonic()
+            try:
+                value = next(it)
+            except StopIteration:
+                stop_iteration = True
+            finally:
+                end_time = monotonic()
+
+                total_time_seconds = end_time - start_time
+
+                if total_time_seconds >= 0.001:
+                    # Don't bother measuring under 1ms. This typically happens often
+                    # when the iterator is obtained from a paginated API: one call
+                    # to next() triggers a network request, then many calls to next()
+                    # are instant, then another triggers a network request, etc.
+                    self.timing(
+                        metric,
+                        total_time_seconds * 1000,
+                        tags=tags,
+                        sample_rate=sample_rate,
+                    )
+
+            if stop_iteration:
+                break
+
+            yield value
 
     def set(self, metric, value, tags=None, sample_rate=1):
         """
