@@ -70,34 +70,35 @@ def exists_accessible(filepath: str) -> bool:
             raise PermissionError("Permission denied: {filepath!r}")
 
 
-def config_basepath(config_path: str) -> str:
-    """Return the base path of a configuration file"""
-    if config_path.endswith(".yml"):
-        return config_path[:-4]
-
-    return config_path
-
-
 def read_raw_config(base_config_path: str) -> Dict[str, Any]:
     """Read the raw config corresponding to base_config_path.
 
     Can read yml files.
     """
-    yml_file = f"{base_config_path}.yml"
-    if exists_accessible(yml_file):
+    yml_file = config_path(base_config_path)
+    if yml_file is None:
+        logging.error("Config file %s does not exist, ignoring it.", base_config_path)
+        return {}
+    else:
         logger.debug("Loading config file %s", yml_file)
         with open(yml_file) as f:
             return yaml.safe_load(f)
 
-    return {}
 
-
-def config_exists(config_path):
+def config_path(config_path):
     """Check whether the given config exists"""
-    basepath = config_basepath(config_path)
-    return any(
-        exists_accessible(basepath + extension) for extension in SWH_CONFIG_EXTENSIONS
-    )
+    if exists_accessible(config_path):
+        return config_path
+    for extension in SWH_CONFIG_EXTENSIONS:
+        if exists_accessible(config_path + extension):
+            logger.warning(
+                "%s does not exist, using %s instead",
+                config_path,
+                config_path + extension,
+            )
+            return config_path + extension
+
+    return None
 
 
 def read(
@@ -122,7 +123,7 @@ def read(
     conf: Dict[str, Any] = {}
 
     if conf_file:
-        base_config_path = config_basepath(os.path.expanduser(conf_file))
+        base_config_path = os.path.expanduser(conf_file)
         conf = read_raw_config(base_config_path) or {}
 
     if not default_conf:
@@ -152,8 +153,8 @@ def priority_read(
 
     # Try all the files in order
     for filename in conf_filenames:
-        full_filename = os.path.expanduser(filename)
-        if config_exists(full_filename):
+        full_filename = config_path(os.path.expanduser(filename))
+        if full_filename is not None:
             return read(full_filename, default_conf)
 
     # Else, return the default configuration
@@ -303,6 +304,6 @@ def load_from_envvar(default_config: Optional[Dict[str, Any]] = None) -> Dict[st
     ), "SWH_CONFIG_FILENAME environment variable is undefined."
 
     cfg_path = os.environ["SWH_CONFIG_FILENAME"]
-    cfg = read_raw_config(config_basepath(cfg_path))
+    cfg = read_raw_config(cfg_path)
     cfg = merge_configs(default_config or {}, cfg)
     return cfg

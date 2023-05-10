@@ -1,9 +1,10 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import os
+from pathlib import Path
 import shutil
 
 import pkg_resources.extern.packaging.version
@@ -110,6 +111,16 @@ def swh_config_empty(tmp_path):
 def test_read(swh_config):
     # when
     res = config.read(str(swh_config), default_conf)
+
+    # then
+    assert res == parsed_conffile
+
+
+def test_read_dotyaml(swh_config):
+    swh_config2 = Path(str(swh_config).replace(".yml", ".yaml"))
+    swh_config.rename(swh_config2)
+    # when
+    res = config.read(swh_config2, default_conf)
 
     # then
     assert res == parsed_conffile
