@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022  The Software Heritage developers
+# Copyright (C) 2020-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -63,10 +63,8 @@ def github_ratelimit_callback(
     # Check request headers
     assert request.headers["Accept"] == "application/vnd.github.v3+json"
     assert request.headers["User-Agent"] is not None
-    if "Authorization" in request.headers:
-        context.status_code = 429
-    else:
-        context.status_code = 403
+
+    context.status_code = 403
 
     if ratelimit_reset is not None:
         context.headers["X-Ratelimit-Reset"] = str(ratelimit_reset)
@@ -74,7 +72,10 @@ def github_ratelimit_callback(
 
     return {
         "message": "API rate limit exceeded for <IP>.",
-        "documentation_url": "https://developer.github.com/v3/#rate-limiting",
+        "documentation_url": (
+            "https://docs.github.com/rest/overview/"
+            "resources-in-the-rest-api#rate-limiting"
+        ),
     }
 
 
@@ -132,11 +133,6 @@ def github_requests_ratelimited(
 ) -> Iterator[requests_mock.Mocker]:
     """Mock requests to the GitHub API, returning a rate-limiting status code after
     `num_before_ratelimit` requests.
-
-    GitHub does inconsistent rate-limiting:
-
-    - Anonymous requests return a 403 status code
-    - Authenticated requests return a 429 status code, with an X-Ratelimit-Reset header.
 
     This fixture takes multiple arguments (which can be overridden with a
     :func:`pytest.mark.parametrize` parameter):

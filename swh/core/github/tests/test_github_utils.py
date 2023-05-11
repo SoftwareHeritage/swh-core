@@ -1,4 +1,4 @@
-# Copyright (C) 2022  The Software Heritage developers
+# Copyright (C) 2022-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,6 +8,7 @@ import logging
 from unittest.mock import call
 
 import pytest
+import requests
 
 from swh.core.github.pytest_plugin import HTTP_GITHUB_API_URL
 from swh.core.github.utils import (
@@ -156,7 +157,7 @@ def test_github_session_ratelimit_once_recovery(
 
     username0 = github_session.credentials[0]["username"]
     username1 = github_session.credentials[1]["username"]
-    tags0 = {"username": username0, "http_status": 429}
+    tags0 = {"username": username0, "http_status": 403}
     tags1 = {"username": username1, "http_status": 200}
     assert [c for c in statsd_report.mock_calls] == [
         call("requests_total", "c", 1, {"username": username0}, 1),
@@ -249,7 +250,7 @@ def test_github_session_ratelimit_reset_sleep(
     def ratelimited_request_calls(user):
         return [
             call("requests_total", "c", 1, {"username": user}, 1),
-            call("responses_total", "c", 1, {"username": user, "http_status": 429}, 1),
+            call("responses_total", "c", 1, {"username": user, "http_status": 403}, 1),
             call("remaining_requests", "g", 0, {"username": user}, 1),
             call("reset_seconds", "g", ratelimit_reset, {"username": user}, 1),
             call("rate_limited_responses_total", "c", 1, {"username": user}, 1),
@@ -359,3 +360,21 @@ def test_github_session_ratelimit_reset_sleep_anonymous(
         "api_type": "github",
         "api_instance": "github",
     }
+
+
+def test_github_session_get_repo_metadata_success(requests_mock):
+    user_repo = KNOWN_GH_REPO.replace("https://github.com/", "")
+    repo_metadata = {"html_url": KNOWN_GH_REPO}
+    requests_mock.get(_url_github_api(user_repo), json=repo_metadata)
+
+    gh_session = GitHubSession(user_agent="GitHub Session Test")
+    assert gh_session.get_repository_metadata(KNOWN_GH_REPO) == repo_metadata
+
+
+def test_github_session_get_repo_metadata_failure(requests_mock):
+    unknown_user_repo = KNOWN_GH_REPO2.replace("https://github.com/", "")
+    requests_mock.get(_url_github_api(unknown_user_repo), status_code=404)
+
+    gh_session = GitHubSession(user_agent="GitHub Session Test")
+    with pytest.raises(requests.HTTPError):
+        gh_session.get_repository_metadata(KNOWN_GH_REPO2)
