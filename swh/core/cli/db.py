@@ -74,6 +74,7 @@ def db_create(module, dbname, template):
 
     Example::
 
+        \b
         PGPORT=5434 swh db create indexer
         swh db create -d postgresql://superuser:passwd@pghost:5433/swh-storage storage
 
@@ -112,6 +113,7 @@ def db_init_admin(module: str, dbname: str) -> None:
 
     Example::
 
+        \b
         PGPORT=5434 swh db init-admin scheduler
         swh db init-admin -d postgresql://superuser:passwd@pghost:5433/swh-scheduler \
           scheduler
@@ -151,6 +153,7 @@ def db_init(ctx, module, dbname, flavor, initial_version):
 
     Example::
 
+        \b
         $ cat conf.yml
         storage:
           cls: postgresql
@@ -158,6 +161,7 @@ def db_init(ctx, module, dbname, flavor, initial_version):
           objstorage:
             cls: memory
 
+        \b
         $ swh db -C conf.yml init storage  # or
         $ SWH_CONFIG_FILENAME=conf.yml swh db init storage
 
@@ -263,6 +267,7 @@ def db_version(ctx, module, show_all, module_config_key=None):
 
     Example::
 
+        \b
         swh db version -d swh-test
         swh db version scheduler
         swh db version scrubber --module-config-key=scrubber_db
@@ -341,6 +346,7 @@ def db_upgrade(ctx, module, to_version, interactive, module_config_key):
 
     Examples::
 
+        \b
         swh db upgrade storage
         swh db upgrade scheduler --to-version=10
         swh db upgrade scrubber --to-version=10 --module-config-key=scrubber_db
