@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022  The Software Heritage developers
+# Copyright (C) 2020-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,7 +8,7 @@ import logging
 import random
 import re
 import time
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from tenacity import (
@@ -190,10 +190,17 @@ class GitHubSession:
             self.statsd.gauge("reset_seconds", reset_seconds, tags=tags)
 
         if (
-            # GitHub returns inconsistent status codes between unauthenticated
-            # rate limit and authenticated rate limits. Handle both.
+            # 429 status code was previously returned for authenticated users, keep the
+            # check for backward compatibility
             response.status_code == 429
-            or (self.anonymous and response.status_code == 403)
+            or (
+                # https://docs.github.com/en/rest/overview
+                # /resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
+                response.status_code == 403
+                and response.json()
+                .get("message", "")
+                .startswith("API rate limit exceeded")
+            )
         ):
             self.statsd.increment("rate_limited_responses_total", tags=tags)
             raise RateLimited(response)
@@ -252,24 +259,47 @@ class GitHubSession:
             self.statsd.increment("sleep_seconds_total", sleep_time)
             time.sleep(sleep_time)
 
-    def get_canonical_url(self, url: str) -> Optional[str]:
-        """Retrieve canonical github url out of an url if any or None otherwise.
+    def get_repository_metadata(self, repo_url: str) -> Optional[Dict[str, Any]]:
+        """Retrieve metadata of a repository from the github API.
+
+        Args:
+            repo_url: URL of a github repository
+
+        Returns:
+            A dictionary holding the metadata of the repository or None
+            if this is not a valid github repository.
+
+        Throws:
+            requests.HTTPError: if the request to the github API failed.
+        """
+        url = repo_url.lower()
+
+        match = GITHUB_PATTERN.match(url)
+        if not match:
+            return None
+
+        user_repo = _sanitize_github_url(match.groupdict()["user_repo"])
+        response = self.request(_url_github_api(user_repo))
+        response.raise_for_status()
+        return response.json()
+
+    def get_canonical_url(self, repo_url: str) -> Optional[str]:
+        """Retrieve canonical github url out of a github url.
 
         This triggers an http request to the github api url to determine the
         canonical repository url.
 
-        Returns
-            The canonical url if any, None otherwise.
+        Args:
+            repo_url: URL of a github repository
+
+        Returns:
+            The canonical github url, the input url if it is not a github one,
+            None otherwise.
         """
-        url_ = url.lower()
 
-        match = GITHUB_PATTERN.match(url_)
-        if not match:
-            return url
-
-        user_repo = _sanitize_github_url(match.groupdict()["user_repo"])
-        response = self.request(_url_github_api(user_repo))
-        if response.status_code != 200:
+        try:
+            metadata = self.get_repository_metadata(repo_url)
+            return metadata.get("html_url") if metadata else repo_url
+        except requests.HTTPError:
+            # invalid github repository
             return None
-        data = response.json()
-        return data["html_url"]

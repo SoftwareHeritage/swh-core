@@ -334,12 +334,17 @@ class RPCClient(metaclass=MetaRPCClient):
 
         if status_class == 4:
             exc_data = self._decode_response(response, check_status=False)
-            for exc_type in self.reraise_exceptions:
-                if exc_type.__name__ == exc_data["type"]:
-                    exception = exc_type(*exc_data["args"])
-                    break
+            if isinstance(exc_data, dict):
+                for exc_type in self.reraise_exceptions:
+                    if exc_type.__name__ == exc_data["type"]:
+                        exception = exc_type(*exc_data["args"])
+                        break
+                else:
+                    exception = RemoteException(payload=exc_data, response=response)
             else:
-                exception = RemoteException(payload=exc_data, response=response)
+                # Typically, because the error is from a reverse proxy not aware of this
+                # RPC protocol, so response's content-type is text/html
+                exception = APIError(exc_data, response)
 
         elif status_class == 5:
             cls: Type[RemoteException]
