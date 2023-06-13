@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2022  The Software Heritage developers
+# Copyright (C) 2015-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -179,7 +179,7 @@ def swh_db_upgrade(
     sqlfiles = [
         fname
         for fname in get_sql_for_package(modname, upgrade=True)
-        if db_version < int(fname.stem) <= to_version
+        if "-" not in fname.stem and db_version < int(fname.stem) <= to_version
     ]
 
     if not sqlfiles:
