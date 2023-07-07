@@ -24,8 +24,8 @@ from swh.core.db.db_utils import (
 from .test_cli import craft_conninfo
 
 
-@pytest.mark.parametrize("module", ["test.cli"])
-def test_get_sql_for_package(mock_import_swhmodule, module):
+def test_get_sql_for_package(mock_import_swhmodule):
+    module = "test.cli"
     files = get_sql_for_package(module)
     assert files
     assert [f.name for f in files] == [
@@ -37,8 +37,7 @@ def test_get_sql_for_package(mock_import_swhmodule, module):
     ]
 
 
-@pytest.mark.parametrize("module", ["test.cli"])
-def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule, module):
+def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule):
     """Check get_database_info, swh_db_versions and swh_db_module work ok
 
     This test checks db versions is properly initialized by the cli db init
@@ -46,6 +45,7 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule, module
 
     mock_import_swhmodule should set the initial version to 3.
     """
+    module = "test.cli"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -92,11 +92,9 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule, module
             assert (now() - ts) < timedelta(seconds=1)
 
 
-@pytest.mark.parametrize("module", ["test.cli"])
-def test_db_utils_upgrade(
-    cli_runner, postgresql, mock_import_swhmodule, module, datadir
-):
+def test_db_utils_upgrade(cli_runner, postgresql, mock_import_swhmodule, datadir):
     """Check swh_db_upgrade"""
+    module = "test.cli"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -133,11 +131,11 @@ def test_db_utils_upgrade(
         assert not result
 
 
-@pytest.mark.parametrize("module", ["test.cli"])
 def test_db_utils_swh_db_upgrade_sanity_checks(
-    cli_runner, postgresql, mock_import_swhmodule, module, datadir
+    cli_runner, postgresql, mock_import_swhmodule, datadir
 ):
     """Check swh_db_upgrade"""
+    module = "test.cli"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -178,10 +176,10 @@ def test_db_utils_swh_db_upgrade_sanity_checks(
         swh_db_upgrade(conninfo, module)
 
 
-@pytest.mark.parametrize("module", ["test.cli"])
 @pytest.mark.parametrize("flavor", [None, "default", "flavorA", "flavorB"])
-def test_db_utils_flavor(cli_runner, postgresql, mock_import_swhmodule, module, flavor):
+def test_db_utils_flavor(cli_runner, postgresql, mock_import_swhmodule, flavor):
     """Check populate_database_for_package handle db flavor properly"""
+    module = "test.cli"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
