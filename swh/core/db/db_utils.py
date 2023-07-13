@@ -698,5 +698,6 @@ def execute_sqlfiles(
             with db.cursor() as c:
                 query = "grant select on all tables in schema public to guest"
                 c.execute(query)
+            db.commit()
         except Exception:
             logger.warning("Grant read-only access to guest user failed. Skipping.")

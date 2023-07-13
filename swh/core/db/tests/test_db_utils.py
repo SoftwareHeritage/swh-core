@@ -6,20 +6,20 @@
 from datetime import timedelta
 from os import path
 
+from psycopg2.errors import InsufficientPrivilege
 import pytest
 
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
 from swh.core.db.db_utils import (
-    get_database_info,
-    get_sql_for_package,
-    now,
     swh_db_module,
     swh_db_upgrade,
     swh_db_version,
     swh_db_versions,
     swh_set_db_module,
 )
+from swh.core.db.db_utils import get_database_info, get_sql_for_package, now
+from swh.core.db.db_utils import parse_dsn_or_dbname as parse_dsn
 
 from .test_cli import craft_conninfo
 
@@ -196,3 +196,59 @@ def test_db_utils_flavor(cli_runner, postgresql, mock_import_swhmodule, flavor):
     dbmodule, _dbversion, dbflavor = get_database_info(conninfo)
     assert dbmodule == module
     assert dbflavor == (flavor or "default")
+
+
+def test_db_utils_guest_permissions(cli_runner, postgresql, mock_import_swhmodule):
+    """Check populate_database_for_package handle db flavor properly"""
+    module = "test.cli"
+    conninfo = craft_conninfo(postgresql)
+    # breakpoint()
+    result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    cmd = ["init", module, "--dbname", conninfo]
+    result = cli_runner.invoke(swhdb, cmd)
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+
+    # check select permissions have been granted tguest
+    cnx = BaseDb.connect(conninfo)
+    with cnx.transaction() as cur:
+        cur.execute("select * from pg_roles where rolname='guest'")
+        assert cur.rowcount == 1
+        query = """
+SELECT table_name, privilege_type
+FROM information_schema.role_table_grants
+WHERE grantee = 'guest'
+"""
+        cur.execute(query)
+        assert cur.rowcount == 4
+        assert set(cur.fetchall()) == {
+            ("dbflavor", "SELECT"),
+            ("origin", "SELECT"),
+            ("dbversion", "SELECT"),
+            ("dbmodule", "SELECT"),
+        }
+
+    guest_dsn = {**parse_dsn(conninfo), **{"user": "guest", "password": "guest"}}
+    gcnx = BaseDb.connect(**guest_dsn)
+    # check guest user can actually query a table
+    with gcnx.transaction() as gcur:
+        gcur.execute("select * from dbversion limit 1")
+        assert gcur.rowcount == 1
+
+    with gcnx.transaction() as gcur:
+        # check guest user CANNOT create a new table
+        with pytest.raises(InsufficientPrivilege):
+            gcur.execute("create table toto(id int)")
+    with gcnx.transaction() as gcur:
+        # check guest user CANNOT drop a new table
+        with pytest.raises(InsufficientPrivilege):
+            gcur.execute("drop table origin")
+    with gcnx.transaction() as gcur:
+        # check guest user CANNOT insert data in a table
+        with pytest.raises(InsufficientPrivilege):
+            gcur.execute(
+                """
+INSERT INTO origin(url, hash)
+VALUES ('https://nowhere.com', hash_sha1('https://nowhere.com'))
+            """
+            )

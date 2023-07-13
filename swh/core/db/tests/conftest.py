@@ -26,7 +26,8 @@ function_scoped_fixture_check = (
 def create_role_guest(**kwargs):
     with psycopg2.connect(**kwargs) as conn:
         with conn.cursor() as cur:
-            cur.execute("CREATE ROLE guest LOGIN PASSWORD 'guest'")
+            cur.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC")
+            cur.execute("CREATE ROLE guest NOINHERIT LOGIN PASSWORD 'guest'")
 
 
 postgresql_proc = factories.postgresql_proc(
