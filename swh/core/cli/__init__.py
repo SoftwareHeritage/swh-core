@@ -14,9 +14,38 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 logger = logging.getLogger(__name__)
 
 
+class SWHHelpFormatter(click.HelpFormatter):
+    """A subclass of click's HelpFormatter which converts some :ref: to links
+    to the SWH documentation
+    """
+
+    _template = (
+        "{key} key: https://docs.softwareheritage.org/devel/configuration.html#{ref}"
+    )
+
+    def write_text(self, text):
+        import re
+
+        text = re.sub(
+            ":ref:`(?P<ref>cli-config-(?P<key>.*?))`",
+            lambda m: self._template.format(**m.groupdict()),
+            text,
+        )
+        text = re.sub(
+            ":mod:`(.*?)`",
+            r"https://docs.softwareheritage.org/devel/apidoc/\1.html",
+            text,
+        )
+        return super().write_text(text)
+
+
 class AliasedGroup(click.Group):
-    """A simple Group that supports command aliases, as well as notes related to
-    options"""
+    """A simple Group that supports:
+
+    * command aliases
+    * notes related to options
+
+    """
 
     def __init__(self, name=None, commands=None, **attrs):
         self.option_notes = attrs.pop("option_notes", None)
@@ -117,6 +146,7 @@ def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
 
     ctx.ensure_object(dict)
     ctx.obj["log_level"] = set_default_loglevel
+    ctx.__class__.formatter_class = SWHHelpFormatter
 
 
 def main():

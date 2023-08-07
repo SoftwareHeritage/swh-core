@@ -11,6 +11,8 @@ from sentry_sdk import capture_exception, capture_message, set_tag
 
 from swh.core.sentry import init_sentry, override_with_bool_envvar
 
+SENTRY_DSN = "https://user@example.org/1234"
+
 
 @pytest.mark.parametrize(
     "envvalue,retval",
@@ -48,7 +50,7 @@ def test_override_with_bool_envvar_logging(monkeypatch, caplog):
 
 def test_sentry():
     reports = []
-    init_sentry("http://example.org", extra_kwargs={"transport": reports.append})
+    init_sentry(SENTRY_DSN, extra_kwargs={"transport": reports.append})
 
     capture_message("Something went wrong")
     logging.error("Stupid error")
@@ -61,7 +63,7 @@ def test_sentry():
 def test_sentry_no_logging():
     reports = []
     init_sentry(
-        "http://example.org",
+        SENTRY_DSN,
         disable_logging_events=True,
         extra_kwargs={"transport": reports.append},
     )
@@ -78,7 +80,7 @@ def test_sentry_no_logging_from_venv(monkeypatch):
 
     reports = []
     init_sentry(
-        "http://example.org",
+        SENTRY_DSN,
         extra_kwargs={"transport": reports.append},
     )
 
@@ -94,7 +96,7 @@ def test_sentry_logging_from_venv(monkeypatch):
 
     reports = []
     init_sentry(
-        "http://example.org",
+        SENTRY_DSN,
         extra_kwargs={"transport": reports.append},
     )
 
@@ -139,9 +141,9 @@ def test_sentry_events_fixture_set_tag(sentry_events):
 def test_sentry_main_package(mocker):
     sentry_sdk_init = mocker.patch.object(sentry_sdk, "init")
     init_sentry(
-        "http://example.org",
+        SENTRY_DSN,
     )
     assert sentry_sdk_init.call_args_list[-1][1]["release"] is None
 
-    init_sentry("http://example.org", main_package="swh.core")
+    init_sentry(SENTRY_DSN, main_package="swh.core")
     assert sentry_sdk_init.call_args_list[-1][1]["release"].startswith("swh.core@")

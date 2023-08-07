@@ -26,7 +26,8 @@ function_scoped_fixture_check = (
 def create_role_guest(**kwargs):
     with psycopg2.connect(**kwargs) as conn:
         with conn.cursor() as cur:
-            cur.execute("CREATE ROLE guest LOGIN PASSWORD 'guest'")
+            cur.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC")
+            cur.execute("CREATE ROLE guest NOINHERIT LOGIN PASSWORD 'guest'")
 
 
 postgresql_proc = factories.postgresql_proc(
@@ -48,7 +49,7 @@ def mock_import_swhmodule(mocker, datadir):
     set to `<mod>` and __file__ pointing to `data/<mod>/__init__.py`.
 
     The Mock object also defines a `get_datastore()` attribute on which the
-    `current_version` attribute is set to 42.
+    `current_version` attribute is set to 3.
 
     Typical usage::
 
@@ -67,7 +68,7 @@ def mock_import_swhmodule(mocker, datadir):
             dirname = modname.split(".", 1)[1]
 
             def get_datastore(*args, **kw):
-                return mock(current_version=42)
+                return mock(current_version=3)
 
             return mock(
                 __name__=modname,

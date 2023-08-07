@@ -140,16 +140,13 @@ def db_init_admin(module: str, dbname: str) -> None:
     help="Database flavor.",
     default=None,
 )
-@click.option(
-    "--initial-version", help="Database initial version.", default=1, show_default=True
-)
 @click.pass_context
-def db_init(ctx, module, dbname, flavor, initial_version):
+def db_init(ctx, module, dbname, flavor):
     """Initialize a database for the Software Heritage <module>.
 
-    The database connection string comes from the configuration file (see
-    option ``--config-file`` in ``swh db --help``) in the section named after
-    the MODULE argument.
+    The database connection string can come from the --dbname option, or from
+    the configuration file (see option ``--config-file`` in ``swh db --help``)
+    in the section named after the MODULE argument.
 
     Example::
 
@@ -164,9 +161,8 @@ def db_init(ctx, module, dbname, flavor, initial_version):
         \b
         $ swh db -C conf.yml init storage  # or
         $ SWH_CONFIG_FILENAME=conf.yml swh db init storage
-
-    Note that the connection string can also be passed directly using the
-    '--db-name' option, but this usage is about to be deprecated.
+        $ # or
+        $ swh db init --dbname postgresql://user:passwd@pghost:5433/swh-storage storage
 
     """
     from swh.core.db.db_utils import (
@@ -194,54 +190,56 @@ def db_init(ctx, module, dbname, flavor, initial_version):
     initialized, dbversion, dbflavor = populate_database_for_package(
         module, dbname, flavor
     )
-    if dbversion is None:
-        if cfg is not None:
-            # db version has not been populated by sql init scripts (new style),
-            # let's do it; instantiate the data source to retrieve the current
-            # (expected) db version
-            datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
-            if datastore_factory:
-                datastore = datastore_factory(**cfg)
-                if not hasattr(datastore, "current_version"):
-                    logger.warning(
-                        "Datastore %s does not declare the "
-                        "'current_version' attribute",
-                        datastore,
-                    )
-                else:
-                    code_version = datastore.current_version
-                    logger.info(
-                        "Initializing database version to %s from the %s datastore",
-                        code_version,
-                        module,
-                    )
-                    swh_set_db_version(dbname, code_version, desc="DB initialization")
-
-    dbversion = get_database_info(dbname)[1]
-    if dbversion is None:
-        logger.info(
-            "Initializing database version to %s "
-            "from the command line option --initial-version",
-            initial_version,
+    if dbversion is not None:
+        click.secho(
+            "ERROR: the database version has been populated by sql init scripts. "
+            "This is now deprecated and should not happen any more"
         )
-        swh_set_db_version(dbname, initial_version, desc="DB initialization")
+    else:
+        # db version has not been populated by sql init scripts (new style),
+        # let's do it; instantiate the data source to retrieve the current
+        # (expected) db version
+        if cfg is None:
+            cfg = {"cls": "postgresql", "db": dbname}
+        datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
+        if datastore_factory:
+            datastore = datastore_factory(**cfg)
+            if not hasattr(datastore, "current_version"):
+                logger.warning(
+                    "Datastore %s does not declare the " "'current_version' attribute",
+                    datastore,
+                )
+            else:
+                code_version = datastore.current_version
+                logger.info(
+                    "Initializing database version to %s from the %s datastore",
+                    code_version,
+                    module,
+                )
+                swh_set_db_version(dbname, code_version, desc="DB initialization")
 
     dbversion = get_database_info(dbname)[1]
-    assert dbversion is not None
-
-    # TODO: Ideally migrate the version from db_version to the latest
-    # db version
-
-    click.secho(
-        "DONE database for {} {}{} at version {}".format(
-            module,
-            "initialized" if initialized else "exists",
-            f" (flavor {dbflavor})" if dbflavor is not None else "",
-            dbversion,
-        ),
-        fg="green",
-        bold=True,
-    )
+    if dbversion is None:
+        click.secho(
+            "ERROR: database for {} {}{} BUT db version could not be set".format(
+                module,
+                "initialized" if initialized else "exists",
+                f" (flavor {dbflavor})" if dbflavor is not None else "",
+            ),
+            fg="red",
+            bold=True,
+        )
+    else:
+        click.secho(
+            "DONE database for {} {}{} at version {}".format(
+                module,
+                "initialized" if initialized else "exists",
+                f" (flavor {dbflavor})" if dbflavor is not None else "",
+                dbversion,
+            ),
+            fg="green",
+            bold=True,
+        )
 
     if flavor is not None and dbflavor != flavor:
         click.secho(
