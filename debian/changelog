@@ -1,3 +1,14 @@
+swh-core (2.24.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.24.0     - (tagged by Antoine R. Dumont
+    (@ardumont) <ardumont@softwareheritage.org> on 2023-08-07 13:26:49
+    +0200)
+  * Upstream changes:     - v2.24.0     - github.utils: Add max attempts
+    & retry requests on connection errors     - Fix read-access granting
+    to the guest user in db_utils
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 07 Aug 2023 11:30:41 +0000
+
 swh-core (2.22.2-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.22.2     - (tagged by Nicolas Dandrimont
