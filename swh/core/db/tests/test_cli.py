@@ -214,7 +214,7 @@ def test_cli_swh_db_create_and_init_db_new_api(
     cli_runner, postgresql, mock_import_swhmodule, mocker, tmp_path
 ):
     """Create a db then initializing it should be ok for a "new style" datastore"""
-    module_name = "test.cli_new"
+    module_name = "test.cli"
 
     conninfo = craft_conninfo(postgresql)
 
@@ -239,7 +239,7 @@ def test_cli_swh_db_create_and_init_db_new_api(
 
 def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp_path):
     """Upgrade scenario for a "new style" datastore"""
-    module_name = "test.cli_new"
+    module_name = "test.cli"
 
     # the `current_version` variable is the version that will be returned by
     # any call to `get_current_version()` in this test session, thanks to the
@@ -330,10 +330,53 @@ def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp
     assert result.exit_code == 0
     assert "Warning: the database does not have a dbmodule table." in result.output
     assert (
-        "Write the module information (test.cli_new) in the database? [Y/n]"
+        "Write the module information (test.cli) in the database? [Y/n]"
         in result.output
     )
     assert swh_db_module(conninfo) == module_name
+
+
+def test_cli_swh_db_init_version_ok(cli_runner, postgresql, datadir, mocker, tmp_path):
+    """Upgrade scenario for a "new style" datastore"""
+    module_name = "test.cli"
+
+    # the `current_version` variable is the version that will be returned by
+    # any call to `get_current_version()` in this test session, thanks to the
+    # local mocked version of import_swhmodule() below.
+    current_version = 5
+
+    # custom version of the mockup to make it easy to change the
+    # current_version returned by get_current_version()
+    # TODO: find a better solution for this...
+    def import_swhmodule_mock(modname):
+        if modname.startswith("test."):
+            dirname = modname.split(".", 1)[1]
+
+            def get_datastore(cls, **kw):
+                return mocker.MagicMock(current_version=current_version)
+
+            return mocker.MagicMock(
+                __name__=modname,
+                __file__=os.path.join(datadir, dirname, "__init__.py"),
+                name=modname,
+                get_datastore=get_datastore,
+            )
+
+        return import_swhmodule(modname)
+
+    mocker.patch("swh.core.db.db_utils.import_swhmodule", import_swhmodule_mock)
+    conninfo = craft_conninfo(postgresql)
+
+    # call the db init stuff WITHOUT a config file
+    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
+    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
+
+    assert (
+        result.exit_code == 0
+    ), f"Unexpected output: {traceback.print_tb(result.exc_info[2])}"
+
+    assert swh_db_version(conninfo) == current_version
 
 
 def test_cli_swh_db_version(swh_db_cli, mock_import_swhmodule, postgresql):

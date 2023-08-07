@@ -11,11 +11,13 @@ import time
 from typing import Any, Dict, List, Optional
 
 import requests
+from requests.exceptions import ChunkedEncodingError, ConnectionError
 from tenacity import (
     retry,
     retry_any,
     retry_if_exception_type,
     retry_if_result,
+    stop_after_attempt,
     wait_exponential,
 )
 
@@ -145,10 +147,13 @@ class GitHubSession:
 
     @retry(
         wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(5),
         retry=retry_any(
-            # ChunkedEncodingErrors happen when the TLS connection gets reset, e.g.
-            # when running the lister on a connection with high latency
-            retry_if_exception_type(requests.exceptions.ChunkedEncodingError),
+            # ChunkedEncodingError happens when the TLS connection gets reset, e.g. when
+            # running the lister on a connection with high latency.
+            retry_if_exception_type(ChunkedEncodingError),
+            # ConnectionError happen when the server hangs up
+            retry_if_exception_type(ConnectionError),
             # 502 status codes happen for a Server Error, sometimes
             retry_if_result(lambda r: r.status_code == 502),
         ),
@@ -160,7 +165,6 @@ class GitHubSession:
         tags = {"username": self.current_user or "anonymous"}
 
         self.statsd.increment("requests_total", tags=tags)
-
         response = self.session.get(url)
 
         # self.session.get(url) raises in case of non-HTTP error (DNS, TCP, TLS, ...),

@@ -5,10 +5,12 @@
 
 import itertools
 import logging
-from unittest.mock import call
+from unittest.mock import call, patch
 
 import pytest
 import requests
+from requests.exceptions import ChunkedEncodingError, ConnectionError
+from tenacity import RetryError
 
 from swh.core.github.pytest_plugin import HTTP_GITHUB_API_URL
 from swh.core.github.utils import (
@@ -20,6 +22,19 @@ from swh.core.github.utils import (
 
 KNOWN_GH_REPO = "https://github.com/user/repo"
 KNOWN_GH_REPO2 = "https://github.com/user/reposit"
+
+
+@patch("time.sleep", return_value=None)
+@patch("swh.core.github.utils.requests.Session.get")
+@pytest.mark.parametrize("exception", [ChunkedEncodingError, ConnectionError])
+def test_retry(mock_requests, monkeypatch_sleep_calls, exception):
+    user_repo = "test/test"
+    html_input_url = f"https://github.com/{user_repo}"
+
+    mock_requests.side_effect = exception("Request failure")
+
+    with pytest.raises(RetryError, match=exception.__name__):
+        get_canonical_github_origin_url(html_input_url)
 
 
 @pytest.mark.parametrize(

@@ -396,3 +396,42 @@ def test_aliased_command(swhmain):
     result = runner.invoke(swhmain, ["othername"])
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
+
+
+def test_documentation(caplog, swhmain):
+    @swhmain.command(name="test")
+    @click.pass_context
+    def swhtest(ctx):
+        """Does a thing
+
+        This needs the following config:
+
+        \b
+        * :ref:`cli-config-storage`
+        * :ref:`cli-config-scheduler`
+
+        and calls :mod:`swh.core.test.test_cli`
+        """
+        click.echo("Hello SWH!")
+
+    runner = CliRunner()
+    result = runner.invoke(swhmain, ["test", "--help"])
+    assert result.exit_code == 0
+    assert result.output == textwrap.dedent(
+        """\
+        Usage: swh test [OPTIONS]
+
+          Does a thing
+
+          This needs the following config:
+
+          * storage key: https://docs.softwareheritage.org/devel/configuration.html#cli-config-storage
+          * scheduler key: https://docs.softwareheritage.org/devel/configuration.html#cli-config-scheduler
+
+          and calls
+          https://docs.softwareheritage.org/devel/apidoc/swh.core.test.test_cli.html
+
+        Options:
+          -h, --help  Show this message and exit.
+        """  # noqa
+    )
