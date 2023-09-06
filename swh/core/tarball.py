@@ -148,16 +148,16 @@ def uncompress(tarpath: str, dest: str):
     try:
         os.makedirs(dest, exist_ok=True)
         format = None
-        # try to get archive format from extension
-        for format_, exts, _ in shutil.get_unpack_formats():
-            if any([tarpath.lower().endswith(ext.lower()) for ext in exts]):
-                format = format_
-                break
         # try to get archive format from file mimetype
+        m = magic.Magic(mime=True)
+        mime = m.from_file(tarpath)
+        format = MIMETYPE_TO_ARCHIVE_FORMAT.get(mime)
         if format is None:
-            m = magic.Magic(mime=True)
-            mime = m.from_file(tarpath)
-            format = MIMETYPE_TO_ARCHIVE_FORMAT.get(mime)
+            # try to get archive format from extension
+            for format_, exts, _ in shutil.get_unpack_formats():
+                if any([tarpath.lower().endswith(ext.lower()) for ext in exts]):
+                    format = format_
+                    break
         shutil.unpack_archive(tarpath, extract_dir=dest, format=format)
     except shutil.ReadError as e:
         raise ValueError(f"Problem during unpacking {tarpath}. Reason: {e}")
