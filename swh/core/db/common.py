@@ -5,6 +5,7 @@
 
 import functools
 import inspect
+import os
 import sys
 
 
@@ -34,7 +35,7 @@ def apply_options(cursor, options):
     return old_options
 
 
-def check_no_transaction(f_name):
+def _check_no_transaction(f_name):
     """Checks there is no open DB transaction in the stack
     (db + cur variables).
     While it is not necessarily broken code, it is very likely
@@ -82,7 +83,8 @@ def db_transaction(**client_options):
                 apply_options(cur, old_options)
                 return ret
             else:
-                check_no_transaction(meth.__name__)
+                if "PYTEST_CURRENT_TEST" in os.environ:
+                    _check_no_transaction(meth.__name__)
                 db = self.get_db()
                 try:
                     with db.transaction() as cur:
@@ -129,7 +131,8 @@ def db_transaction_generator(**client_options):
                 yield from meth(self, *args, **kwargs)
                 apply_options(cur, old_options)
             else:
-                check_no_transaction(meth.__name__)
+                if "PYTEST_CURRENT_TEST" in os.environ:
+                    _check_no_transaction(meth.__name__)
                 db = self.get_db()
                 try:
                     with db.transaction() as cur:
