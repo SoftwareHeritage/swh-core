@@ -1,22 +1,22 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2021  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from collections import deque
+from functools import partial
 import logging
+from os import path
 import re
+from typing import Dict, List, Optional
+from urllib.parse import unquote, urlparse
+
 import pytest
 import requests
-
-from functools import partial
-from os import path
-from typing import Dict, List, Optional
-from urllib.parse import urlparse, unquote
-
 from requests.adapters import BaseAdapter
 from requests.structures import CaseInsensitiveDict
 from requests.utils import get_encoding_from_headers
-
+import sentry_sdk
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,7 @@ def get_response_cb(
 
 
 @pytest.fixture
-def datadir(request):
+def datadir(request: pytest.FixtureRequest) -> str:
     """By default, returns the test directory's data directory.
 
     This can be overridden on a per file tree basis. Add an override
@@ -135,33 +135,38 @@ def datadir(request):
 
 
     """
-    return path.join(path.dirname(str(request.fspath)), "data")
+    # pytest >= 7 renamed FixtureRequest fspath attribute to path
+    path_ = request.path if hasattr(request, "path") else request.fspath  # type: ignore
+    return path.join(path.dirname(str(path_)), "data")
 
 
 def requests_mock_datadir_factory(
     ignore_urls: List[str] = [], has_multi_visit: bool = False
 ):
-    """This factory generates fixture which allow to look for files on the
+    """This factory generates fixtures which allow to look for files on the
     local filesystem based on the requested URL, using the following rules:
 
-    - files are searched in the datadir/<hostname> directory
+    - files are searched in the data/<hostname> directory
 
     - the local file name is the path part of the URL with path hierarchy
       markers (aka '/') replaced by '_'
 
     Multiple implementations are possible, for example:
 
-    - requests_mock_datadir_factory([]):
+    ``requests_mock_datadir_factory([])``
+
         This computes the file name from the query and always returns the same
         result.
 
-    - requests_mock_datadir_factory(has_multi_visit=True):
+    ``requests_mock_datadir_factory(has_multi_visit=True)``
+
         This computes the file name from the query and returns the content of
         the filename the first time, the next call returning the content of
         files suffixed with _visit1 and so on and so forth. If the file is not
         found, returns a 404.
 
-    - requests_mock_datadir_factory(ignore_urls=['url1', 'url2']):
+    ``requests_mock_datadir_factory(ignore_urls=['url1', 'url2'])``
+
         This will ignore any files corresponding to url1 and url2, always
         returning 404.
 
@@ -195,13 +200,21 @@ def requests_mock_datadir_factory(
 
 
 # Default `requests_mock_datadir` implementation
-requests_mock_datadir = requests_mock_datadir_factory([])
+requests_mock_datadir = requests_mock_datadir_factory()
+"""
+Instance of :py:func:`requests_mock_datadir_factory`,
+with the default arguments.
+"""
 
 # Implementation for multiple visits behavior:
 # - first time, it checks for a file named `filename`
 # - second time, it checks for a file named `filename`_visit1
 # etc...
 requests_mock_datadir_visits = requests_mock_datadir_factory(has_multi_visit=True)
+"""
+Instance of :py:func:`requests_mock_datadir_factory`,
+with the default arguments, but `has_multi_visit=True`.
+"""
 
 
 @pytest.fixture
@@ -243,8 +256,8 @@ def swh_rpc_adapter(app):
     See swh/core/api/tests/test_rpc_client_server.py for an example of usage.
 
     """
-    with app.test_client() as client:
-        yield RPCTestAdapter(client)
+    client = app.test_client()
+    yield RPCTestAdapter(client)
 
 
 class RPCTestAdapter(BaseAdapter):
@@ -299,7 +312,7 @@ def flask_app_client(app):
 # stolen from pytest-flask, required to have url_for() working within tests
 # using flask_app_client fixture.
 @pytest.fixture(autouse=True)
-def _push_request_context(request):
+def _push_request_context(request: pytest.FixtureRequest):
     """During tests execution request context has been pushed, e.g. `url_for`,
     `session`, etc. can be used in tests as is::
 
@@ -317,3 +330,78 @@ def _push_request_context(request):
         ctx.pop()
 
     request.addfinalizer(teardown)
+
+
+class FakeSocket(object):
+    """A fake socket for testing."""
+
+    def __init__(self):
+        self.payloads = deque()
+
+    def send(self, payload):
+        assert type(payload) == bytes
+        self.payloads.append(payload)
+
+    def recv(self):
+        try:
+            return self.payloads.popleft().decode("utf-8")
+        except IndexError:
+            return None
+
+    def close(self):
+        pass
+
+    def __repr__(self):
+        return str(self.payloads)
+
+
+@pytest.fixture
+def statsd():
+    """Simple fixture giving a Statsd instance suitable for tests
+
+    The Statsd instance uses a FakeSocket as `.socket` attribute in which one
+    can get the accumulated statsd messages in a deque in `.socket.payloads`.
+    """
+
+    from swh.core.statsd import Statsd
+
+    statsd = Statsd()
+    statsd._socket = FakeSocket()
+    yield statsd
+
+
+@pytest.fixture
+def monkeypatch_sentry_transport():
+    # Inspired by
+    # https://github.com/getsentry/sentry-python/blob/1.5.9/tests/conftest.py#L168-L184
+
+    initialized = False
+
+    def setup_sentry_transport_monkeypatch(*a, **kw):
+        nonlocal initialized
+        assert not initialized, "already initialized"
+        initialized = True
+        hub = sentry_sdk.Hub.current
+        client = sentry_sdk.Client(*a, **kw)
+        hub.bind_client(client)
+        client.transport = TestTransport()
+
+    class TestTransport:
+        def __init__(self):
+            self.events = []
+            self.envelopes = []
+
+        def capture_event(self, event):
+            self.events.append(event)
+
+        def capture_envelope(self, envelope):
+            self.envelopes.append(envelope)
+
+    with sentry_sdk.Hub(None):
+        yield setup_sentry_transport_monkeypatch
+
+
+@pytest.fixture
+def sentry_events(monkeypatch_sentry_transport):
+    monkeypatch_sentry_transport()
+    return sentry_sdk.Hub.current.client.transport.events

@@ -1,15 +1,13 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from collections import abc
 import functools
+import importlib
 import inspect
 import logging
-import pickle
-import requests
-
 from typing import (
     Any,
     Callable,
@@ -19,28 +17,29 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
+import warnings
 
-from flask import Flask, Request, Response, request, abort
+from deprecated import deprecated
+from flask import Flask, Request, Response, abort, request
+import requests
+import sentry_sdk
 from werkzeug.exceptions import HTTPException
 
+from .negotiation import Formatter as FormatterBase
+from .negotiation import Negotiator as NegotiatorBase
+from .negotiation import negotiate as _negotiate
 from .serializers import (
     decode_response,
-    encode_data_client as encode_data,
-    msgpack_dumps,
-    msgpack_loads,
+    encode_data_client,
+    exception_to_dict,
     json_dumps,
     json_loads,
-    exception_to_dict,
+    msgpack_dumps,
+    msgpack_loads,
 )
-
-from .negotiation import (
-    Formatter as FormatterBase,
-    Negotiator as NegotiatorBase,
-    negotiate as _negotiate,
-)
-
 
 logger = logging.getLogger(__name__)
 
@@ -124,9 +123,19 @@ class RemoteException(Exception):
             return super().__str__()
 
 
-def remote_api_endpoint(path):
-    def dec(f):
-        f._endpoint_path = path
+class TransientRemoteException(RemoteException):
+    """Subclass of RemoteException representing errors which are expected
+    to be temporary.
+    """
+
+
+F = TypeVar("F", bound=Callable)
+
+
+def remote_api_endpoint(path: str, method: str = "POST") -> Callable[[F], F]:
+    def dec(f: F) -> F:
+        f._endpoint_path = path  # type: ignore
+        f._method = method  # type: ignore
         return f
 
     return dec
@@ -178,16 +187,14 @@ class MetaRPCClient(type):
             post_data.pop("db", None)
 
             # Send the request.
-            return self.post(meth._endpoint_path, post_data)
+            return self._post(meth._endpoint_path, post_data)
 
         if meth_name not in attributes:
             attributes[meth_name] = meth_
 
 
 class RPCClient(metaclass=MetaRPCClient):
-    """Proxy to an internal SWH RPC
-
-    """
+    """Proxy to an internal SWH RPC"""
 
     backend_class = None  # type: ClassVar[Optional[type]]
     """For each method of `backend_class` decorated with
@@ -255,7 +262,7 @@ class RPCClient(metaclass=MetaRPCClient):
         except requests.exceptions.ConnectionError as e:
             raise self.api_exception(e)
 
-    def post(self, endpoint, data, **opts):
+    def _post(self, endpoint, data, **opts):
         if isinstance(data, (abc.Iterator, abc.Generator)):
             data = (self._encode_data(x) for x in data)
         else:
@@ -278,11 +285,19 @@ class RPCClient(metaclass=MetaRPCClient):
             return self._decode_response(response)
 
     def _encode_data(self, data):
-        return encode_data(data, extra_encoders=self.extra_type_encoders)
+        return encode_data_client(data, extra_encoders=self.extra_type_encoders)
 
-    post_stream = post
+    _post_stream = _post
 
-    def get(self, endpoint, **opts):
+    @deprecated(version="2.1.0", reason="Use _post instead")
+    def post(self, *args, **kwargs):
+        return self._post(*args, **kwargs)
+
+    @deprecated(version="2.1.0", reason="Use _post_stream instead")
+    def post_stream(self, *args, **kwargs):
+        return self._post_stream(*args, **kwargs)
+
+    def _get(self, endpoint, **opts):
         chunk_size = opts.pop("chunk_size", self.chunk_size)
         response = self.raw_verb(
             "get", endpoint, headers={"accept": "application/x-msgpack"}, **opts
@@ -293,8 +308,16 @@ class RPCClient(metaclass=MetaRPCClient):
         else:
             return self._decode_response(response)
 
-    def get_stream(self, endpoint, **opts):
-        return self.get(endpoint, stream=True, **opts)
+    def _get_stream(self, endpoint, **opts):
+        return self._get(endpoint, stream=True, **opts)
+
+    @deprecated(version="2.1.0", reason="Use _get instead")
+    def get(self, *args, **kwargs):
+        return self._get(*args, **kwargs)
+
+    @deprecated(version="2.1.0", reason="Use _get_stream instead")
+    def get_stream(self, *args, **kwargs):
+        return self._get_stream(*args, **kwargs)
 
     def raise_for_status(self, response) -> None:
         """check response HTTP status code and raise an exception if it denotes an
@@ -309,34 +332,31 @@ class RPCClient(metaclass=MetaRPCClient):
 
         exception = None
 
-        # TODO: only old servers send pickled error; stop trying to unpickle
-        # after they are all upgraded
-        try:
-            if status_class == 4:
-                data = self._decode_response(response, check_status=False)
-                if isinstance(data, dict):
-                    for exc_type in self.reraise_exceptions:
-                        if exc_type.__name__ == data["exception"]["type"]:
-                            exception = exc_type(*data["exception"]["args"])
-                            break
-                    else:
-                        exception = RemoteException(
-                            payload=data["exception"], response=response
-                        )
+        if status_class == 4:
+            exc_data = self._decode_response(response, check_status=False)
+            if isinstance(exc_data, dict):
+                for exc_type in self.reraise_exceptions:
+                    if exc_type.__name__ == exc_data["type"]:
+                        exception = exc_type(*exc_data["args"])
+                        break
                 else:
-                    exception = pickle.loads(data)
+                    exception = RemoteException(payload=exc_data, response=response)
+            else:
+                # Typically, because the error is from a reverse proxy not aware of this
+                # RPC protocol, so response's content-type is text/html
+                exception = APIError(exc_data, response)
 
-            elif status_class == 5:
-                data = self._decode_response(response, check_status=False)
-                if "exception_pickled" in data:
-                    exception = pickle.loads(data["exception_pickled"])
-                else:
-                    exception = RemoteException(
-                        payload=data["exception"], response=response
-                    )
-
-        except (TypeError, pickle.UnpicklingError):
-            raise RemoteException(payload=data, response=response)
+        elif status_class == 5:
+            cls: Type[RemoteException]
+            if status_code in (502, 503):
+                # This isn't a generic HTTP client and we know the server does
+                # not support the Retry-After header, so we do not implement
+                # it here either.
+                cls = TransientRemoteException
+            else:
+                cls = RemoteException
+            exc_data = self._decode_response(response, check_status=False)
+            exception = cls(payload=exc_data, response=response)
 
         if exception:
             raise exception from None
@@ -373,7 +393,10 @@ def encode_data_server(
     data, content_type="application/x-msgpack", extra_type_encoders=None
 ):
     encoded_data = ENCODERS[content_type](data, extra_encoders=extra_type_encoders)
-    return Response(encoded_data, mimetype=content_type,)
+    return Response(
+        encoded_data,
+        mimetype=content_type,
+    )
 
 
 def decode_request(request, extra_decoders=None):
@@ -394,13 +417,32 @@ def decode_request(request, extra_decoders=None):
     return r
 
 
-def error_handler(exception, encoder, status_code=500):
-    logging.exception(exception)
+def error_handler(
+    exception: BaseException, encoder=encode_data_server, status_code: int = 500
+):
+    """Error handler to be registered using flask's error-handling decorator
+    ``app.errorhandler``.
+
+    This is used for exceptions that are expected in the normal execution flow of the
+    RPC-ed API, in which case the status code should be set to a value in the 4xx range,
+    as well as for exceptions that are unexpected (generally, a bare
+    :class:`Exception`), and for which the status code should be kept in the 5xx class.
+
+    This function only captures exceptions as sentry errors if the status code is in the
+    5xx range and not 502/503/504, as "expected exceptions" in the 4xx range are more,
+    likely to be handled on the client side; and 502/503/504 are "transient" exceptions
+    that should be resolved with client retries.
+
+    """
+    status_class = status_code // 100
+    if status_class == 5 and status_code not in (502, 503, 504):
+        logger.exception(exception)
+        sentry_sdk.capture_exception(exception)
+
     response = encoder(exception_to_dict(exception))
     if isinstance(exception, HTTPException):
         response.status_code = exception.code
     else:
-        # TODO: differentiate between server errors and client errors
         response.status_code = status_code
     return response
 
@@ -417,6 +459,11 @@ class RPCServerApp(Flask):
         A function with no argument that returns an instance of
         `backend_class`. If unset, defaults to calling `backend_class`
         constructor directly.
+
+    For each method 'do_x()' of the ``backend_factory``, subclasses may implement
+    two methods: ``pre_do_x(self, kw)`` and ``post_do_x(self, ret, kw)`` that will
+    be called respectively before and after ``do_x(**kw)``. ``kw`` is the dict
+    of request parameters, and ``ret`` is the return value of ``do_x(**kw)``.
     """
 
     request_class = BytesRequest
@@ -428,13 +475,59 @@ class RPCServerApp(Flask):
     """Value of `extra_decoders` passed to `json_loads` or `msgpack_loads`
     to be able to deserialize more object types."""
 
+    method_decorators: List[Callable[[Callable], Callable]] = []
+    """List of decorators to all methods generated from the ``backend_class``."""
+
+    exception_status_codes: List[Tuple[Union[Type[BaseException], str], int]] = [
+        # Default to "Internal Server Error" for most exceptions:
+        (Exception, 500),
+        # These errors are noisy, and are better logged on the caller's side after
+        # it retried a few times:
+        ("psycopg2.errors.OperationalError", 503),
+        # Subclass of OperationalError; but it is unlikely to be solved after retries
+        # (short of getting more cache hits) because this is usually caused by the query
+        # size instead of a transient failure
+        ("psycopg2.errors.QueryCanceled", 500),
+        # Often a transient error because of connectivity issue with, or restart of,
+        # the Kafka brokers:
+        ("swh.journal.writer.kafka.KafkaDeliveryError", 503),
+    ]
+    """Pairs of ``(exception, status_code)`` where ``exception`` is either an
+    exception class or a a dotted exception name to be imported (and ignored if import
+    fails) and ``status_code`` is the HTTP code that should be returned when an instance
+    of this exception is raised.
+
+    If a raised exception is an instance of a subclass of two classes defined here,
+    the most specific class wins, according Flask's MRO-based resolution."""
+
     def __init__(self, *args, backend_class=None, backend_factory=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.add_backend_class(backend_class, backend_factory)
+        self._register_error_handlers()
 
-        self.backend_class = backend_class
+    def _register_error_handlers(self):
+        for (exception, status_code) in self.exception_status_codes:
+            if isinstance(exception, str):
+                (module_path, class_name) = exception.rsplit(".", 1)
+                try:
+                    module = importlib.import_module(module_path, package=__package__)
+                except ImportError as e:
+                    logger.debug("Could not import %s: %r", exception, e)
+                    continue
+                exception = getattr(module, class_name)
+
+            self.register_error_handler(
+                exception, functools.partial(error_handler, status_code=status_code)
+            )
+
+    def add_backend_class(self, backend_class=None, backend_factory=None):
+        if backend_class is None and backend_factory is not None:
+            raise ValueError(
+                "backend_factory should only be provided if backend_class is"
+            )
+
         if backend_class is not None:
-            if backend_factory is None:
-                backend_factory = backend_class
+            backend_factory = backend_factory or backend_class
             for (meth_name, meth) in backend_class.__dict__.items():
                 if hasattr(meth, "_endpoint_path"):
                     self.__add_endpoint(meth_name, meth, backend_factory)
@@ -442,12 +535,35 @@ class RPCServerApp(Flask):
     def __add_endpoint(self, meth_name, meth, backend_factory):
         from flask import request
 
-        @self.route("/" + meth._endpoint_path, methods=["POST"])
         @negotiate(MsgpackFormatter, extra_encoders=self.extra_type_encoders)
         @negotiate(JSONFormatter, extra_encoders=self.extra_type_encoders)
         @functools.wraps(meth)  # Copy signature and doc
-        def _f():
+        def f():
             # Call the actual code
+            pre_hook = getattr(self, f"pre_{meth_name}", None)
+            post_hook = getattr(self, f"post_{meth_name}", None)
             obj_meth = getattr(backend_factory(), meth_name)
             kw = decode_request(request, extra_decoders=self.extra_type_decoders)
-            return obj_meth(**kw)
+
+            if pre_hook is not None:
+                pre_hook(kw)
+
+            ret = obj_meth(**kw)
+
+            if post_hook is not None:
+                post_hook(ret, kw)
+
+            return ret
+
+        for decorator in self.method_decorators:
+            f = decorator(f)
+
+        self.route("/" + meth._endpoint_path, methods=["POST"])(f)
+
+    def setup_psycopg2_errorhandlers(self) -> None:
+        """Deprecated method; error handlers are now setup in the constructor."""
+        warnings.warn(
+            "setup_psycopg2_errorhandlers has no effect; error handlers are now setup "
+            "by the constructor.",
+            DeprecationWarning,
+        )

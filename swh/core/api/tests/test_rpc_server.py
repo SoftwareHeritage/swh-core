@@ -1,42 +1,95 @@
-# Copyright (C) 2018-2019  The Software Heritage developers
+# Copyright (C) 2018-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import pytest
 import json
-import msgpack
 
 from flask import url_for
+import msgpack
+import pytest
 
-from swh.core.api import remote_api_endpoint, RPCServerApp
-from swh.core.api import negotiate, JSONFormatter, MsgpackFormatter
-from .test_serializers import ExtraType, extra_encoders, extra_decoders
+from swh.core.api import (
+    JSONFormatter,
+    MsgpackFormatter,
+    RPCServerApp,
+    negotiate,
+    remote_api_endpoint,
+)
+
+from .test_serializers import ExtraType, extra_decoders, extra_encoders
+
+
+class MyCustomException(Exception):
+    pass
 
 
 class MyRPCServerApp(RPCServerApp):
     extra_type_encoders = extra_encoders
     extra_type_decoders = extra_decoders
+    exception_status_codes = [
+        *RPCServerApp.exception_status_codes,
+        (MyCustomException, 503),
+    ]
+
+
+class TestStorage:
+    @remote_api_endpoint("test_endpoint_url")
+    def endpoint_test(self, test_data, db=None, cur=None):
+        assert test_data == "spam"
+        return "egg"
+
+    @remote_api_endpoint("path/to/endpoint")
+    def something(self, data, db=None, cur=None):
+        return data
+
+    @remote_api_endpoint("serializer_test")
+    def serializer_test(self, data, db=None, cur=None):
+        assert data == ["foo", ExtraType("bar", b"baz")]
+        return ExtraType({"spam": "egg"}, "qux")
+
+    @remote_api_endpoint("crashy/builtin")
+    def crashy(self, data, db=None, cur=None):
+        raise ValueError("this is an unexpected exception")
+
+    @remote_api_endpoint("crashy/custom")
+    def custom_crashy(self, data, db=None, cur=None):
+        raise MyCustomException("try again later!")
+
+    @remote_api_endpoint("crashy/adminshutdown")
+    def adminshutdown_crash(self, data, db=None, cur=None):
+        from psycopg2.errors import AdminShutdown
+
+        raise AdminShutdown("cluster is shutting down")
+
+    @remote_api_endpoint("crashy/querycancelled")
+    def querycancelled_crash(self, data, db=None, cur=None):
+        from psycopg2.errors import QueryCanceled
+
+        raise QueryCanceled("too big!")
 
 
 @pytest.fixture
 def app():
-    class TestStorage:
-        @remote_api_endpoint("test_endpoint_url")
-        def test_endpoint(self, test_data, db=None, cur=None):
-            assert test_data == "spam"
-            return "egg"
-
-        @remote_api_endpoint("path/to/endpoint")
-        def something(self, data, db=None, cur=None):
-            return data
-
-        @remote_api_endpoint("serializer_test")
-        def serializer_test(self, data, db=None, cur=None):
-            assert data == ["foo", ExtraType("bar", b"baz")]
-            return ExtraType({"spam": "egg"}, "qux")
-
     return MyRPCServerApp("testapp", backend_class=TestStorage)
+
+
+def test_api_rpc_server_app_ok(app):
+    assert isinstance(app, MyRPCServerApp)
+
+    actual_rpc_server2 = MyRPCServerApp(
+        "app2", backend_class=TestStorage, backend_factory=TestStorage
+    )
+    assert isinstance(actual_rpc_server2, MyRPCServerApp)
+
+    actual_rpc_server3 = MyRPCServerApp("app3")
+    assert isinstance(actual_rpc_server3, MyRPCServerApp)
+
+
+def test_api_rpc_server_app_misconfigured():
+    expected_error = "backend_factory should only be provided if backend_class is"
+    with pytest.raises(ValueError, match=expected_error):
+        MyRPCServerApp("failed-app", backend_factory="something-to-make-it-raise")
 
 
 def test_api_endpoint(flask_app_client):
@@ -76,7 +129,7 @@ def test_api_nego_accept(flask_app_client):
 
 def test_rpc_server(flask_app_client):
     res = flask_app_client.post(
-        url_for("test_endpoint"),
+        url_for("endpoint_test"),
         headers=[
             ("Content-Type", "application/x-msgpack"),
             ("Accept", "application/x-msgpack"),
@@ -87,6 +140,102 @@ def test_rpc_server(flask_app_client):
     assert res.status_code == 200
     assert res.mimetype == "application/x-msgpack"
     assert res.data == b"\xa3egg"
+
+
+def test_rpc_server_exception(flask_app_client):
+    res = flask_app_client.post(
+        url_for("crashy"),
+        headers=[
+            ("Content-Type", "application/x-msgpack"),
+            ("Accept", "application/x-msgpack"),
+        ],
+        data=msgpack.dumps({"data": "toto"}),
+    )
+
+    assert res.status_code == 500
+    assert res.mimetype == "application/x-msgpack", res.data
+    data = msgpack.loads(res.data)
+    assert (
+        data.items()
+        >= {
+            "type": "ValueError",
+            "module": "builtins",
+            "args": ["this is an unexpected exception"],
+        }.items()
+    ), data
+
+
+def test_rpc_server_custom_exception(flask_app_client):
+    res = flask_app_client.post(
+        url_for("custom_crashy"),
+        headers=[
+            ("Content-Type", "application/x-msgpack"),
+            ("Accept", "application/x-msgpack"),
+        ],
+        data=msgpack.dumps({"data": "toto"}),
+    )
+
+    assert res.status_code == 503
+    assert res.mimetype == "application/x-msgpack", res.data
+    data = msgpack.loads(res.data)
+    assert (
+        data.items()
+        >= {
+            "type": "MyCustomException",
+            "module": "swh.core.api.tests.test_rpc_server",
+            "args": ["try again later!"],
+        }.items()
+    ), data
+
+
+def test_rpc_server_psycopg2_adminshutdown(flask_app_client):
+    pytest.importorskip("psycopg2")
+
+    res = flask_app_client.post(
+        url_for("adminshutdown_crash"),
+        headers=[
+            ("Content-Type", "application/x-msgpack"),
+            ("Accept", "application/x-msgpack"),
+        ],
+        data=msgpack.dumps({"data": "toto"}),
+    )
+
+    assert res.status_code == 503
+    assert res.mimetype == "application/x-msgpack", res.data
+    data = msgpack.loads(res.data)
+    assert (
+        data.items()
+        >= {
+            "type": "AdminShutdown",
+            "module": "psycopg2.errors",
+            "args": ["cluster is shutting down"],
+        }.items()
+    ), data
+
+
+def test_rpc_server_psycopg2_querycancelled(flask_app_client):
+    pytest.importorskip("psycopg2")
+
+    res = flask_app_client.post(
+        url_for("querycancelled_crash"),
+        headers=[
+            ("Content-Type", "application/x-msgpack"),
+            ("Accept", "application/x-msgpack"),
+        ],
+        data=msgpack.dumps({"data": "toto"}),
+    )
+
+    assert res.status_code == 500
+    assert res.mimetype == "application/x-msgpack", res.data
+    data = msgpack.loads(res.data)
+    assert (
+        data.items()
+        >= {
+            "type": "QueryCanceled",
+            "module": "psycopg2.errors",
+            "args": ["too big!"],
+        }.items()
+    ), data
 
 
 def test_rpc_server_extra_serializers(flask_app_client):
@@ -116,7 +265,10 @@ def test_api_negotiate_no_extra_encoders(app, flask_app_client):
     def endpoint():
         return "test"
 
-    res = flask_app_client.post(url, headers=[("Content-Type", "application/json")],)
+    res = flask_app_client.post(
+        url,
+        headers=[("Content-Type", "application/json")],
+    )
     assert res.status_code == 200
     assert res.mimetype == "application/json"
     assert res.data == b'"test"'

@@ -1,6 +1,12 @@
+hypothesis >= 3.11.0
 pytest
 pytest-mock
-requests-mock
-hypothesis >= 3.11.0
-pre-commit
 pytz
+requests-mock
+types-click
+types-deprecated
+types-flask
+types-psycopg2
+types-pytz
+types-pyyaml
+types-requests

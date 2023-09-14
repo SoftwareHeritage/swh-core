@@ -24,10 +24,9 @@
 #
 
 from collections import defaultdict
-from decorator import decorator
+import functools
 from inspect import getcallargs
-
-from typing import Any, List, Optional, Callable, Type, NoReturn, DefaultDict
+from typing import Any, Callable, DefaultDict, List, NoReturn, Optional, Type
 
 from requests import Response
 
@@ -144,14 +143,15 @@ class Negotiator:
 def negotiate(
     negotiator_cls: Type[Negotiator], formatter_cls: Type[Formatter], *args, **kwargs
 ) -> Callable:
-    def _negotiate(f, *args, **kwargs):
-        return f.negotiator(*args, **kwargs)
-
-    def decorate(f):
+    def decorator(f):
         if not hasattr(f, "negotiator"):
             f.negotiator = negotiator_cls(f)
-
         f.negotiator.register_formatter(formatter_cls, *args, **kwargs)
-        return decorator(_negotiate, f)
 
-    return decorate
+        @functools.wraps(f)
+        def newf(*args, **kwargs):
+            return f.negotiator(*args, **kwargs)
+
+        return newf
+
+    return decorator

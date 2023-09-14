@@ -1,0 +1,1 @@
+TEST_DIRS := ./swh/core/api/tests ./swh/core/db/tests ./swh/core/tests ./swh/core/github/tests

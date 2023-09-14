@@ -5,8 +5,18 @@
 
 import pytest
 
-from swh.core.api import remote_api_endpoint, RPCServerApp, RPCClient
-from swh.core.api import error_handler, encode_data_server, RemoteException
+from swh.core.api import (
+    RemoteException,
+    RPCClient,
+    RPCServerApp,
+    encode_data_server,
+    error_handler,
+    remote_api_endpoint,
+)
+
+
+class ExpectedException(Exception):
+    """Another exception class to distinguish error handlers"""
 
 
 # this class is used on the server part
@@ -23,6 +33,14 @@ class RPCTest:
     @remote_api_endpoint("raises_typeerror")
     def raise_typeerror(self):
         raise TypeError("Did I pass through?")
+
+    @remote_api_endpoint("raise_exception_exc_arg")
+    def raise_exception_exc_arg(self):
+        raise Exception(Exception("error"))
+
+    @remote_api_endpoint("raises_expectedexc")
+    def raise_expectedexc(self):
+        raise ExpectedException("that was expected")
 
 
 # this class is used on the client part. We cannot inherit from RPCTest
@@ -48,6 +66,10 @@ class RPCTest2:
     def raise_typeerror(self):
         return "data"
 
+    @remote_api_endpoint("raises_expectedexc")
+    def raise_expectedexc(self):
+        return "nothing"
+
 
 class RPCTestClient(RPCClient):
     backend_class = RPCTest2
@@ -58,6 +80,10 @@ def app():
     # This fixture is used by the 'swh_rpc_adapter' fixture
     # which is defined in swh/core/pytest_plugin.py
     application = RPCServerApp("testapp", backend_class=RPCTest)
+
+    @application.errorhandler(ExpectedException)
+    def my_expected_error_handler(exception):
+        return error_handler(exception, encode_data_server, status_code=400)
 
     @application.errorhandler(Exception)
     def my_error_handler(exception):
@@ -99,9 +125,13 @@ def test_api_endpoint_args(swh_rpc_client):
     assert res == "egg"
 
 
-def test_api_typeerror(swh_rpc_client):
+def test_api_typeerror(swh_rpc_client, mocker):
+    mocked_capture_exception = mocker.patch("swh.core.api.sentry_sdk.capture_exception")
+
     with pytest.raises(RemoteException) as exc_info:
         swh_rpc_client.raise_typeerror()
+
+    assert mocked_capture_exception.called_once_with(TypeError("Did I pass through?"))
 
     assert exc_info.value.args[0]["type"] == "TypeError"
     assert exc_info.value.args[0]["args"] == ["Did I pass through?"]
@@ -109,3 +139,24 @@ def test_api_typeerror(swh_rpc_client):
         str(exc_info.value)
         == "<RemoteException 500 TypeError: ['Did I pass through?']>"
     )
+
+
+def test_api_raise_exception_exc_arg(swh_rpc_client):
+    with pytest.raises(RemoteException) as exc_info:
+        swh_rpc_client._post("raise_exception_exc_arg", data={})
+
+    assert exc_info.value.args[0]["type"] == "Exception"
+    assert type(exc_info.value.args[0]["args"][0]) == Exception
+    assert str(exc_info.value.args[0]["args"][0]) == "error"
+
+
+def test_api_expected_exception_no_sentry_capture(swh_rpc_client, mocker):
+    mocked_capture_exception = mocker.patch("swh.core.api.sentry_sdk.capture_exception")
+
+    with pytest.raises(RemoteException) as exc_info:
+        swh_rpc_client.raise_expectedexc()
+
+    assert not mocked_capture_exception.called
+
+    assert exc_info.value.args[0]["type"] == "ExpectedException"
+    assert exc_info.value.args[0]["args"] == ["that was expected"]

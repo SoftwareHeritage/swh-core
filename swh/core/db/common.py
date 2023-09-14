@@ -52,9 +52,15 @@ def check_no_transaction(f_name):
 def db_transaction(**client_options):
     """decorator to execute Backend methods within DB transactions
 
-    The decorated method must accept a `cur` and `db` keyword argument
+    The decorated method must accept a ``cur`` and ``db`` keyword argument
 
-    Client options are passed as `set` options to the postgresql server
+    Client options are passed as ``set`` options to the postgresql server. If
+    available, decorated ``self.query_options`` can be defined as a dict which
+    keys are (decorated) method names and values are dicts. These later dicts
+    are merged with the given ``client_options``. So it's possible to define
+    default client_options as decorator arguments and overload them from e.g. a
+    configuration file (e.g. making is the ``self.query_options`` attribute filled
+    from a config file).
     """
 
     def decorator(meth, __client_options=client_options):
@@ -64,9 +70,14 @@ def db_transaction(**client_options):
         @remove_kwargs(["cur", "db"])
         @functools.wraps(meth)
         def _meth(self, *args, **kwargs):
+            options = getattr(self, "query_options", None) or {}
+            if meth.__name__ in options:
+                client_options = {**__client_options, **options[meth.__name__]}
+            else:
+                client_options = __client_options
             if "cur" in kwargs and kwargs["cur"]:
                 cur = kwargs["cur"]
-                old_options = apply_options(cur, __client_options)
+                old_options = apply_options(cur, client_options)
                 ret = meth(self, *args, **kwargs)
                 apply_options(cur, old_options)
                 return ret
@@ -75,7 +86,7 @@ def db_transaction(**client_options):
                 db = self.get_db()
                 try:
                     with db.transaction() as cur:
-                        apply_options(cur, __client_options)
+                        apply_options(cur, client_options)
                         return meth(self, *args, db=db, cur=cur, **kwargs)
                 finally:
                     self.put_db(db)
@@ -89,9 +100,15 @@ def db_transaction_generator(**client_options):
     """decorator to execute Backend methods within DB transactions, while
     returning a generator
 
-    The decorated method must accept a `cur` and `db` keyword argument
+    The decorated method must accept a ``cur`` and ``db`` keyword argument
 
-    Client options are passed as `set` options to the postgresql server
+    Client options are passed as ``set`` options to the postgresql server. If
+    available, decorated ``self.query_options`` can be defined as a dict which
+    keys are (decorated) method names and values are dicts. These later dicts
+    are merged with the given ``client_options``. So it's possible to define
+    default client_options as decorator arguments and overload them from e.g. a
+    configuration file (e.g. making is the ``self.query_options`` attribute filled
+    from a config file).
     """
 
     def decorator(meth, __client_options=client_options):
@@ -101,9 +118,14 @@ def db_transaction_generator(**client_options):
         @remove_kwargs(["cur", "db"])
         @functools.wraps(meth)
         def _meth(self, *args, **kwargs):
+            options = getattr(self, "query_options", None) or {}
+            if meth.__name__ in options:
+                client_options = {**__client_options, **options[meth.__name__]}
+            else:
+                client_options = __client_options
             if "cur" in kwargs and kwargs["cur"]:
                 cur = kwargs["cur"]
-                old_options = apply_options(cur, __client_options)
+                old_options = apply_options(cur, client_options)
                 yield from meth(self, *args, **kwargs)
                 apply_options(cur, old_options)
             else:
@@ -111,7 +133,7 @@ def db_transaction_generator(**client_options):
                 db = self.get_db()
                 try:
                     with db.transaction() as cur:
-                        apply_options(cur, __client_options)
+                        apply_options(cur, client_options)
                         yield from meth(self, *args, db=db, cur=cur, **kwargs)
                 finally:
                     self.put_db(db)

@@ -4,8 +4,9 @@
 # See top-level LICENSE file for more information
 
 import os
-import pkg_resources
 from unittest.mock import patch
+
+import pkg_resources
 
 import swh.core.api.gunicorn_config as gunicorn_config
 
@@ -19,16 +20,22 @@ def test_post_fork_default():
 
 def test_post_fork_with_dsn_env():
     flask_integration = object()  # unique object to check for equality
+    logging_integration = object()  # unique object to check for equality
     with patch(
         "sentry_sdk.integrations.flask.FlaskIntegration", new=lambda: flask_integration
+    ), patch(
+        "sentry_sdk.integrations.logging.LoggingIntegration",
+        new=lambda event_level: logging_integration,
+    ), patch(
+        "sentry_sdk.init"
+    ) as sentry_sdk_init, patch.dict(
+        os.environ, {"SWH_SENTRY_DSN": "test_dsn"}
     ):
-        with patch("sentry_sdk.init") as sentry_sdk_init:
-            with patch.dict(os.environ, {"SWH_SENTRY_DSN": "test_dsn"}):
-                gunicorn_config.post_fork(None, None)
+        gunicorn_config.post_fork(None, None)
 
     sentry_sdk_init.assert_called_once_with(
         dsn="test_dsn",
-        integrations=[flask_integration],
+        integrations=[flask_integration, logging_integration],
         debug=False,
         release=None,
         environment=None,
@@ -36,26 +43,31 @@ def test_post_fork_with_dsn_env():
 
 
 def test_post_fork_with_package_env():
-    flask_integration = object()  # unique object to check for equality
+    flask_integration = object()
+    logging_integration = object()
+
     with patch(
         "sentry_sdk.integrations.flask.FlaskIntegration", new=lambda: flask_integration
+    ), patch(
+        "sentry_sdk.integrations.logging.LoggingIntegration",
+        new=lambda event_level: logging_integration,
+    ), patch(
+        "sentry_sdk.init"
+    ) as sentry_sdk_init, patch.dict(
+        os.environ,
+        {
+            "SWH_SENTRY_DSN": "test_dsn",
+            "SWH_SENTRY_ENVIRONMENT": "tests",
+            "SWH_MAIN_PACKAGE": "swh.core",
+        },
     ):
-        with patch("sentry_sdk.init") as sentry_sdk_init:
-            with patch.dict(
-                os.environ,
-                {
-                    "SWH_SENTRY_DSN": "test_dsn",
-                    "SWH_SENTRY_ENVIRONMENT": "tests",
-                    "SWH_MAIN_PACKAGE": "swh.core",
-                },
-            ):
-                gunicorn_config.post_fork(None, None)
+        gunicorn_config.post_fork(None, None)
 
     version = pkg_resources.get_distribution("swh.core").version
 
     sentry_sdk_init.assert_called_once_with(
         dsn="test_dsn",
-        integrations=[flask_integration],
+        integrations=[flask_integration, logging_integration],
         debug=False,
         release="swh.core@" + version,
         environment="tests",
@@ -63,19 +75,24 @@ def test_post_fork_with_package_env():
 
 
 def test_post_fork_debug():
-    flask_integration = object()  # unique object to check for equality
+    flask_integration = object()
+    logging_integration = object()
+
     with patch(
         "sentry_sdk.integrations.flask.FlaskIntegration", new=lambda: flask_integration
+    ), patch(
+        "sentry_sdk.integrations.logging.LoggingIntegration",
+        new=lambda event_level: logging_integration,
+    ), patch(
+        "sentry_sdk.init"
+    ) as sentry_sdk_init, patch.dict(
+        os.environ, {"SWH_SENTRY_DSN": "test_dsn", "SWH_SENTRY_DEBUG": "1"}
     ):
-        with patch("sentry_sdk.init") as sentry_sdk_init:
-            with patch.dict(
-                os.environ, {"SWH_SENTRY_DSN": "test_dsn", "SWH_SENTRY_DEBUG": "1"}
-            ):
-                gunicorn_config.post_fork(None, None)
+        gunicorn_config.post_fork(None, None)
 
     sentry_sdk_init.assert_called_once_with(
         dsn="test_dsn",
-        integrations=[flask_integration],
+        integrations=[flask_integration, logging_integration],
         debug=True,
         release=None,
         environment=None,
@@ -83,12 +100,37 @@ def test_post_fork_debug():
 
 
 def test_post_fork_no_flask():
-    with patch("sentry_sdk.init") as sentry_sdk_init:
-        with patch.dict(os.environ, {"SWH_SENTRY_DSN": "test_dsn"}):
-            gunicorn_config.post_fork(None, None, flask=False)
+    logging_integration = object()
+
+    with patch("sentry_sdk.init") as sentry_sdk_init, patch(
+        "sentry_sdk.integrations.logging.LoggingIntegration",
+        new=lambda event_level: logging_integration,
+    ), patch.dict(os.environ, {"SWH_SENTRY_DSN": "test_dsn"}):
+        gunicorn_config.post_fork(None, None, flask=False)
 
     sentry_sdk_init.assert_called_once_with(
-        dsn="test_dsn", integrations=[], debug=False, release=None, environment=None,
+        dsn="test_dsn",
+        integrations=[logging_integration],
+        debug=False,
+        release=None,
+        environment=None,
+    )
+
+
+def test_post_fork_override_logging_events_envvar():
+
+    with patch("sentry_sdk.init") as sentry_sdk_init, patch.dict(
+        os.environ,
+        {"SWH_SENTRY_DSN": "test_dsn", "SWH_SENTRY_DISABLE_LOGGING_EVENTS": "false"},
+    ):
+        gunicorn_config.post_fork(None, None, flask=False)
+
+    sentry_sdk_init.assert_called_once_with(
+        dsn="test_dsn",
+        integrations=[],
+        debug=False,
+        release=None,
+        environment=None,
     )
 
 
@@ -104,6 +146,7 @@ def test_post_fork_extras():
                     None,
                     sentry_integrations=["foo"],
                     extra_sentry_kwargs={"bar": "baz"},
+                    disable_logging_events=False,
                 )
 
     sentry_sdk_init.assert_called_once_with(

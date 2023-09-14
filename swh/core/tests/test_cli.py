@@ -4,44 +4,98 @@
 # See top-level LICENSE file for more information
 
 import logging
-import pkg_resources
 import textwrap
+from typing import List
 from unittest.mock import patch
 
 import click
 from click.testing import CliRunner
+import pkg_resources
 import pytest
+import yaml
+
+help_msg_snippets = (
+    (
+        "Usage",
+        (
+            "swh [OPTIONS] COMMAND [ARGS]...",
+            "Command line interface for Software Heritage.",
+        ),
+    ),
+    (
+        "Options",
+        (
+            "-l, --log-level",
+            "--log-config",
+            "--sentry-dsn",
+            "-h, --help",
+        ),
+    ),
+)
 
 
-help_msg = """Usage: swh [OPTIONS] COMMAND [ARGS]...
+def get_section(cli_output: str, section: str) -> List[str]:
+    """Get the given `section` of the `cli_output`"""
+    result = []
+    in_section = False
+    for line in cli_output.splitlines():
+        if not line:
+            continue
 
-  Command line interface for Software Heritage.
+        if in_section:
+            if not line.startswith(" "):
+                break
+        else:
+            if line.startswith(section):
+                in_section = True
 
-Options:
-  -l, --log-level [NOTSET|DEBUG|INFO|WARNING|ERROR|CRITICAL]
-                                  Log level (defaults to INFO).
-  --log-config FILENAME           Python yaml logging configuration file.
-  --sentry-dsn TEXT               DSN of the Sentry instance to report to
-  -h, --help                      Show this message and exit.
+        if in_section:
+            result.append(line)
 
-Notes:
-  If both options are present, --log-level will override the root logger
-  configuration set in --log-config.
+    return result
 
-  The --log-config YAML must conform to the logging.config.dictConfig schema
-  documented at https://docs.python.org/3/library/logging.config.html.
-"""
+
+def assert_section_contains(cli_output: str, section: str, snippet: str) -> bool:
+    """Check that a given `section` of the `cli_output` contains the given `snippet`"""
+    section_lines = get_section(cli_output, section)
+    assert section_lines, "Section %s not found in output %r" % (section, cli_output)
+
+    for line in section_lines:
+        if snippet in line:
+            return True
+    else:
+        assert False, "%r not found in section %r of output %r" % (
+            snippet,
+            section,
+            cli_output,
+        )
+
+
+@pytest.fixture(autouse=True)
+def reset_root_loglevel():
+    root_level = logging.root.level
+    yield
+    logging.root.setLevel(root_level)
+
+
+@pytest.fixture
+def patched_dictconfig(mocker):
+    yield mocker.patch("swh.core.logging.dictConfig", autospec=True)
 
 
 def test_swh_help(swhmain):
     runner = CliRunner()
     result = runner.invoke(swhmain, ["-h"])
     assert result.exit_code == 0
-    assert result.output.startswith(help_msg)
+    for section, snippets in help_msg_snippets:
+        for snippet in snippets:
+            assert_section_contains(result.output, section, snippet)
 
     result = runner.invoke(swhmain, ["--help"])
     assert result.exit_code == 0
-    assert result.output.startswith(help_msg)
+    for section, snippets in help_msg_snippets:
+        for snippet in snippets:
+            assert_section_contains(result.output, section, snippet)
 
 
 def test_command(swhmain):
@@ -68,7 +122,6 @@ def test_loglevel_default(caplog, swhmain):
     runner = CliRunner()
     result = runner.invoke(swhmain, ["test"])
     assert result.exit_code == 0
-    print(result.output)
     assert result.output.strip() == """Hello SWH!"""
 
 
@@ -110,7 +163,11 @@ def test_sentry(swhmain):
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
-        dsn="test_dsn", debug=False, integrations=[], release=None, environment=None,
+        dsn="test_dsn",
+        debug=False,
+        integrations=[],
+        release=None,
+        environment=None,
     )
 
 
@@ -128,7 +185,11 @@ def test_sentry_debug(swhmain):
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
-        dsn="test_dsn", debug=True, integrations=[], release=None, environment=None,
+        dsn="test_dsn",
+        debug=True,
+        integrations=[],
+        release=None,
+        environment=None,
     )
 
 
@@ -148,7 +209,11 @@ def test_sentry_env(swhmain):
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
-        dsn="test_dsn", debug=True, integrations=[], release=None, environment=None,
+        dsn="test_dsn",
+        debug=True,
+        integrations=[],
+        release=None,
+        environment=None,
     )
 
 
@@ -210,49 +275,99 @@ def log_config_path(tmp_path):
     yield str(tmp_path / "log_config.yml")
 
 
-def test_log_config(caplog, log_config_path, swhmain):
+def test_log_config(log_config_path, swhmain, patched_dictconfig):
+    """Check that --log-config properly calls :func:`logging.config.dictConfig`."""
+
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
-        logging.debug("Root log debug")
-        logging.info("Root log info")
-        logging.getLogger("dontshowdebug").debug("Not shown")
-        logging.getLogger("dontshowdebug").info("Shown")
+        patched_dictconfig.assert_called_once_with(
+            yaml.safe_load(open(log_config_path, "r"))
+        )
 
-    runner = CliRunner()
-    result = runner.invoke(swhmain, ["--log-config", log_config_path, "test",],)
-
-    assert result.exit_code == 0
-    assert result.output.strip() == "\n".join(
-        [
-            "custom format:root:DEBUG:Root log debug",
-            "custom format:root:INFO:Root log info",
-            "custom format:dontshowdebug:INFO:Shown",
-        ]
-    )
-
-
-def test_log_config_log_level_interaction(caplog, log_config_path, swhmain):
-    @swhmain.command(name="test")
-    @click.pass_context
-    def swhtest(ctx):
-        logging.debug("Root log debug")
-        logging.info("Root log info")
-        logging.getLogger("dontshowdebug").debug("Not shown")
-        logging.getLogger("dontshowdebug").info("Shown")
+        click.echo("Hello SWH!")
 
     runner = CliRunner()
     result = runner.invoke(
-        swhmain, ["--log-config", log_config_path, "--log-level", "INFO", "test",],
+        swhmain,
+        [
+            "--log-config",
+            log_config_path,
+            "test",
+        ],
     )
 
     assert result.exit_code == 0
-    assert result.output.strip() == "\n".join(
+    assert result.output.strip() == "Hello SWH!"
+
+
+def test_log_config_log_level_interaction(log_config_path, swhmain, patched_dictconfig):
+    """Check that --log-config and --log-level work properly together, by calling
+    :func:`logging.config.dictConfig` then setting the loglevel of the root logger."""
+
+    @swhmain.command(name="test")
+    @click.pass_context
+    def swhtest(ctx):
+        assert logging.root.level == logging.DEBUG
+        patched_dictconfig.assert_called_once_with(
+            yaml.safe_load(open(log_config_path, "r"))
+        )
+
+        click.echo("Hello SWH!")
+
+    assert logging.root.level != logging.DEBUG
+
+    runner = CliRunner()
+    result = runner.invoke(
+        swhmain,
         [
-            "custom format:root:INFO:Root log info",
-            "custom format:dontshowdebug:INFO:Shown",
-        ]
+            "--log-config",
+            log_config_path,
+            "--log-level",
+            "DEBUG",
+            "test",
+        ],
     )
+
+    assert result.exit_code == 0
+    assert result.output.strip() == "Hello SWH!"
+
+
+def test_multiple_log_level_behavior(swhmain):
+    @swhmain.command(name="test")
+    @click.pass_context
+    def swhtest(ctx):
+        assert logging.getLevelName(logging.root.level) == "DEBUG"
+        assert logging.getLevelName(logging.getLogger("dontshowdebug").level) == "INFO"
+        return 0
+
+    runner = CliRunner()
+    result = runner.invoke(
+        swhmain,
+        [
+            "--log-level",
+            "DEBUG",
+            "--log-level",
+            "dontshowdebug:INFO",
+            "test",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+
+def test_invalid_log_level(swhmain):
+    runner = CliRunner()
+    result = runner.invoke(swhmain, ["--log-level", "broken:broken:DEBUG"])
+
+    assert result.exit_code != 0
+    assert "Invalid log level specification" in result.output
+
+    runner = CliRunner()
+    result = runner.invoke(swhmain, ["--log-level", "UNKNOWN"])
+
+    assert result.exit_code != 0
+    assert "Log level UNKNOWN unknown" in result.output
 
 
 def test_aliased_command(swhmain):
@@ -281,3 +396,42 @@ def test_aliased_command(swhmain):
     result = runner.invoke(swhmain, ["othername"])
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
+
+
+def test_documentation(caplog, swhmain):
+    @swhmain.command(name="test")
+    @click.pass_context
+    def swhtest(ctx):
+        """Does a thing
+
+        This needs the following config:
+
+        \b
+        * :ref:`cli-config-storage`
+        * :ref:`cli-config-scheduler`
+
+        and calls :mod:`swh.core.test.test_cli`
+        """
+        click.echo("Hello SWH!")
+
+    runner = CliRunner()
+    result = runner.invoke(swhmain, ["test", "--help"])
+    assert result.exit_code == 0
+    assert result.output == textwrap.dedent(
+        """\
+        Usage: swh test [OPTIONS]
+
+          Does a thing
+
+          This needs the following config:
+
+          * storage key: https://docs.softwareheritage.org/devel/configuration.html#cli-config-storage
+          * scheduler key: https://docs.softwareheritage.org/devel/configuration.html#cli-config-scheduler
+
+          and calls
+          https://docs.softwareheritage.org/devel/apidoc/swh.core.test.test_cli.html
+
+        Options:
+          -h, --help  Show this message and exit.
+        """  # noqa
+    )

@@ -52,16 +52,18 @@
 
 
 from asyncio import iscoroutinefunction
+from contextlib import contextmanager
 from functools import wraps
-from random import random
-from time import monotonic
 import itertools
 import logging
 import os
+from random import random
+import re
 import socket
 import threading
+from time import monotonic
+from typing import Collection, Dict, Optional
 import warnings
-
 
 log = logging.getLogger("swh.core.statsd")
 
@@ -81,7 +83,7 @@ class TimedContextManagerDecorator(object):
         self.statsd = statsd
         self.metric = metric
         self.error_metric = error_metric
-        self.tags = tags
+        self.tags = tags or {}
         self.sample_rate = sample_rate
         self.elapsed = None  # this is for testing purpose
 
@@ -102,8 +104,8 @@ class TimedContextManagerDecorator(object):
                 start = monotonic()
                 try:
                     result = await func(*args, **kwargs)
-                except:  # noqa
-                    self._send_error()
+                except BaseException as e:
+                    self._send_error(error_type=type(e).__name__)
                     raise
                 self._send(start)
                 return result
@@ -116,8 +118,8 @@ class TimedContextManagerDecorator(object):
             start = monotonic()
             try:
                 result = func(*args, **kwargs)
-            except:  # noqa
-                self._send_error()
+            except BaseException as e:
+                self._send_error(error_type=type(e).__name__)
                 raise
             self._send(start)
             return result
@@ -135,7 +137,7 @@ class TimedContextManagerDecorator(object):
         if type is None:
             self._send(self._start)
         else:
-            self._send_error()
+            self._send_error(error_type=type.__name__)
 
     def _send(self, start):
         elapsed = (monotonic() - start) * 1000
@@ -144,10 +146,14 @@ class TimedContextManagerDecorator(object):
         )
         self.elapsed = elapsed
 
-    def _send_error(self):
+    def _send_error(self, error_type=None):
         if self.error_metric is None:
             self.error_metric = self.metric + "_error_count"
-        self.statsd.increment(self.error_metric, tags=self.tags)
+        if error_type is not None:
+            tags = {**self.tags, "error_type": error_type}
+        else:
+            tags = self.tags
+        self.statsd.increment(self.error_metric, tags=tags)
 
     def start(self):
         """Start the timer"""
@@ -187,6 +193,7 @@ class Statsd(object):
 
     def __init__(
         self,
+        *,
         host=None,
         port=None,
         max_buffer_size=50,
@@ -217,11 +224,19 @@ class Statsd(object):
                 continue
             if ":" not in tag:
                 warnings.warn(
-                    "STATSD_TAGS needs to be in key:value format, " "%s invalid" % tag,
+                    f"STATSD_TAGS needs to be in 'key:value' format, not {tag!r}",
                     UserWarning,
                 )
                 continue
             k, v = tag.split(":", 1)
+
+            # look for a possible env var substitution, using $NAME or ${NAME} format
+            m = re.match(r"^[$]([{])?(?P<envvar>\w+)(?(1)[}]|)$", v)
+            if m:
+                envvar = m.group("envvar")
+                if envvar in os.environ:
+                    v = os.environ[envvar]
+
             self.constant_tags[k] = v
 
         if constant_tags:
@@ -433,9 +448,55 @@ class Statsd(object):
         return {
             str(k): str(v)
             for k, v in itertools.chain(
-                self.constant_tags.items(), (tags if tags else {}).items(),
+                self.constant_tags.items(),
+                (tags if tags else {}).items(),
             )
         }
+
+    @contextmanager
+    def status_gauge(
+        self,
+        metric_name: str,
+        statuses: Collection[str],
+        tags: Optional[Dict[str, str]] = None,
+    ):
+        """Context manager to keep track of status changes as a gauge
+
+        In addition to the `metric_name` and `tags` arguments, it expects a
+        list of `statuses` to declare which statuses are possible, and returns
+        a callable as context manager. This callable takes ones of the possible
+        statuses as argument. Typical usage would be:
+
+        >>> with statsd.status_gauge(
+                    "metric_name", ["starting", "processing", "waiting"]) as set_status:
+                set_status("starting")
+                # ...
+                set_status("waiting")
+                # ...
+        """
+        if tags is None:
+            tags = {}
+        current_status: Optional[str] = None
+        # reset status gauges to make sure they do not "leak"
+        for status in statuses:
+            self.gauge(metric_name, 0, {**tags, "status": status})
+
+        def set_status(new_status: str):
+            nonlocal current_status
+            assert isinstance(tags, dict)
+            if new_status not in statuses:
+                raise ValueError(f"{new_status} not in {statuses}")
+            if current_status and new_status != current_status:
+                self.gauge(metric_name, 0, {**tags, "status": current_status})
+            current_status = new_status
+            self.gauge(metric_name, 1, {**tags, "status": current_status})
+
+        try:
+            yield set_status
+        finally:
+            # reset gauges on exit
+            for status in statuses:
+                self.gauge(metric_name, 0, {**tags, "status": status})
 
 
 statsd = Statsd()

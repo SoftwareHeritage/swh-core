@@ -1,134 +1,169 @@
-# Copyright (C) 2015-2018  The Software Heritage developers
+# Copyright (C) 2015-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import unittest
+import pytest
 
 from swh.core import utils
 
 
-class UtilsLib(unittest.TestCase):
-    def test_grouper(self):
-        # given
-        actual_data = utils.grouper((i for i in range(0, 9)), 2)
+def test_grouper():
+    # given
+    actual_data = utils.grouper((i for i in range(0, 9)), 2)
 
-        out = []
-        for d in actual_data:
-            out.append(list(d))  # force generator resolution for checks
+    out = []
+    for d in actual_data:
+        out.append(list(d))  # force generator resolution for checks
 
-        self.assertEqual(out, [[0, 1], [2, 3], [4, 5], [6, 7], [8]])
+    assert out == [[0, 1], [2, 3], [4, 5], [6, 7], [8]]
 
-        # given
-        actual_data = utils.grouper((i for i in range(9, 0, -1)), 4)
+    # given
+    actual_data = utils.grouper((i for i in range(9, 0, -1)), 4)
 
-        out = []
-        for d in actual_data:
-            out.append(list(d))  # force generator resolution for checks
+    out = []
+    for d in actual_data:
+        out.append(list(d))  # force generator resolution for checks
 
-        self.assertEqual(out, [[9, 8, 7, 6], [5, 4, 3, 2], [1]])
+    assert out == [[9, 8, 7, 6], [5, 4, 3, 2], [1]]
 
-    def test_grouper_with_stop_value(self):
-        # given
-        actual_data = utils.grouper(((i, i + 1) for i in range(0, 9)), 2)
 
-        out = []
-        for d in actual_data:
-            out.append(list(d))  # force generator resolution for checks
+def test_grouper_with_stop_value():
+    # given
+    actual_data = utils.grouper(((i, i + 1) for i in range(0, 9)), 2)
 
-        self.assertEqual(
-            out,
-            [
-                [(0, 1), (1, 2)],
-                [(2, 3), (3, 4)],
-                [(4, 5), (5, 6)],
-                [(6, 7), (7, 8)],
-                [(8, 9)],
-            ],
-        )
+    out = []
+    for d in actual_data:
+        out.append(list(d))  # force generator resolution for checks
 
-        # given
-        actual_data = utils.grouper((i for i in range(9, 0, -1)), 4)
+    assert out == [
+        [(0, 1), (1, 2)],
+        [(2, 3), (3, 4)],
+        [(4, 5), (5, 6)],
+        [(6, 7), (7, 8)],
+        [(8, 9)],
+    ]
 
-        out = []
-        for d in actual_data:
-            out.append(list(d))  # force generator resolution for checks
+    # given
+    actual_data = utils.grouper((i for i in range(9, 0, -1)), 4)
 
-        self.assertEqual(out, [[9, 8, 7, 6], [5, 4, 3, 2], [1]])
+    out = []
+    for d in actual_data:
+        out.append(list(d))  # force generator resolution for checks
 
-    def test_backslashescape_errors(self):
-        raw_data_err = b"abcd\x80"
-        with self.assertRaises(UnicodeDecodeError):
-            raw_data_err.decode("utf-8", "strict")
+    assert out == [[9, 8, 7, 6], [5, 4, 3, 2], [1]]
 
-        self.assertEqual(
-            raw_data_err.decode("utf-8", "backslashescape"), "abcd\\x80",
-        )
 
-        raw_data_ok = b"abcd\xc3\xa9"
-        self.assertEqual(
-            raw_data_ok.decode("utf-8", "backslashescape"),
-            raw_data_ok.decode("utf-8", "strict"),
-        )
+def test_iter_chunks():
+    def chunks(input_, remainder):
+        return list(utils.iter_chunks(input_, 3, remainder=remainder))
 
-        unicode_data = "abcdef\u00a3"
-        self.assertEqual(
-            unicode_data.encode("ascii", "backslashescape"), b"abcdef\\xa3",
-        )
+    # all even, remainder=False
+    assert chunks(["ab", "cd", "ef"], False) == ["abc", "def"]
+    assert chunks(["abc", "def"], False) == ["abc", "def"]
+    assert chunks(["abcd", "ef"], False) == ["abc", "def"]
 
-    def test_encode_with_unescape(self):
-        valid_data = "\\x01020304\\x00"
-        valid_data_encoded = b"\x01020304\x00"
+    # all even, remainder=True
+    assert chunks(["ab", "cd", "ef"], True) == ["abc", "def"]
+    assert chunks(["abc", "def"], True) == ["abc", "def"]
+    assert chunks(["abcd", "ef"], True) == ["abc", "def"]
 
-        self.assertEqual(valid_data_encoded, utils.encode_with_unescape(valid_data))
+    # uneven, remainder=False
+    assert chunks([], False) == []
+    assert chunks(["ab"], False) == []
+    assert chunks(["ab", "cd", "ef", "g"], False) == ["abc", "def"]
+    assert chunks(["ab", "cd", "efg"], False) == ["abc", "def"]
+    assert chunks(["abc", "def", "g"], False) == ["abc", "def"]
+    assert chunks(["abcd", "ef", "g"], False) == ["abc", "def"]
 
-    def test_encode_with_unescape_invalid_escape(self):
-        invalid_data = "test\\abcd"
+    # uneven, remainder=True
+    assert chunks([], True) == []
+    assert chunks(["ab"], True) == ["ab"]
+    assert chunks(["ab", "cd", "ef", "g"], True) == ["abc", "def", "g"]
+    assert chunks(["ab", "cd", "efg"], True) == ["abc", "def", "g"]
+    assert chunks(["abc", "def", "g"], True) == ["abc", "def", "g"]
+    assert chunks(["abcd", "ef", "g"], True) == ["abc", "def", "g"]
 
-        with self.assertRaises(ValueError) as exc:
-            utils.encode_with_unescape(invalid_data)
 
-        self.assertIn("invalid escape", exc.exception.args[0])
-        self.assertIn("position 4", exc.exception.args[0])
+def test_backslashescape_errors():
+    raw_data_err = b"abcd\x80"
+    with pytest.raises(UnicodeDecodeError):
+        raw_data_err.decode("utf-8", "strict")
 
-    def test_decode_with_escape(self):
-        backslashes = b"foo\\bar\\\\baz"
-        backslashes_escaped = "foo\\\\bar\\\\\\\\baz"
+    assert raw_data_err.decode("utf-8", "backslashescape") == "abcd\\x80"
 
-        self.assertEqual(
-            backslashes_escaped, utils.decode_with_escape(backslashes),
-        )
+    raw_data_ok = b"abcd\xc3\xa9"
+    assert raw_data_ok.decode("utf-8", "backslashescape") == raw_data_ok.decode(
+        "utf-8", "strict"
+    )
 
-        valid_utf8 = b"foo\xc3\xa2"
-        valid_utf8_escaped = "foo\u00e2"
+    unicode_data = "abcdef\u00a3"
+    assert unicode_data.encode("ascii", "backslashescape") == b"abcdef\\xa3"
 
-        self.assertEqual(
-            valid_utf8_escaped, utils.decode_with_escape(valid_utf8),
-        )
 
-        invalid_utf8 = b"foo\xa2"
-        invalid_utf8_escaped = "foo\\xa2"
+def test_encode_with_unescape():
+    valid_data = "\\x01020304\\x00"
+    valid_data_encoded = b"\x01020304\x00"
 
-        self.assertEqual(
-            invalid_utf8_escaped, utils.decode_with_escape(invalid_utf8),
-        )
+    assert valid_data_encoded == utils.encode_with_unescape(valid_data)
 
-        valid_utf8_nul = b"foo\xc3\xa2\x00"
-        valid_utf8_nul_escaped = "foo\u00e2\\x00"
 
-        self.assertEqual(
-            valid_utf8_nul_escaped, utils.decode_with_escape(valid_utf8_nul),
-        )
+def test_encode_with_unescape_invalid_escape():
+    invalid_data = "test\\abcd"
 
-    def test_commonname(self):
-        # when
-        actual_commonname = utils.commonname("/some/where/to/", "/some/where/to/go/to")
-        # then
-        self.assertEqual("go/to", actual_commonname)
+    with pytest.raises(ValueError) as exc:
+        utils.encode_with_unescape(invalid_data)
 
-        # when
-        actual_commonname2 = utils.commonname(
-            b"/some/where/to/", b"/some/where/to/go/to"
-        )
-        # then
-        self.assertEqual(b"go/to", actual_commonname2)
+    assert "invalid escape" in exc.value.args[0]
+    assert "position 4" in exc.value.args[0]
+
+
+def test_decode_with_escape():
+    backslashes = b"foo\\bar\\\\baz"
+    backslashes_escaped = "foo\\\\bar\\\\\\\\baz"
+
+    assert backslashes_escaped == utils.decode_with_escape(backslashes)
+
+    valid_utf8 = b"foo\xc3\xa2"
+    valid_utf8_escaped = "foo\u00e2"
+
+    assert valid_utf8_escaped == utils.decode_with_escape(valid_utf8)
+
+    invalid_utf8 = b"foo\xa2"
+    invalid_utf8_escaped = "foo\\xa2"
+
+    assert invalid_utf8_escaped == utils.decode_with_escape(invalid_utf8)
+
+    valid_utf8_nul = b"foo\xc3\xa2\x00"
+    valid_utf8_nul_escaped = "foo\u00e2\\x00"
+
+    assert valid_utf8_nul_escaped == utils.decode_with_escape(valid_utf8_nul)
+
+
+def test_commonname():
+    # when
+    actual_commonname = utils.commonname("/some/where/to/", "/some/where/to/go/to")
+    # then
+    assert "go/to" == actual_commonname
+
+    # when
+    actual_commonname2 = utils.commonname(b"/some/where/to/", b"/some/where/to/go/to")
+    # then
+    assert b"go/to" == actual_commonname2
+
+
+def test_numfile_sotkey():
+    assert utils.numfile_sortkey("00-xxx.sql") == (0, "-xxx.sql")
+    assert utils.numfile_sortkey("01-xxx.sql") == (1, "-xxx.sql")
+    assert utils.numfile_sortkey("10-xxx.sql") == (10, "-xxx.sql")
+    assert utils.numfile_sortkey("99-xxx.sql") == (99, "-xxx.sql")
+    assert utils.numfile_sortkey("100-xxx.sql") == (100, "-xxx.sql")
+    assert utils.numfile_sortkey("00100-xxx.sql") == (100, "-xxx.sql")
+    assert utils.numfile_sortkey("1.sql") == (1, ".sql")
+    assert utils.numfile_sortkey("1") == (1, "")
+    assert utils.numfile_sortkey("toto-01.sql") == (999999, "toto-01.sql")
+
+
+def test_basename_sotkey():
+    assert utils.basename_sortkey("00-xxx.sql") == (0, "-xxx.sql")
+    assert utils.basename_sortkey("path/to/00-xxx.sql") == (0, "-xxx.sql")

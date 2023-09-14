@@ -1,12 +1,15 @@
-# Copyright (C) 2015  The Software Heritage developers
+# Copyright (C) 2015-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import os
+from pathlib import Path
 import shutil
-import pytest
+
 import pkg_resources.extern.packaging.version
+import pytest
+import yaml
 
 from swh.core import config
 
@@ -14,9 +17,9 @@ pytest_v = pkg_resources.get_distribution("pytest").parsed_version
 if pytest_v < pkg_resources.extern.packaging.version.parse("3.9"):
 
     @pytest.fixture
-    def tmp_path(request):
-        import tempfile
+    def tmp_path():
         import pathlib
+        import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             yield pathlib.Path(tmpdir)
@@ -63,14 +66,14 @@ parsed_conffile = {
 @pytest.fixture
 def swh_config(tmp_path):
     # create a temporary folder
-    conffile = tmp_path / "config.ini"
-    conf_contents = """[main]
-a = 1
-b = this is a string
-c = true
-h = false
-ls = list, of, strings
-li = 1, 2, 3, 4
+    conffile = tmp_path / "config.yml"
+    conf_contents = """
+a: 1
+b: this is a string
+c: true
+h: false
+ls: list, of, strings
+li: 1, 2, 3, 4
 """
     conffile.open("w").write(conf_contents)
     return conffile
@@ -100,7 +103,7 @@ def swh_config_unreadable_dir(swh_config):
 @pytest.fixture
 def swh_config_empty(tmp_path):
     # create a temporary folder
-    conffile = tmp_path / "config.ini"
+    conffile = tmp_path / "config.yml"
     conffile.touch()
     return conffile
 
@@ -113,6 +116,28 @@ def test_read(swh_config):
     assert res == parsed_conffile
 
 
+def test_read_dotyaml(swh_config):
+    swh_config2 = Path(str(swh_config).replace(".yml", ".yaml"))
+    swh_config.rename(swh_config2)
+    # when
+    res = config.read(swh_config2, default_conf)
+
+    # then
+    assert res == parsed_conffile
+
+
+def test_read_no_default_conf(swh_config):
+    """If no default config if provided to read, this should directly parse the config file
+    yaml
+
+    """
+    config_path = str(swh_config)
+    actual_config = config.read(config_path)
+    with open(config_path) as f:
+        expected_config = yaml.safe_load(f)
+    assert actual_config == expected_config
+
+
 def test_read_empty_file():
     # when
     res = config.read(None, default_conf)
@@ -123,7 +148,7 @@ def test_read_empty_file():
 
 def test_support_non_existing_conffile(tmp_path):
     # when
-    res = config.read(str(tmp_path / "void.ini"), default_conf)
+    res = config.read(str(tmp_path / "void.yml"), default_conf)
 
     # then
     assert res == parsed_default_conf
@@ -156,7 +181,7 @@ def test_merge_default_configs():
 
 
 def test_priority_read_nonexist_conf(swh_config):
-    noexist = str(swh_config.parent / "void.ini")
+    noexist = str(swh_config.parent / "void.yml")
     # when
     res = config.priority_read([noexist, str(swh_config)], default_conf)
 
@@ -165,8 +190,8 @@ def test_priority_read_nonexist_conf(swh_config):
 
 
 def test_priority_read_conf_nonexist_empty(swh_config):
-    noexist = swh_config.parent / "void.ini"
-    empty = swh_config.parent / "empty.ini"
+    noexist = swh_config.parent / "void.yml"
+    empty = swh_config.parent / "empty.yml"
     empty.touch()
 
     # when
@@ -179,8 +204,8 @@ def test_priority_read_conf_nonexist_empty(swh_config):
 
 
 def test_priority_read_empty_conf_nonexist(swh_config):
-    noexist = swh_config.parent / "void.ini"
-    empty = swh_config.parent / "empty.ini"
+    noexist = swh_config.parent / "void.yml"
+    empty = swh_config.parent / "empty.yml"
     empty.touch()
 
     # when
@@ -193,12 +218,12 @@ def test_priority_read_empty_conf_nonexist(swh_config):
 
 
 def test_swh_config_paths():
-    res = config.swh_config_paths("foo/bar.ini")
+    res = config.swh_config_paths("foo/bar.yml")
 
     assert res == [
-        "~/.config/swh/foo/bar.ini",
-        "~/.swh/foo/bar.ini",
-        "/etc/softwareheritage/foo/bar.ini",
+        "~/.config/swh/foo/bar.yml",
+        "~/.swh/foo/bar.yml",
+        "/etc/softwareheritage/foo/bar.yml",
     ]
 
 
@@ -312,3 +337,42 @@ def test_merge_config_type_error():
             config.merge_configs({"a": v}, {"a": {}})
         with pytest.raises(TypeError):
             config.merge_configs({"a": {}}, {"a": v})
+
+
+def test_load_from_envvar_no_environment_var_swh_config_filename_set():
+    """Without SWH_CONFIG_FILENAME set, load_from_envvar raises"""
+
+    with pytest.raises(AssertionError, match="SWH_CONFIG_FILENAME environment"):
+        config.load_from_envvar()
+
+
+def test_load_from_envvar_no_default_config(swh_config, monkeypatch):
+    config_path = str(swh_config)
+    monkeypatch.setenv("SWH_CONFIG_FILENAME", config_path)
+
+    actual_config = config.load_from_envvar()
+
+    expected_config = config.read(config_path)
+    assert actual_config == expected_config
+
+
+def test_load_from_envvar_with_default_config(swh_config, monkeypatch):
+    default_config = {
+        "number": 666,
+        "something-cool": ["something", "cool"],
+    }
+
+    config_path = str(swh_config)
+    monkeypatch.setenv("SWH_CONFIG_FILENAME", config_path)
+
+    actual_config = config.load_from_envvar(default_config)
+
+    expected_config = config.read(config_path)
+    expected_config.update(
+        {
+            "number": 666,
+            "something-cool": ["something", "cool"],
+        }
+    )
+
+    assert actual_config == expected_config

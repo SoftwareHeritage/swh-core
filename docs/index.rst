@@ -1,10 +1,6 @@
 .. _swh-core:
 
-Software Heritage - Core foundations
-====================================
-
-Low-level utilities and helpers used by almost all other modules in the stack.
-
+.. include:: README.rst
 
 Reference Documentation
 -----------------------
@@ -12,4 +8,14 @@ Reference Documentation
 .. toctree::
    :maxdepth: 2
 
-   /apidoc/swh.core
+   cli
+   db
+
+.. only:: standalone_package_doc
+
+   Indices and tables
+   ------------------
+
+   * :ref:`genindex`
+   * :ref:`modindex`
+   * :ref:`search`

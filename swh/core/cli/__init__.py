@@ -1,28 +1,51 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2023  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import logging
-import logging.config
-import signal
+import warnings
 
 import click
 import pkg_resources
-import yaml
-
-from ..sentry import init_sentry
-
-LOG_LEVEL_NAMES = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 logger = logging.getLogger(__name__)
 
 
+class SWHHelpFormatter(click.HelpFormatter):
+    """A subclass of click's HelpFormatter which converts some :ref: to links
+    to the SWH documentation
+    """
+
+    _template = (
+        "{key} key: https://docs.softwareheritage.org/devel/configuration.html#{ref}"
+    )
+
+    def write_text(self, text):
+        import re
+
+        text = re.sub(
+            ":ref:`(?P<ref>cli-config-(?P<key>.*?))`",
+            lambda m: self._template.format(**m.groupdict()),
+            text,
+        )
+        text = re.sub(
+            ":mod:`(.*?)`",
+            r"https://docs.softwareheritage.org/devel/apidoc/\1.html",
+            text,
+        )
+        return super().write_text(text)
+
+
 class AliasedGroup(click.Group):
-    """A simple Group that supports command aliases, as well as notes related to
-    options"""
+    """A simple Group that supports:
+
+    * command aliases
+    * notes related to options
+
+    """
 
     def __init__(self, name=None, commands=None, **attrs):
         self.option_notes = attrs.pop("option_notes", None)
@@ -51,12 +74,26 @@ def clean_exit_on_signal(signal, frame):
     raise SystemExit(0)
 
 
+def validate_loglevel_params(ctx, param, values):
+    """Validate the --log-level parameters, with multiple values."""
+    if values is None:
+        return None
+
+    from swh.core.logging import BadLogLevel, validate_loglevel
+
+    try:
+        module_log_levels = [validate_loglevel(value) for value in values]
+    except BadLogLevel as e:
+        raise click.BadParameter(e)
+    return module_log_levels
+
+
 @click.group(
     context_settings=CONTEXT_SETTINGS,
     cls=AliasedGroup,
     option_notes="""\
-If both options are present, --log-level will override the root logger
-configuration set in --log-config.
+If both options are present, --log-level values will override the configuration
+in --log-config.
 
 The --log-config YAML must conform to the logging.config.dictConfig schema
 documented at https://docs.python.org/3/library/logging.config.html.
@@ -65,14 +102,21 @@ documented at https://docs.python.org/3/library/logging.config.html.
 @click.option(
     "--log-level",
     "-l",
+    "log_levels",
     default=None,
-    type=click.Choice(LOG_LEVEL_NAMES),
-    help="Log level (defaults to INFO).",
+    callback=validate_loglevel_params,
+    multiple=True,
+    help=(
+        "Log level (defaults to INFO). "
+        "Can override the log level for a specific module, by using the "
+        "``specific.module:LOGLEVEL`` syntax (e.g. ``--log-level swh.core:DEBUG`` "
+        "will enable DEBUG logging for swh.core)."
+    ),
 )
 @click.option(
     "--log-config",
     default=None,
-    type=click.File("r"),
+    type=click.Path(exists=True, readable=True),
     help="Python yaml logging configuration file.",
 )
 @click.option(
@@ -85,26 +129,24 @@ documented at https://docs.python.org/3/library/logging.config.html.
     help="Enable debugging of sentry",
 )
 @click.pass_context
-def swh(ctx, log_level, log_config, sentry_dsn, sentry_debug):
-    """Command line interface for Software Heritage.
-    """
+def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
+    """Command line interface for Software Heritage."""
+    import signal
+
+    from swh.core.logging import logging_configure
+
+    from ..sentry import init_sentry
+
     signal.signal(signal.SIGTERM, clean_exit_on_signal)
     signal.signal(signal.SIGINT, clean_exit_on_signal)
 
-    init_sentry(sentry_dsn, debug=sentry_debug)
+    init_sentry(sentry_dsn=sentry_dsn, debug=sentry_debug)
 
-    if log_level is None and log_config is None:
-        log_level = "INFO"
-
-    if log_config:
-        logging.config.dictConfig(yaml.safe_load(log_config.read()))
-
-    if log_level:
-        log_level = logging.getLevelName(log_level)
-        logging.root.setLevel(log_level)
+    set_default_loglevel = logging_configure(log_levels, log_config)
 
     ctx.ensure_object(dict)
-    ctx.obj["log_level"] = log_level
+    ctx.obj["log_level"] = set_default_loglevel
+    ctx.__class__.formatter_class = SWHHelpFormatter
 
 
 def main():
@@ -115,9 +157,19 @@ def main():
     for entry_point in pkg_resources.iter_entry_points("swh.cli.subcommands"):
         try:
             cmd = entry_point.load()
-            swh.add_command(cmd, name=entry_point.name)
+            if isinstance(cmd, click.BaseCommand):
+                # for BW compat, auto add click commands
+                warnings.warn(
+                    f"{entry_point.name}: automagic addition of click commands "
+                    f"to the main swh group is deprecated",
+                    DeprecationWarning,
+                )
+                swh.add_command(cmd, name=entry_point.name)
+            # otherwise it's expected to be a module which has been loaded
+            # it's the responsibility of the click commands/groups in this
+            # module to transitively have the main swh group as parent.
         except Exception as e:
-            logger.warning("Could not load subcommand %s: %s", entry_point.name, str(e))
+            logger.warning("Could not load subcommand %s: %r", entry_point.name, e)
 
     return swh(auto_envvar_prefix="SWH")
 
