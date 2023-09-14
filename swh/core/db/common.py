@@ -45,7 +45,7 @@ def _check_no_transaction(f_name):
         if "db" in frame.f_locals and "cur" in frame.f_locals:
             raise AssertionError(
                 f'Calling function {f_name} without "db" and "cur" arguments '
-                "from a function ({frame.f_code.co_name}) with these variables."
+                f"from a function ({frame.f_code.co_name}) with these variables."
             )
         frame = frame.f_back
 
