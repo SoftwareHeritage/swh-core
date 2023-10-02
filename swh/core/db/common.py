@@ -43,10 +43,12 @@ def _check_no_transaction(f_name):
     frame = sys._getframe().f_back.f_back
     while frame:
         if "db" in frame.f_locals and "cur" in frame.f_locals:
-            raise AssertionError(
-                f'Calling function {f_name} without "db" and "cur" arguments '
-                f"from a function ({frame.f_code.co_name}) with these variables."
-            )
+            cur = frame.f_locals["cur"]
+            if hasattr(cur, "closed") and not cur.closed:
+                raise AssertionError(
+                    f'Calling function {f_name} without "db" and "cur" arguments '
+                    f"from a function ({frame.f_code.co_name}) with these variables."
+                )
         frame = frame.f_back
 
 
