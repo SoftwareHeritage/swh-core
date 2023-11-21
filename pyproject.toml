@@ -27,15 +27,13 @@ testing_core = {file = "requirements-test.txt"}
 logging = {file = ["requirements-logging.txt"]}
 db = {file = ["requirements-db.txt", "requirements-db-pytestplugin.txt"]}
 http = {file = "requirements-http.txt"}
-github = {file = ["requirements-github.txt"]}
 # kitchen sink, please do not use
 testing = {file = [
         "requirements-test.txt",
         "requirements-logging.txt",
         "requirements-http.txt",
         "requirements-db.txt",
-        "requirements-db-pytestplugin.txt",
-        "requirements-github.txt"]}
+        "requirements-db-pytestplugin.txt"]}
 
 [project.entry-points.console_scripts]
 "swh" = "swh.core.cli:main"
