@@ -364,7 +364,8 @@ def test_db_transaction_signature():
 
 
 def test_db_transaction_nested(mocker):
-    expected_cur = object()
+    expected_cur = Mock(spec=psycopg2.extensions.cursor)
+    expected_cur.closed = False
 
     called = False
 
