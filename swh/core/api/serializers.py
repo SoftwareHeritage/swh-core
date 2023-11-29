@@ -175,7 +175,7 @@ class SWHJSONEncoder(json.JSONEncoder):
         self.encoders = get_encoders(extra_encoders, with_json=True)
 
     def default(self, o: Any) -> Union[Dict[str, Union[Dict[str, int], str]], list]:
-        for (type_, type_name, encoder) in self.encoders:
+        for type_, type_name, encoder in self.encoders:
             if isinstance(o, type_):
                 return {
                     "swhtype": type_name,
@@ -263,7 +263,7 @@ def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
         if isinstance(obj, types.GeneratorType):
             return list(obj)
 
-        for (type_, type_name, encoder) in encoders:
+        for type_, type_name, encoder in encoders:
             if isinstance(obj, type_):
                 return {
                     b"swhtype": type_name,

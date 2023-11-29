@@ -167,7 +167,7 @@ class MetaRPCClient(type):
                 break
             backend_class = getattr(base, "backend_class", None)
         if backend_class:
-            for (meth_name, meth) in backend_class.__dict__.items():
+            for meth_name, meth in backend_class.__dict__.items():
                 if hasattr(meth, "_endpoint_path"):
                     cls.__add_endpoint(meth_name, meth, attributes)
         return super().__new__(cls, name, bases, attributes)
@@ -506,7 +506,7 @@ class RPCServerApp(Flask):
         self._register_error_handlers()
 
     def _register_error_handlers(self):
-        for (exception, status_code) in self.exception_status_codes:
+        for exception, status_code in self.exception_status_codes:
             if isinstance(exception, str):
                 (module_path, class_name) = exception.rsplit(".", 1)
                 try:
@@ -528,7 +528,7 @@ class RPCServerApp(Flask):
 
         if backend_class is not None:
             backend_factory = backend_factory or backend_class
-            for (meth_name, meth) in backend_class.__dict__.items():
+            for meth_name, meth in backend_class.__dict__.items():
                 if hasattr(meth, "_endpoint_path"):
                     self.__add_endpoint(meth_name, meth, backend_factory)
 
