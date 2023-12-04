@@ -131,7 +131,7 @@ class RPCServerApp(aiohttp.web.Application):
         self.backend_class = backend_class
         if backend_class is not None:
             backend_factory = backend_factory or backend_class
-            for (meth_name, meth) in backend_class.__dict__.items():
+            for meth_name, meth in backend_class.__dict__.items():
                 if hasattr(meth, "_endpoint_path"):
                     path = meth._endpoint_path
                     http_method = meth._method

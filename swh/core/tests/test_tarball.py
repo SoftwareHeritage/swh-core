@@ -123,7 +123,7 @@ def test_uncompress_tar_failure(tmp_path, datadir):
 
     assert not os.path.exists(tarpath)
 
-    with pytest.raises(ValueError, match="Problem during unpacking"):
+    with pytest.raises(FileNotFoundError, match="No such file or directory"):
         tarball.uncompress(tarpath, tmp_path)
 
 
@@ -282,3 +282,18 @@ def test_uncompress_archive_no_extension(tmp_path, datadir):
         shutil.copy(archive_file_path, archive_file_md5sum)
         tarball.uncompress(archive_file_md5sum, extract_dir)
         assert len(os.listdir(extract_dir)) > 0
+
+
+def test_uncompress_tar_incorrect_extension(tmp_path, datadir):
+    """Unpack tarball with an incorrect extension should be ok"""
+    filename = "groff-1.02.tar.Z"
+    orig_tarpath = os.path.join(datadir, "archives", filename)
+
+    tarpath = os.path.join(tmp_path, filename.replace(".tar.Z", ".tar.gz"))
+    shutil.copyfile(orig_tarpath, tarpath)
+    assert os.path.exists(tarpath)
+
+    extract_dir = os.path.join(tmp_path, filename)
+    tarball.uncompress(tarpath, extract_dir)
+
+    assert len(os.listdir(extract_dir)) > 0

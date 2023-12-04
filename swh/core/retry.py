@@ -18,7 +18,9 @@ def is_throttling_exception(e: Exception) -> bool:
     a response with status code 429 (too many requests).
     """
     return (
-        isinstance(e, HTTPError) and e.response.status_code == codes.too_many_requests
+        isinstance(e, HTTPError)
+        and e.response is not None
+        and e.response.status_code == codes.too_many_requests
     )
 
 
@@ -27,7 +29,11 @@ def is_retryable_exception(e: Exception) -> bool:
     Checks if an exception is worth retrying (connection, throttling or a server error).
     """
     is_connection_error = isinstance(e, ConnectionError)
-    is_500_error = isinstance(e, HTTPError) and e.response.status_code >= 500
+    is_500_error = (
+        isinstance(e, HTTPError)
+        and e.response is not None
+        and e.response.status_code >= 500
+    )
 
     return is_connection_error or is_throttling_exception(e) or is_500_error
 

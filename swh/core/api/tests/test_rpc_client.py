@@ -82,7 +82,6 @@ def rpc_client(requests_mock):
 
 
 def test_client(rpc_client):
-
     assert hasattr(rpc_client, "test_endpoint")
     assert hasattr(rpc_client, "something")
 

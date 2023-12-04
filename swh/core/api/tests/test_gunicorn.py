@@ -118,7 +118,6 @@ def test_post_fork_no_flask():
 
 
 def test_post_fork_override_logging_events_envvar():
-
     with patch("sentry_sdk.init") as sentry_sdk_init, patch.dict(
         os.environ,
         {"SWH_SENTRY_DSN": "test_dsn", "SWH_SENTRY_DISABLE_LOGGING_EVENTS": "false"},

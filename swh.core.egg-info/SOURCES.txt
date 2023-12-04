@@ -1,3 +1,4 @@
+.copier-answers.yml
 .git-blame-ignore-revs
 .gitignore
 .pre-commit-config.yaml
@@ -5,7 +6,6 @@ AUTHORS
 CODE_OF_CONDUCT.md
 CONTRIBUTORS
 LICENSE
-MANIFEST.in
 Makefile
 Makefile.local
 README.rst
@@ -15,14 +15,12 @@ pyproject.toml
 pytest.ini
 requirements-db-pytestplugin.txt
 requirements-db.txt
-requirements-github.txt
 requirements-http.txt
 requirements-logging.txt
 requirements-swh.txt
 requirements-test.txt
 requirements.txt
 setup.cfg
-setup.py
 tox.ini
 docs/.gitignore
 docs/Makefile
@@ -33,7 +31,6 @@ docs/db.rst
 docs/index.rst
 docs/_static/.placeholder
 docs/_templates/.placeholder
-swh/__init__.py
 swh/__main__.py
 swh.core.egg-info/PKG-INFO
 swh.core.egg-info/SOURCES.txt
