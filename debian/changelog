@@ -1,3 +1,14 @@
+swh-core (2.25.0-1~swh1) unstable-swh; urgency=medium
+
+  * New upstream release 2.25.0     - (tagged by David Douard
+    <david.douard@sdfa3.org> on 2023-12-04 17:10:05 +0100)
+  * Upstream changes:     - v2.25.0     - use mimetype to guess the
+    tarball format (instead of filename     - extension),     - migrate
+    to copier, PEP420 and pyproject.toml based packaging,     - remove
+    the 'github' package extra.
+
+ -- Software Heritage autobuilder (on jenkins-debian1) <jenkins@jenkins-debian1.internal.softwareheritage.org>  Mon, 04 Dec 2023 16:26:37 +0000
+
 swh-core (2.24.0-1~swh1) unstable-swh; urgency=medium
 
   * New upstream release 2.24.0     - (tagged by Antoine R. Dumont
