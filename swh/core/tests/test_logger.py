@@ -58,7 +58,18 @@ def test_flatten_dict():
     assert list(logger.flatten({})) == []
     assert list(logger.flatten({"a": 1})) == [("a", 1)]
 
-    assert sorted(logger.flatten({"a": 1, "b": (2, 3,), "c": {"d": 4, "e": "f"}})) == [
+    assert sorted(
+        logger.flatten(
+            {
+                "a": 1,
+                "b": (
+                    2,
+                    3,
+                ),
+                "c": {"d": 4, "e": "f"},
+            }
+        )
+    ) == [
         ("a", 1),
         ("b_0", 2),
         ("b_1", 3),

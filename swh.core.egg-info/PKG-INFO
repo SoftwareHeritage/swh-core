@@ -1,14 +1,13 @@
 Metadata-Version: 2.1
 Name: swh.core
-Version: 2.24.0
+Version: 2.25.0
 Summary: Software Heritage core utilities
-Home-page: https://forge.softwareheritage.org/diffusion/DCORE/
-Author: Software Heritage developers
-Author-email: swh-devel@inria.fr
-Project-URL: Bug Reports, https://forge.softwareheritage.org/maniphest
+Author-email: Software Heritage developers <swh-devel@inria.fr>
+Project-URL: Homepage, https://gitlab.softwareheritage.org/swh/devel/swh-core
+Project-URL: Bug Reports, https://gitlab.softwareheritage.org/swh/devel/swh-core/-/issues
 Project-URL: Funding, https://www.softwareheritage.org/donate
-Project-URL: Source, https://forge.softwareheritage.org/source/swh-core
 Project-URL: Documentation, https://docs.softwareheritage.org/devel/swh-core/
+Project-URL: Source, https://gitlab.softwareheritage.org/swh/devel/swh-core.git
 Classifier: Programming Language :: Python :: 3
 Classifier: Intended Audience :: Developers
 Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
@@ -16,14 +15,66 @@ Classifier: Operating System :: OS Independent
 Classifier: Development Status :: 5 - Production/Stable
 Requires-Python: >=3.7
 Description-Content-Type: text/x-rst
-Provides-Extra: testing-core
-Provides-Extra: logging
-Provides-Extra: db
-Provides-Extra: http
-Provides-Extra: github
-Provides-Extra: testing
 License-File: LICENSE
 License-File: AUTHORS
+Requires-Dist: click
+Requires-Dist: deprecated
+Requires-Dist: python-magic
+Requires-Dist: pyyaml
+Requires-Dist: requests
+Requires-Dist: sentry-sdk
+Requires-Dist: tenacity
+Provides-Extra: testing-core
+Requires-Dist: hypothesis>=3.11.0; extra == "testing-core"
+Requires-Dist: pytest; extra == "testing-core"
+Requires-Dist: pytest-mock; extra == "testing-core"
+Requires-Dist: pytz; extra == "testing-core"
+Requires-Dist: requests-mock; extra == "testing-core"
+Requires-Dist: types-click; extra == "testing-core"
+Requires-Dist: types-deprecated; extra == "testing-core"
+Requires-Dist: types-flask; extra == "testing-core"
+Requires-Dist: types-psycopg2; extra == "testing-core"
+Requires-Dist: types-pytz; extra == "testing-core"
+Requires-Dist: types-pyyaml; extra == "testing-core"
+Requires-Dist: types-requests; extra == "testing-core"
+Provides-Extra: logging
+Requires-Dist: systemd-python; extra == "logging"
+Provides-Extra: db
+Requires-Dist: psycopg2; extra == "db"
+Requires-Dist: typing-extensions; extra == "db"
+Requires-Dist: pytest-postgresql<4.0.0,>=3; extra == "db"
+Provides-Extra: http
+Requires-Dist: aiohttp; extra == "http"
+Requires-Dist: aiohttp_utils>=3.1.1; extra == "http"
+Requires-Dist: blinker; extra == "http"
+Requires-Dist: flask; extra == "http"
+Requires-Dist: iso8601; extra == "http"
+Requires-Dist: msgpack>=1.0.0; extra == "http"
+Requires-Dist: requests; extra == "http"
+Provides-Extra: testing
+Requires-Dist: hypothesis>=3.11.0; extra == "testing"
+Requires-Dist: pytest; extra == "testing"
+Requires-Dist: pytest-mock; extra == "testing"
+Requires-Dist: pytz; extra == "testing"
+Requires-Dist: requests-mock; extra == "testing"
+Requires-Dist: types-click; extra == "testing"
+Requires-Dist: types-deprecated; extra == "testing"
+Requires-Dist: types-flask; extra == "testing"
+Requires-Dist: types-psycopg2; extra == "testing"
+Requires-Dist: types-pytz; extra == "testing"
+Requires-Dist: types-pyyaml; extra == "testing"
+Requires-Dist: types-requests; extra == "testing"
+Requires-Dist: systemd-python; extra == "testing"
+Requires-Dist: aiohttp; extra == "testing"
+Requires-Dist: aiohttp_utils>=3.1.1; extra == "testing"
+Requires-Dist: blinker; extra == "testing"
+Requires-Dist: flask; extra == "testing"
+Requires-Dist: iso8601; extra == "testing"
+Requires-Dist: msgpack>=1.0.0; extra == "testing"
+Requires-Dist: requests; extra == "testing"
+Requires-Dist: psycopg2; extra == "testing"
+Requires-Dist: typing-extensions; extra == "testing"
+Requires-Dist: pytest-postgresql<4.0.0,>=3; extra == "testing"
 
 Software Heritage - Core foundations
 ====================================

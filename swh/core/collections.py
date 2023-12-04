@@ -37,7 +37,7 @@ class SortedList(Generic[SortedListKey, SortedListItem]):
         bisect.insort(self.data, (k, item))
 
     def __iter__(self) -> Iterator[SortedListItem]:
-        for (k, item) in self.data:
+        for k, item in self.data:
             yield item
 
     def iter_from(self, start_key: Any) -> Iterator[SortedListItem]:
@@ -47,7 +47,7 @@ class SortedList(Generic[SortedListKey, SortedListItem]):
         `(x for x in L if key(x) >= start_key)`)
         """
         from_index = bisect.bisect_left(self.data, (start_key,))
-        for (k, item) in itertools.islice(self.data, from_index, None):
+        for k, item in itertools.islice(self.data, from_index, None):
             yield item
 
     def iter_after(self, start_key: Any) -> Iterator[SortedListItem]:

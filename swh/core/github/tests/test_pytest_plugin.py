@@ -12,7 +12,6 @@ from swh.core.github.pytest_plugin import fake_time_sleep, fake_time_time
 
 @pytest.mark.parametrize("duration", [10, 20, -1])
 def test_fake_time_sleep(duration):
-
     if duration < 0:
         with pytest.raises(ValueError, match="negative"):
             fake_time_sleep(duration, [])
@@ -27,7 +26,6 @@ def test_fake_time_time():
 
 
 def test_monkeypatch_sleep_calls(monkeypatch_sleep_calls):
-
     sleeps = [10, 20, 30]
     for sleep in sleeps:
         # This adds the sleep number inside the monkeypatch_sleep_calls fixture

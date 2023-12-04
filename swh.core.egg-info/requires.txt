@@ -11,10 +11,6 @@ psycopg2
 typing-extensions
 pytest-postgresql<4.0.0,>=3
 
-[github]
-requests
-tenacity
-
 [http]
 aiohttp
 aiohttp_utils>=3.1.1
@@ -40,9 +36,7 @@ types-psycopg2
 types-pytz
 types-pyyaml
 types-requests
-psycopg2
-typing-extensions
-pytest-postgresql<4.0.0,>=3
+systemd-python
 aiohttp
 aiohttp_utils>=3.1.1
 blinker
@@ -50,9 +44,11 @@ flask
 iso8601
 msgpack>=1.0.0
 requests
-systemd-python
+psycopg2
+typing-extensions
+pytest-postgresql<4.0.0,>=3
 
-[testing-core]
+[testing_core]
 hypothesis>=3.11.0
 pytest
 pytest-mock

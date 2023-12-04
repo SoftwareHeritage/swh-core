@@ -1,3 +1,63 @@
+[project]
+name = "swh.core"
+authors = [
+    {name="Software Heritage developers", email="swh-devel@inria.fr"},
+]
+
+description = "Software Heritage core utilities"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Development Status :: 5 - Production/Stable",
+]
+dynamic = ["version", "dependencies", "optional-dependencies"]
+
+[tool.setuptools.packages.find]
+include = ["swh.*"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = "requirements.txt"}
+
+[tool.setuptools.dynamic.optional-dependencies]
+testing_core = {file = "requirements-test.txt"}
+logging = {file = ["requirements-logging.txt"]}
+db = {file = ["requirements-db.txt", "requirements-db-pytestplugin.txt"]}
+http = {file = "requirements-http.txt"}
+# kitchen sink, please do not use
+testing = {file = [
+        "requirements-test.txt",
+        "requirements-logging.txt",
+        "requirements-http.txt",
+        "requirements-db.txt",
+        "requirements-db-pytestplugin.txt"]}
+
+[project.entry-points.console_scripts]
+"swh" = "swh.core.cli:main"
+
+[project.entry-points."swh.cli.subcommands"]
+"swh.core.db" = "swh.core.cli.db"
+
+[project.entry-points.pytest11]
+"pytest_swh_core" = "swh.core.pytest_plugin"
+
+[project.urls]
+"Homepage" = "https://gitlab.softwareheritage.org/swh/devel/swh-core"
+"Bug Reports" = "https://gitlab.softwareheritage.org/swh/devel/swh-core/-/issues"
+"Funding" = "https://www.softwareheritage.org/donate"
+"Documentation" = "https://docs.softwareheritage.org/devel/swh-core/"
+"Source" = "https://gitlab.softwareheritage.org/swh/devel/swh-core.git"
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+fallback_version = "0.0.1"
+
 [tool.black]
 target-version = ['py37']
 
@@ -9,3 +69,4 @@ use_parentheses = true
 ensure_newline_before_comments = true
 line_length = 88
 force_sort_within_sections = true
+known_first_party = ['swh']
