@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: swh.core
-Version: 2.25.0
+Version: 2.26.0
 Summary: Software Heritage core utilities
 Author-email: Software Heritage developers <swh-devel@inria.fr>
 Project-URL: Homepage, https://gitlab.softwareheritage.org/swh/devel/swh-core
@@ -30,9 +30,7 @@ Requires-Dist: pytest; extra == "testing-core"
 Requires-Dist: pytest-mock; extra == "testing-core"
 Requires-Dist: pytz; extra == "testing-core"
 Requires-Dist: requests-mock; extra == "testing-core"
-Requires-Dist: types-click; extra == "testing-core"
 Requires-Dist: types-deprecated; extra == "testing-core"
-Requires-Dist: types-flask; extra == "testing-core"
 Requires-Dist: types-psycopg2; extra == "testing-core"
 Requires-Dist: types-pytz; extra == "testing-core"
 Requires-Dist: types-pyyaml; extra == "testing-core"
@@ -57,9 +55,7 @@ Requires-Dist: pytest; extra == "testing"
 Requires-Dist: pytest-mock; extra == "testing"
 Requires-Dist: pytz; extra == "testing"
 Requires-Dist: requests-mock; extra == "testing"
-Requires-Dist: types-click; extra == "testing"
 Requires-Dist: types-deprecated; extra == "testing"
-Requires-Dist: types-flask; extra == "testing"
 Requires-Dist: types-psycopg2; extra == "testing"
 Requires-Dist: types-pytz; extra == "testing"
 Requires-Dist: types-pyyaml; extra == "testing"

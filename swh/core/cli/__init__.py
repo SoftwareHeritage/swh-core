@@ -103,6 +103,7 @@ documented at https://docs.python.org/3/library/logging.config.html.
     "--log-level",
     "-l",
     "log_levels",
+    envvar="SWH_LOG_LEVEL",
     default=None,
     callback=validate_loglevel_params,
     multiple=True,
