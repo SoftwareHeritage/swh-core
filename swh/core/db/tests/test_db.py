@@ -245,7 +245,7 @@ test_db = factories.postgresql("postgresql_proc", dbname="test-db2")
 @pytest.fixture
 def db_with_data(test_db, request):
     """Fixture to initialize a db with some data out of the "INIT_SQL above"""
-    db = BaseDb.connect(test_db.dsn)
+    db = BaseDb.connect(test_db.info.dsn)
     with db.cursor() as cur:
         psycopg2.extras.register_default_jsonb(cur)
         cur.execute(INIT_SQL)

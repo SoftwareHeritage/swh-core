@@ -3,7 +3,6 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import copy
 import os
 import traceback
 
@@ -59,24 +58,19 @@ def swh_db_cli(cli_runner, monkeypatch, postgresql):
     the cli to run appropriately (when not specifying the --dbname flag)
 
     """
-    db_params = postgresql.get_dsn_parameters()
-    monkeypatch.setenv("PGHOST", db_params["host"])
-    monkeypatch.setenv("PGUSER", db_params["user"])
-    monkeypatch.setenv("PGPORT", db_params["port"])
+    monkeypatch.setenv("PGHOST", postgresql.info.host)
+    monkeypatch.setenv("PGUSER", postgresql.info.user)
+    monkeypatch.setenv("PGPORT", postgresql.info.port)
 
-    return cli_runner, db_params
+    return cli_runner, postgresql.info
 
 
 def craft_conninfo(test_db, dbname=None) -> str:
     """Craft conninfo string out of the test_db object. This also allows to override the
     dbname."""
-    db_params = test_db.get_dsn_parameters()
-    if dbname:
-        params = copy.deepcopy(db_params)
-        params["dbname"] = dbname
-    else:
-        params = db_params
-    return "postgresql://{user}@{host}:{port}/{dbname}".format(**params)
+    db_params = test_db.info
+    dbname = dbname if dbname else db_params.dbname
+    return f"postgresql://{db_params.user}@{db_params.host}:{db_params.port}/{dbname}"
 
 
 def test_cli_swh_db_create_and_init_db(cli_runner, postgresql, mock_import_swhmodule):
@@ -145,7 +139,7 @@ def test_cli_swh_db_initialization_works_with_flags(
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(postgresql.dsn).cursor() as cur:
+    with BaseDb.connect(postgresql.info.dsn).cursor() as cur:
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1
@@ -158,18 +152,18 @@ def test_cli_swh_db_initialization_with_env(
     module_name = "test.cli"  # it's mocked here
     cli_runner, db_params = swh_db_cli
     result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--dbname", db_params["dbname"]]
+        swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--dbname", db_params["dbname"]]
+        swhdb, ["init", module_name, "--dbname", db_params.dbname]
     )
 
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(postgresql.dsn).cursor() as cur:
+    with BaseDb.connect(postgresql.info.dsn).cursor() as cur:
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1
@@ -183,28 +177,28 @@ def test_cli_swh_db_initialization_idempotent(
     cli_runner, db_params = swh_db_cli
 
     result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--dbname", db_params["dbname"]]
+        swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--dbname", db_params["dbname"]]
+        swhdb, ["init", module_name, "--dbname", db_params.dbname]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--dbname", db_params["dbname"]]
+        swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--dbname", db_params["dbname"]]
+        swhdb, ["init", module_name, "--dbname", db_params.dbname]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(postgresql.dsn).cursor() as cur:
+    with BaseDb.connect(postgresql.info.dsn).cursor() as cur:
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1

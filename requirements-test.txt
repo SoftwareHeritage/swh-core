@@ -1,6 +1,7 @@
 hypothesis >= 3.11.0
 pytest
 pytest-mock
+pytest-postgresql > 5
 pytz
 requests-mock
 types-deprecated
