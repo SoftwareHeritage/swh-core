@@ -147,3 +147,16 @@ def test_sentry_main_package(mocker):
 
     init_sentry(SENTRY_DSN, main_package="swh.core")
     assert sentry_sdk_init.call_args_list[-1][1]["release"].startswith("swh.core@")
+
+
+@pytest.mark.parametrize("deferred_init", [False, True])
+def test_sentry_deferred_init(caplog, deferred_init):
+    init_sentry(None, deferred_init=deferred_init)
+    if not deferred_init:
+        assert caplog.records
+        assert (
+            caplog.records[0].message
+            == "Sentry DSN not provided, events will not be sent."
+        )
+    else:
+        assert not caplog.records

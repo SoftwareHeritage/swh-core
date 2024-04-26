@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2020  The Software Heritage developers
+# Copyright (C) 2019-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -49,6 +49,7 @@ def init_sentry(
     disable_logging_events: bool = False,
     integrations: Optional[List] = None,
     extra_kwargs: Optional[Dict] = None,
+    deferred_init: bool = False,
 ):
     """Configure the sentry integration
 
@@ -64,6 +65,8 @@ def init_sentry(
         :envvar:`SWH_SENTRY_DISABLE_LOGGING_EVENTS`
       integrations: list of dedicated Sentry integrations to include
       extra_kwargs: dict of additional parameters passed to :func:`sentry_sdk.init`
+      deferred_init: indicates that sentry will be properly initialized in subsequent
+        calls and that no warnings about missing DSN should be logged
 
     """
     if integrations is None:
@@ -79,19 +82,21 @@ def init_sentry(
         "SWH_SENTRY_DISABLE_LOGGING_EVENTS", disable_logging_events
     )
 
-    if sentry_dsn:
-        import sentry_sdk
+    if sentry_dsn is None and not deferred_init:
+        logger.warning("Sentry DSN not provided, events will not be sent.")
 
-        if disable_logging_events:
-            from sentry_sdk.integrations.logging import LoggingIntegration
+    import sentry_sdk
 
-            integrations.append(LoggingIntegration(event_level=None))
+    if disable_logging_events:
+        from sentry_sdk.integrations.logging import LoggingIntegration
 
-        sentry_sdk.init(
-            release=get_sentry_release(main_package),
-            environment=environment,
-            dsn=sentry_dsn,
-            integrations=integrations,
-            debug=debug,
-            **extra_kwargs,
-        )
+        integrations.append(LoggingIntegration(event_level=None))
+
+    sentry_sdk.init(
+        release=get_sentry_release(main_package),
+        environment=environment,
+        dsn=sentry_dsn,
+        integrations=integrations,
+        debug=debug,
+        **extra_kwargs,
+    )

@@ -1,4 +1,4 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -6,7 +6,6 @@
 import logging
 import textwrap
 from typing import List
-from unittest.mock import patch
 
 import click
 from click.testing import CliRunner
@@ -98,16 +97,22 @@ def test_swh_help(swhmain):
             assert_section_contains(result.output, section, snippet)
 
 
-def test_command(swhmain):
+def test_command(swhmain, mocker):
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
         click.echo("Hello SWH!")
 
     runner = CliRunner()
-    with patch("sentry_sdk.init") as sentry_sdk_init:
-        result = runner.invoke(swhmain, ["test"])
-    sentry_sdk_init.assert_not_called()
+    sentry_sdk_init = mocker.patch("sentry_sdk.init")
+    result = runner.invoke(swhmain, ["test"])
+    sentry_sdk_init.assert_called_once_with(
+        dsn=None,
+        debug=False,
+        integrations=[],
+        release=None,
+        environment=None,
+    )
     assert result.exit_code == 0
     assert result.output.strip() == "Hello SWH!"
 
@@ -151,15 +156,15 @@ def test_loglevel_debug(caplog, swhmain):
     assert result.output.strip() == """Hello SWH!"""
 
 
-def test_sentry(swhmain):
+def test_sentry(swhmain, mocker):
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
         click.echo("Hello SWH!")
 
     runner = CliRunner()
-    with patch("sentry_sdk.init") as sentry_sdk_init:
-        result = runner.invoke(swhmain, ["--sentry-dsn", "test_dsn", "test"])
+    sentry_sdk_init = mocker.patch("sentry_sdk.init")
+    result = runner.invoke(swhmain, ["--sentry-dsn", "test_dsn", "test"])
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
@@ -171,17 +176,17 @@ def test_sentry(swhmain):
     )
 
 
-def test_sentry_debug(swhmain):
+def test_sentry_debug(swhmain, mocker):
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
         click.echo("Hello SWH!")
 
     runner = CliRunner()
-    with patch("sentry_sdk.init") as sentry_sdk_init:
-        result = runner.invoke(
-            swhmain, ["--sentry-dsn", "test_dsn", "--sentry-debug", "test"]
-        )
+    sentry_sdk_init = mocker.patch("sentry_sdk.init")
+    result = runner.invoke(
+        swhmain, ["--sentry-dsn", "test_dsn", "--sentry-debug", "test"]
+    )
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
@@ -193,19 +198,19 @@ def test_sentry_debug(swhmain):
     )
 
 
-def test_sentry_env(swhmain):
+def test_sentry_env(swhmain, mocker):
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
         click.echo("Hello SWH!")
 
     runner = CliRunner()
-    with patch("sentry_sdk.init") as sentry_sdk_init:
-        env = {
-            "SWH_SENTRY_DSN": "test_dsn",
-            "SWH_SENTRY_DEBUG": "1",
-        }
-        result = runner.invoke(swhmain, ["test"], env=env, auto_envvar_prefix="SWH")
+    sentry_sdk_init = mocker.patch("sentry_sdk.init")
+    env = {
+        "SWH_SENTRY_DSN": "test_dsn",
+        "SWH_SENTRY_DEBUG": "1",
+    }
+    result = runner.invoke(swhmain, ["test"], env=env, auto_envvar_prefix="SWH")
     assert result.exit_code == 0
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
@@ -217,20 +222,20 @@ def test_sentry_env(swhmain):
     )
 
 
-def test_sentry_env_main_package(swhmain):
+def test_sentry_env_main_package(swhmain, mocker):
     @swhmain.command(name="test")
     @click.pass_context
     def swhtest(ctx):
         click.echo("Hello SWH!")
 
     runner = CliRunner()
-    with patch("sentry_sdk.init") as sentry_sdk_init:
-        env = {
-            "SWH_SENTRY_DSN": "test_dsn",
-            "SWH_MAIN_PACKAGE": "swh.core",
-            "SWH_SENTRY_ENVIRONMENT": "tests",
-        }
-        result = runner.invoke(swhmain, ["test"], env=env, auto_envvar_prefix="SWH")
+    sentry_sdk_init = mocker.patch("sentry_sdk.init")
+    env = {
+        "SWH_SENTRY_DSN": "test_dsn",
+        "SWH_MAIN_PACKAGE": "swh.core",
+        "SWH_SENTRY_ENVIRONMENT": "tests",
+    }
+    result = runner.invoke(swhmain, ["test"], env=env, auto_envvar_prefix="SWH")
     assert result.exit_code == 0
 
     version = pkg_resources.get_distribution("swh.core").version
