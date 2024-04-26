@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2021  The Software Heritage developers
+# Copyright (C) 2019-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -373,7 +373,7 @@ def statsd():
 @pytest.fixture
 def monkeypatch_sentry_transport():
     # Inspired by
-    # https://github.com/getsentry/sentry-python/blob/1.5.9/tests/conftest.py#L168-L184
+    # https://github.com/getsentry/sentry-python/blob/2.0.0/tests/conftest.py#L175-L219
 
     initialized = False
 
@@ -386,15 +386,18 @@ def monkeypatch_sentry_transport():
         hub.bind_client(client)
         client.transport = TestTransport()
 
-    class TestTransport:
+    from sentry_sdk.transport import Transport
+
+    class TestTransport(Transport):
         def __init__(self):
+            super().__init__()
             self.events = []
             self.envelopes = []
 
-        def capture_event(self, event):
-            self.events.append(event)
-
         def capture_envelope(self, envelope):
+            for item in envelope:
+                if item.headers.get("type") in ("event", "transaction"):
+                    self.events.append(item.payload.json)
             self.envelopes.append(envelope)
 
     with sentry_sdk.Hub(None):
@@ -405,3 +408,13 @@ def monkeypatch_sentry_transport():
 def sentry_events(monkeypatch_sentry_transport):
     monkeypatch_sentry_transport()
     return sentry_sdk.Hub.current.client.transport.events
+
+
+@pytest.fixture(autouse=True)
+def clean_scopes():
+    # https://github.com/getsentry/sentry-python/blob/2.0.0/tests/conftest.py#L61-L68
+    from sentry_sdk import scope
+
+    scope._global_scope = None
+    scope._isolation_scope.set(None)
+    scope._current_scope.set(None)

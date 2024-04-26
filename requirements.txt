@@ -3,5 +3,5 @@ deprecated
 python-magic
 pyyaml
 requests
-sentry-sdk
+sentry-sdk >= 2
 tenacity
