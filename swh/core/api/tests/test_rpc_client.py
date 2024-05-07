@@ -25,7 +25,7 @@ class ReraiseException(Exception):
 
 
 @pytest.fixture
-def rpc_client(requests_mock):
+def rpc_client_class(requests_mock):
     class TestStorage:
         @remote_api_endpoint("test_endpoint_url")
         def test_endpoint(self, test_data, db=None, cur=None):
@@ -78,7 +78,12 @@ def rpc_client(requests_mock):
 
     requests_mock.post(re.compile("mock://example.com/"), content=callback)
 
-    return Testclient(url="mock://example.com")
+    return Testclient
+
+
+@pytest.fixture
+def rpc_client(rpc_client_class):
+    return rpc_client_class(url="mock://example.com")
 
 
 def test_client(rpc_client):
@@ -190,3 +195,24 @@ def test_client_raise_remote_exception(rpc_client, requests_mock, status_code):
         assert isinstance(exc_info.value, TransientRemoteException)
     else:
         assert not isinstance(exc_info.value, TransientRemoteException)
+
+
+@pytest.mark.parametrize(
+    "timeout_arg,timeout_value",
+    [
+        pytest.param(None, None, id="default"),
+        pytest.param(1.0, 1.0, id="float"),
+        pytest.param((1, 2), (1, 2), id="tuple"),
+        pytest.param([1, 2], (1, 2), id="list"),
+    ],
+)
+def test_client_timeout_param(rpc_client_class, timeout_arg, timeout_value):
+    client = rpc_client_class(url="mock://example.com/", timeout=timeout_arg)
+    assert client.timeout == timeout_value
+
+
+def test_client_timeout_valueerror(rpc_client_class):
+    for timeout in ([], [1], [1, 2, 3]):
+        with pytest.raises(ValueError) as exc:
+            rpc_client_class(url="mock://example.com/", timeout=timeout)
+        assert repr(timeout) in str(exc.value)

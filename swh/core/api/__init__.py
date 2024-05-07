@@ -194,9 +194,27 @@ class MetaRPCClient(type):
 
 
 class RPCClient(metaclass=MetaRPCClient):
-    """Proxy to an internal SWH RPC"""
+    """Proxy to an internal SWH RPC.
 
-    backend_class = None  # type: ClassVar[Optional[type]]
+    Arguments:
+      url: base url for the RPC endpoints
+      timeout: request timeout. Can be a pair of floats, used to distinguish
+        between connection and read timeouts.
+      chunk_size: used for iteration on chunked responses
+      max_retries: number of automatic retries issued for requests
+      pool_connections: number of connections instantiated in the default connection pool
+      pool_maxsize: maximum size of the connection pool
+      adapter_kwargs: extra keyword arguments to pass to the
+        :class:`requests.adapters.HTTPAdapter`
+      api_exception: The exception class to raise in case of communication error
+        with the server.
+      reraise_exceptions: On server errors, if any of the exception classes in
+        this list has the same name as the error name, then the exception will
+        be instantiated and raised instead of a generic RemoteException.
+
+    """
+
+    backend_class: ClassVar[Optional[type]] = None
     """For each method of `backend_class` decorated with
     :func:`remote_api_endpoint`, a method with the same prototype and
     docstring will be added to this class. Calls to this new method will
@@ -205,11 +223,11 @@ class RPCClient(metaclass=MetaRPCClient):
     This backend class will never be instantiated, it only serves as
     a template."""
 
-    api_exception = APIError  # type: ClassVar[Type[Exception]]
+    api_exception: Type[Exception] = APIError
     """The exception class to raise in case of communication error with
     the server."""
 
-    reraise_exceptions: ClassVar[List[Type[Exception]]] = []
+    reraise_exceptions: List[Type[Exception]] = []
     """On server errors, if any of the exception classes in this list
     has the same name as the error name, then the exception will
     be instantiated and raised instead of a generic RemoteException."""
@@ -223,11 +241,15 @@ class RPCClient(metaclass=MetaRPCClient):
 
     def __init__(
         self,
-        url,
-        api_exception=None,
-        timeout=None,
-        chunk_size=4096,
-        reraise_exceptions=None,
+        url: str,
+        timeout: Union[None, Tuple[float, float], List[float], float] = None,
+        chunk_size: int = 4096,
+        max_retries: int = 3,
+        pool_connections: int = 20,
+        pool_maxsize: int = 100,
+        adapter_kwargs: Optional[Dict[str, Any]] = None,
+        api_exception: Optional[Type[Exception]] = None,
+        reraise_exceptions: Optional[List[Type[Exception]]] = None,
         **kwargs,
     ):
         if api_exception:
@@ -236,15 +258,24 @@ class RPCClient(metaclass=MetaRPCClient):
             self.reraise_exceptions = reraise_exceptions
         base_url = url if url.endswith("/") else url + "/"
         self.url = base_url
+
         self.session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(
-            max_retries=kwargs.get("max_retries", 3),
-            pool_connections=kwargs.get("pool_connections", 20),
-            pool_maxsize=kwargs.get("pool_maxsize", 100),
+            max_retries=max_retries,
+            pool_connections=pool_connections,
+            pool_maxsize=pool_maxsize,
+            **(adapter_kwargs or {}),
         )
         self.session.mount(self.url, adapter)
 
+        if isinstance(timeout, list):
+            if len(timeout) != 2:
+                raise ValueError(
+                    "timeout must be a pair of (connect, read) floats, not %r" % timeout
+                )
+            timeout = (timeout[0], timeout[1])
         self.timeout = timeout
+
         self.chunk_size = chunk_size
 
     def _url(self, endpoint):
