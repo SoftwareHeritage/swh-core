@@ -172,12 +172,13 @@ def db_init(ctx, module, dbname, flavor):
         swh_set_db_version,
     )
 
-    cfg = None
     if dbname is None:
         # use the db cnx from the config file; the expected config entry is the
         # given module name
         cfg = ctx.obj["config"].get(module, {})
         dbname = get_dburl_from_config(cfg)
+    else:
+        cfg = {"cls": "postgresql", "db": dbname}
 
     if not dbname:
         raise click.BadParameter(
@@ -199,8 +200,6 @@ def db_init(ctx, module, dbname, flavor):
         # db version has not been populated by sql init scripts (new style),
         # let's do it; instantiate the data source to retrieve the current
         # (expected) db version
-        if cfg is None:
-            cfg = {"cls": "postgresql", "db": dbname}
         datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
         if datastore_factory:
             datastore = datastore_factory(**cfg)
@@ -324,6 +323,14 @@ def db_version(ctx, module, show_all, module_config_key=None):
 @db.command(name="upgrade", context_settings=CONTEXT_SETTINGS)
 @click.argument("module", required=True)
 @click.option(
+    "--dbname",
+    "--db-name",
+    "-d",
+    help="Database name or connection URI.",
+    default=None,
+    show_default=False,
+)
+@click.option(
     "--to-version",
     type=int,
     help="Upgrade up to version VERSION",
@@ -339,7 +346,7 @@ def db_version(ctx, module, show_all, module_config_key=None):
     "--module-config-key", help="Module configuration key to lookup.", default=None
 )
 @click.pass_context
-def db_upgrade(ctx, module, to_version, interactive, module_config_key):
+def db_upgrade(ctx, module, dbname, to_version, interactive, module_config_key):
     """Upgrade the database for given module (to a given version if specified).
 
     Examples::
@@ -360,8 +367,11 @@ def db_upgrade(ctx, module, to_version, interactive, module_config_key):
     # use the db cnx from the config file; the expected config entry is either the given
     # module_config_key or defaulting to the module name (if module_config_key is not
     # provided)
-    cfg = ctx.obj["config"].get(module_config_key or module, {})
-    dbname = get_dburl_from_config(cfg)
+    if dbname is None:
+        cfg = ctx.obj["config"].get(module_config_key or module, {})
+        dbname = get_dburl_from_config(cfg)
+    else:
+        cfg = {"cls": "postgresql", "db": dbname}
 
     if not dbname:
         raise click.BadParameter(
