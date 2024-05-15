@@ -62,7 +62,7 @@ def exists_accessible(filepath: str) -> bool:
         os.stat(filepath)
     except PermissionError:
         raise
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):
         return False
     else:
         if os.access(filepath, os.R_OK):
