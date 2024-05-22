@@ -3,9 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from importlib.metadata import distribution
 import os
-
-import pkg_resources
 
 import swh.core.api.gunicorn_config as gunicorn_config
 
@@ -80,7 +79,7 @@ def test_post_fork_with_package_env(mocker):
 
     gunicorn_config.post_fork(None, None)
 
-    version = pkg_resources.get_distribution("swh.core").version
+    version = distribution("swh.core").version
 
     sentry_sdk_init.assert_called_once_with(
         dsn="test_dsn",

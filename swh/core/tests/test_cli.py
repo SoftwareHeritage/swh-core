@@ -3,13 +3,13 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from importlib.metadata import distribution
 import logging
 import textwrap
 from typing import List
 
 import click
 from click.testing import CliRunner
-import pkg_resources
 import pytest
 import yaml
 
@@ -238,7 +238,7 @@ def test_sentry_env_main_package(swhmain, mocker):
     result = runner.invoke(swhmain, ["test"], env=env, auto_envvar_prefix="SWH")
     assert result.exit_code == 0
 
-    version = pkg_resources.get_distribution("swh.core").version
+    version = distribution("swh.core").version
 
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(

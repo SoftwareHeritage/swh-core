@@ -3,11 +3,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from importlib.metadata import entry_points
 import logging
 import warnings
 
 import click
-import pkg_resources
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -155,7 +155,7 @@ def main():
     # for the next few logging statements
     logging.basicConfig()
     # load plugins that define cli sub commands
-    for entry_point in pkg_resources.iter_entry_points("swh.cli.subcommands"):
+    for entry_point in entry_points("swh.cli.subcommands"):
         try:
             cmd = entry_point.load()
             if isinstance(cmd, click.BaseCommand):

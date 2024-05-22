@@ -3,11 +3,10 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from importlib.metadata import distribution
 import logging
 import os
 from typing import Dict, List, Optional
-
-import pkg_resources
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 def get_sentry_release(main_package: Optional[str] = None):
     main_package = os.environ.get("SWH_MAIN_PACKAGE", main_package)
     if main_package:
-        version = pkg_resources.get_distribution(main_package).version
+        version = distribution(main_package).version
         return f"{main_package}@{version}"
     else:
         return None
