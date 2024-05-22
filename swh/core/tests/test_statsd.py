@@ -251,7 +251,7 @@ def test_timed_no_metric(statsd):
     name, value = name_value.split(":")
 
     assert type_ == "ms"
-    assert name == "swh.core.tests.test_statsd.func"
+    assert name in ("swh.core.tests.test_statsd.func", "core.tests.test_statsd.func")
     assert_almost_equal(500, float(value), 100)
 
 

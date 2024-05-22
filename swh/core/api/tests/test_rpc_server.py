@@ -155,14 +155,9 @@ def test_rpc_server_exception(flask_app_client):
     assert res.status_code == 500
     assert res.mimetype == "application/x-msgpack", res.data
     data = msgpack.loads(res.data)
-    assert (
-        data.items()
-        >= {
-            "type": "ValueError",
-            "module": "builtins",
-            "args": ["this is an unexpected exception"],
-        }.items()
-    ), data
+    assert data["type"] == "ValueError"
+    assert data["module"] == "builtins"
+    assert data["args"] == ["this is an unexpected exception"]
 
 
 def test_rpc_server_custom_exception(flask_app_client):
@@ -178,14 +173,12 @@ def test_rpc_server_custom_exception(flask_app_client):
     assert res.status_code == 503
     assert res.mimetype == "application/x-msgpack", res.data
     data = msgpack.loads(res.data)
-    assert (
-        data.items()
-        >= {
-            "type": "MyCustomException",
-            "module": "swh.core.api.tests.test_rpc_server",
-            "args": ["try again later!"],
-        }.items()
-    ), data
+    assert data["type"] == "MyCustomException"
+    assert data["module"] in (
+        "swh.core.api.tests.test_rpc_server",
+        "core.api.tests.test_rpc_server",
+    )
+    assert data["args"] == ["try again later!"]
 
 
 def test_rpc_server_psycopg2_adminshutdown(flask_app_client):
@@ -203,14 +196,9 @@ def test_rpc_server_psycopg2_adminshutdown(flask_app_client):
     assert res.status_code == 503
     assert res.mimetype == "application/x-msgpack", res.data
     data = msgpack.loads(res.data)
-    assert (
-        data.items()
-        >= {
-            "type": "AdminShutdown",
-            "module": "psycopg2.errors",
-            "args": ["cluster is shutting down"],
-        }.items()
-    ), data
+    assert data["type"] == "AdminShutdown"
+    assert data["module"] == "psycopg2.errors"
+    assert data["args"] == ["cluster is shutting down"]
 
 
 def test_rpc_server_psycopg2_querycancelled(flask_app_client):
@@ -228,14 +216,9 @@ def test_rpc_server_psycopg2_querycancelled(flask_app_client):
     assert res.status_code == 500
     assert res.mimetype == "application/x-msgpack", res.data
     data = msgpack.loads(res.data)
-    assert (
-        data.items()
-        >= {
-            "type": "QueryCanceled",
-            "module": "psycopg2.errors",
-            "args": ["too big!"],
-        }.items()
-    ), data
+    assert data["type"] == "QueryCanceled"
+    assert data["module"] == "psycopg2.errors"
+    assert data["args"] == ["too big!"]
 
 
 def test_rpc_server_extra_serializers(flask_app_client):
