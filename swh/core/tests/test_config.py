@@ -7,23 +7,10 @@ import os
 from pathlib import Path
 import shutil
 
-import pkg_resources.extern.packaging.version
 import pytest
 import yaml
 
 from swh.core import config
-
-pytest_v = pkg_resources.get_distribution("pytest").parsed_version
-if pytest_v < pkg_resources.extern.packaging.version.parse("3.9"):
-
-    @pytest.fixture
-    def tmp_path():
-        import pathlib
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            yield pathlib.Path(tmpdir)
-
 
 default_conf = {
     "a": ("int", 2),
