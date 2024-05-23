@@ -155,7 +155,7 @@ def main():
     # for the next few logging statements
     logging.basicConfig()
     # load plugins that define cli sub commands
-    for entry_point in entry_points("swh.cli.subcommands"):
+    for entry_point in entry_points(group="swh.cli.subcommands"):
         try:
             cmd = entry_point.load()
             if isinstance(cmd, click.BaseCommand):
