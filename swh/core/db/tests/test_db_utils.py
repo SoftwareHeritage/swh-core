@@ -6,7 +6,7 @@
 from datetime import timedelta
 from os import path
 
-from psycopg2.errors import InsufficientPrivilege
+from psycopg.errors import InsufficientPrivilege
 import pytest
 
 from swh.core.cli.db import db as swhdb
@@ -22,7 +22,7 @@ from swh.core.db.db_utils import get_database_info, get_sql_for_package, now
 from swh.core.db.db_utils import parse_dsn_or_dbname as parse_dsn
 from swh.core.tests.test_cli import assert_result
 
-from .test_cli import craft_conninfo
+from .test_cli import assert_no_pending_transaction, craft_conninfo
 
 
 def test_get_sql_for_package(mock_import_module):
@@ -146,38 +146,40 @@ def test_db_utils_swh_db_upgrade_sanity_checks(
     result = cli_runner.invoke(swhdb, ["init", module, "--dbname", conninfo])
     assert_result(result)
 
-    cnx = BaseDb.connect(conninfo)
-    with cnx.transaction() as cur:
-        cur.execute("drop table dbmodule")
+    with BaseDb.connect(conninfo) as cnx:
+        with cnx.transaction() as cur:
+            assert_no_pending_transaction(cur)
+            cur.execute("drop table dbmodule")
 
-    # try to upgrade with a unset module
-    with pytest.raises(ValueError):
-        swh_db_upgrade(conninfo, module)
+        # try to upgrade with a unset module
+        with pytest.raises(ValueError):
+            swh_db_upgrade(conninfo, module)
 
-    # check the dbmodule is unset
-    assert swh_db_module(conninfo) is None
+        # check the dbmodule is unset
+        assert swh_db_module(conninfo) is None
 
-    # set the stored module to something else
-    swh_set_db_module(conninfo, f"{module}2")
-    assert swh_db_module(conninfo) == f"{module}2"
+        # set the stored module to something else
+        swh_set_db_module(conninfo, f"{module}2")
+        assert swh_db_module(conninfo) == f"{module}2"
 
-    # try to upgrade with a different module
-    with pytest.raises(ValueError):
-        swh_db_upgrade(conninfo, module)
+        # try to upgrade with a different module
+        with pytest.raises(ValueError):
+            swh_db_upgrade(conninfo, module)
 
-    # revert to the proper module in the db
-    swh_set_db_module(conninfo, module, force=True)
-    assert swh_db_module(conninfo) == module
-    # trying again is a noop
-    swh_set_db_module(conninfo, module)
-    assert swh_db_module(conninfo) == module
+        # revert to the proper module in the db
+        swh_set_db_module(conninfo, module, force=True)
+        assert swh_db_module(conninfo) == module
+        # trying again is a noop
+        swh_set_db_module(conninfo, module)
+        assert swh_db_module(conninfo) == module
 
-    # drop the dbversion table
-    with cnx.transaction() as cur:
-        cur.execute("drop table dbversion")
-    # an upgrade should fail due to missing stored version
-    with pytest.raises(ValueError):
-        swh_db_upgrade(conninfo, module)
+        # drop the dbversion table
+        with cnx.transaction() as cur:
+            assert_no_pending_transaction(cur)
+            cur.execute("drop table dbversion")
+        # an upgrade should fail due to missing stored version
+        with pytest.raises(ValueError):
+            swh_db_upgrade(conninfo, module)
 
 
 @pytest.mark.parametrize("flavor", [None, "default", "flavorA", "flavorB"])

@@ -554,11 +554,11 @@ class RPCServerApp(Flask):
         (Exception, 500),
         # These errors are noisy, and are better logged on the caller's side after
         # it retried a few times:
-        ("psycopg2.errors.OperationalError", 503),
+        ("psycopg.errors.OperationalError", 503),
         # Subclass of OperationalError; but it is unlikely to be solved after retries
         # (short of getting more cache hits) because this is usually caused by the query
         # size instead of a transient failure
-        ("psycopg2.errors.QueryCanceled", 500),
+        ("psycopg.errors.QueryCanceled", 500),
         # Often a transient error because of connectivity issue with, or restart of,
         # the Kafka brokers:
         ("swh.journal.writer.kafka.KafkaDeliveryError", 503),
@@ -631,10 +631,10 @@ class RPCServerApp(Flask):
 
         self.route("/" + meth._endpoint_path, methods=["POST"])(f)
 
-    def setup_psycopg2_errorhandlers(self) -> None:
+    def setup_psycopg_errorhandlers(self) -> None:
         """Deprecated method; error handlers are now setup in the constructor."""
         warnings.warn(
-            "setup_psycopg2_errorhandlers has no effect; error handlers are now setup "
+            "setup_psycopg_errorhandlers has no effect; error handlers are now setup "
             "by the constructor.",
             DeprecationWarning,
         )

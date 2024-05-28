@@ -13,15 +13,13 @@ import pathlib
 import re
 import subprocess
 from types import ModuleType
-from typing import Collection, Dict, Iterator, List, Optional, Tuple, Union, cast
+from typing import Any, Collection, Dict, Iterator, List, Optional, Tuple, Union, cast
 
-import psycopg2
-import psycopg2.errors
-import psycopg2.extensions
-from psycopg2.extensions import connection as pgconnection
-from psycopg2.extensions import encodings as pgencodings
-from psycopg2.extensions import make_dsn
-from psycopg2.extensions import parse_dsn as _parse_dsn
+import psycopg
+from psycopg import Connection
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
+import psycopg.errors
+from psycopg.types.json import Json
 
 from swh.core.config import get_swh_backend_module
 from swh.core.utils import numfile_sortkey as sortkey
@@ -54,17 +52,17 @@ def stored_procedure(stored_proc):
 
 
 def jsonize(value):
-    """Convert a value to a psycopg2 JSON object if necessary"""
+    """Convert a value to a psycopg JSON object if necessary"""
     if isinstance(value, dict):
-        return psycopg2.extras.Json(value)
+        return Json(value)
 
     return value
 
 
 @contextmanager
 def connect_to_conninfo(
-    db_or_conninfo: Union[str, pgconnection],
-) -> Iterator[pgconnection]:
+    db_or_conninfo: Union[str, Connection[Any]],
+) -> Iterator[Connection[Any]]:
     """Connect to the database passed as argument.
 
     Args:
@@ -74,7 +72,12 @@ def connect_to_conninfo(
         a connected database handle or None if the database is not initialized
 
     """
-    if isinstance(db_or_conninfo, pgconnection):
+    if isinstance(db_or_conninfo, Connection):
+        # we don't use a connext manager here, as we let the caller manage the
+        # connection life time.
+        #
+        # We don't want a Connection to be prematurely closed by simple
+        # function like `swh_db_version`
         yield db_or_conninfo
     else:
         if "=" not in db_or_conninfo and "//" not in db_or_conninfo:
@@ -82,14 +85,15 @@ def connect_to_conninfo(
             db_or_conninfo = f"dbname={db_or_conninfo}"
 
         try:
-            db = psycopg2.connect(db_or_conninfo)
-        except psycopg2.Error:
+            db = psycopg.connect(db_or_conninfo)
+        except psycopg.Error:
             logger.exception("Failed to connect to `%s`", db_or_conninfo)
         else:
-            yield db
+            with db:
+                yield db
 
 
-def swh_db_version(db_or_conninfo: Union[str, pgconnection]) -> Optional[int]:
+def swh_db_version(db_or_conninfo: Union[str, Connection[Any]]) -> Optional[int]:
     """Retrieve the swh version of the database.
 
     If the database is not initialized, this logs a warning and returns None.
@@ -101,7 +105,8 @@ def swh_db_version(db_or_conninfo: Union[str, pgconnection]) -> Optional[int]:
         Either the version of the database, or None if it couldn't be detected
     """
     try:
-        with connect_to_conninfo(db_or_conninfo) as db:
+        co = connect_to_conninfo(db_or_conninfo)
+        with co as db:
             if not db:
                 return None
             with db.cursor() as c:
@@ -111,7 +116,7 @@ def swh_db_version(db_or_conninfo: Union[str, pgconnection]) -> Optional[int]:
                     result = c.fetchone()
                     if result:
                         return result[0]
-                except psycopg2.errors.UndefinedTable:
+                except psycopg.errors.UndefinedTable:
                     return None
     except Exception:
         logger.exception("Could not get version from `%s`", db_or_conninfo)
@@ -119,7 +124,7 @@ def swh_db_version(db_or_conninfo: Union[str, pgconnection]) -> Optional[int]:
 
 
 def swh_db_versions(
-    db_or_conninfo: Union[str, pgconnection],
+    db_or_conninfo: Union[str, Connection[Any]],
 ) -> Optional[List[Tuple[int, datetime, str]]]:
     """Retrieve the swh version history of the database.
 
@@ -143,7 +148,7 @@ def swh_db_versions(
                 try:
                     c.execute(query)
                     return cast(List[Tuple[int, datetime, str]], c.fetchall())
-                except psycopg2.errors.UndefinedTable:
+                except psycopg.errors.UndefinedTable:
                     return None
     except Exception:
         logger.exception("Could not get versions from `%s`", db_or_conninfo)
@@ -232,7 +237,7 @@ def swh_db_upgrade(
     return new_version
 
 
-def swh_db_module(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
+def swh_db_module(db_or_conninfo: Union[str, Connection[Any]]) -> Optional[str]:
     """Retrieve the swh module used to create the database.
 
     If the database is not initialized, this logs a warning and returns None.
@@ -254,7 +259,7 @@ def swh_db_module(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
                     resp = c.fetchone()
                     if resp:
                         return resp[0]
-                except psycopg2.errors.UndefinedTable:
+                except psycopg.errors.UndefinedTable:
                     return None
     except Exception:
         logger.exception("Could not get module from `%s`", db_or_conninfo)
@@ -262,7 +267,7 @@ def swh_db_module(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
 
 
 def swh_set_db_module(
-    db_or_conninfo: Union[str, pgconnection], module: str, force=False
+    db_or_conninfo: Union[str, Connection[Any]], module: str, force=False
 ) -> None:
     """Set the swh module used to create the database.
 
@@ -319,7 +324,7 @@ def swh_set_db_module(
 
 
 def swh_set_db_version(
-    db_or_conninfo: Union[str, pgconnection],
+    db_or_conninfo: Union[str, Connection[Any]],
     version: int,
     ts: Optional[datetime] = None,
     desc: str = "Work in progress",
@@ -347,7 +352,7 @@ def swh_set_db_version(
             db.commit()
 
 
-def swh_db_flavor(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
+def swh_db_flavor(db_or_conninfo: Union[str, Connection[Any]]) -> Optional[str]:
     """Retrieve the swh flavor of the database.
 
     If the database is not initialized, or the database doesn't support
@@ -370,21 +375,22 @@ def swh_db_flavor(db_or_conninfo: Union[str, pgconnection]) -> Optional[str]:
                     result = c.fetchone()
                     assert result is not None  # to keep mypy happy
                     return result[0]
-                except psycopg2.errors.UndefinedFunction:
+                except psycopg.errors.UndefinedFunction:
                     # function not found: no flavor
                     return None
     except Exception:
+        raise
         logger.exception("Could not get flavor from `%s`", db_or_conninfo)
         return None
 
 
-# The following code has been imported from psycopg2, version 2.7.4,
-# https://github.com/psycopg/psycopg2/tree/5afb2ce803debea9533e293eef73c92ffce95bcd
+# The following code has been imported from psycopg, version 2.7.4,
+# https://github.com/psycopg/psycopg/tree/5afb2ce803debea9533e293eef73c92ffce95bcd
 # and modified by Software Heritage.
 #
 # Original file: lib/extras.py
 #
-# psycopg2 is free software: you can redistribute it and/or modify it under the
+# psycopg is free software: you can redistribute it and/or modify it under the
 # terms of the GNU Lesser General Public License as published by the Free
 # Software Foundation, either version 3 of the License, or (at your option) any
 # later version.
@@ -438,60 +444,6 @@ def _split_sql(sql):
         raise ValueError("the query doesn't contain any '%s' placeholder")
 
     return pre, post
-
-
-def execute_values_generator(cur, sql, argslist, template=None, page_size=100):
-    """Execute a statement using SQL ``VALUES`` with a sequence of parameters.
-    Rows returned by the query are returned through a generator.
-    You need to consume the generator for the queries to be executed!
-
-    :param cur: the cursor to use to execute the query.
-    :param sql: the query to execute. It must contain a single ``%s``
-        placeholder, which will be replaced by a `VALUES list`__.
-        Example: ``"INSERT INTO mytable (id, f1, f2) VALUES %s"``.
-    :param argslist: sequence of sequences or dictionaries with the arguments
-        to send to the query. The type and content must be consistent with
-        *template*.
-    :param template: the snippet to merge to every item in *argslist* to
-        compose the query.
-
-        - If the *argslist* items are sequences it should contain positional
-          placeholders (e.g. ``"(%s, %s, %s)"``, or ``"(%s, %s, 42)``" if there
-          are constants value...).
-        - If the *argslist* items are mappings it should contain named
-          placeholders (e.g. ``"(%(id)s, %(f1)s, 42)"``).
-
-        If not specified, assume the arguments are sequence and use a simple
-        positional template (i.e.  ``(%s, %s, ...)``), with the number of
-        placeholders sniffed by the first element in *argslist*.
-    :param page_size: maximum number of *argslist* items to include in every
-        statement. If there are more items the function will execute more than
-        one statement.
-    :param yield_from_cur: Whether to yield results from the cursor in this
-        function directly.
-
-    .. __: https://www.postgresql.org/docs/current/static/queries-values.html
-
-    After the execution of the function the `cursor.rowcount` property will
-    **not** contain a total result.
-    """
-    # we can't just use sql % vals because vals is bytes: if sql is bytes
-    # there will be some decoding error because of stupid codec used, and Py3
-    # doesn't implement % on bytes.
-    if not isinstance(sql, bytes):
-        sql = sql.encode(pgencodings[cur.connection.encoding])
-    pre, post = _split_sql(sql)
-
-    for page in _paginate(argslist, page_size=page_size):
-        if template is None:
-            template = b"(" + b",".join([b"%s"] * len(page[0])) + b")"
-        parts = pre[:]
-        for args in page:
-            parts.append(cur.mogrify(template, args))
-            parts.append(b",")
-        parts[-1:] = post
-        cur.execute(b"".join(parts))
-        yield from cur
 
 
 def import_swhmodule(modname: str) -> Optional[ModuleType]:
@@ -596,12 +548,13 @@ def initialize_database_for_module(
       storage_postgresql = factories.postgresql("storage_postgresql_proc")
 
     """
-    conninfo = psycopg2.connect(**kwargs).dsn
+    with psycopg.connect(**kwargs) as con:
+        conninfo = dsn_with_password(con)
     init_admin_extensions(modname, conninfo)
     populate_database_for_package(modname, conninfo, flavor)
     try:
         swh_set_db_version(conninfo, version)
-    except psycopg2.errors.UniqueViolation:
+    except psycopg.errors.UniqueViolation:
         logger.warn(
             "Version already set by db init scripts. "
             f"This generally means the swh.{modname} package needs to be "
@@ -610,7 +563,7 @@ def initialize_database_for_module(
 
 
 def get_database_info(
-    conninfo: str,
+    conninfo: Union[str, Connection[Any]],
 ) -> Tuple[Optional[str], Optional[int], Optional[str]]:
     """Get version, flavor and module of the db"""
     dbmodule = swh_db_module(conninfo)
@@ -622,13 +575,16 @@ def get_database_info(
 
 
 def parse_dsn_or_dbname(dsn_or_dbname: str) -> Dict[str, str]:
-    """Parse a psycopg2 dsn, falling back to supporting plain database names as well"""
+    """Parse a psycopg dsn, falling back to supporting plain database names as well"""
     try:
-        return _parse_dsn(dsn_or_dbname)
-    except psycopg2.ProgrammingError:
-        # psycopg2 failed to parse the DSN; it's probably a database name,
+        d = conninfo_to_dict(dsn_or_dbname)
+    except psycopg.ProgrammingError:
+        # psycopg failed to parse the DSN; it's probably a database name,
         # handle it as such
-        return _parse_dsn(f"dbname={dsn_or_dbname}")
+        d = conninfo_to_dict(f"dbname={dsn_or_dbname}")
+    # conninfo_to_dict only returns non-str values when given keyword arguments
+    conninfo = cast(Dict[str, str], d)
+    return conninfo
 
 
 def init_admin_extensions(modname: str, conninfo: str) -> None:
@@ -668,7 +624,7 @@ def create_database_for_package(
             "-v",
             "ON_ERROR_STOP=1",
             "-d",
-            make_dsn(**creation_dsn),
+            make_conninfo(**creation_dsn),
             "-c",
             f'CREATE DATABASE "{dbname}"',
         ]
@@ -676,9 +632,18 @@ def create_database_for_package(
     init_admin_extensions(modname, conninfo)
 
 
+def dsn_with_password(con: Connection[Any]):
+    """fetch the connection info with password"""
+    conn_info = con.info.dsn
+    password = con.info.password
+    if password is not None:
+        conn_info = conn_info.replace("@", f":{password}@", 1)
+    return conn_info
+
+
 def execute_sqlfiles(
     sqlfiles: Collection[pathlib.Path],
-    db_or_conninfo: Union[str, pgconnection],
+    db_or_conninfo: Union[str, Connection[Any]],
     flavor: Optional[str] = None,
 ):
     """Execute a list of SQL files on the database pointed at with ``db_or_conninfo``.
@@ -691,7 +656,7 @@ def execute_sqlfiles(
     if isinstance(db_or_conninfo, str):
         conninfo = db_or_conninfo
     else:
-        conninfo = db_or_conninfo.dsn
+        conninfo = dsn_with_password(db_or_conninfo)
 
     psql_command = [
         "psql",

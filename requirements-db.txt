@@ -1,3 +1,4 @@
 # requirements for swh.core.db
-psycopg2
+psycopg
+psycopg_pool
 typing-extensions

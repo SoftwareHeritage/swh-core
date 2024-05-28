@@ -14,7 +14,9 @@ import uuid
 
 from hypothesis import given, settings, strategies
 from hypothesis.extra.pytz import timezones
-import psycopg2
+import psycopg
+from psycopg.types.json import Json
+from psycopg.types.range import TimestamptzRange
 import pytest
 from pytest_postgresql import factories
 
@@ -169,7 +171,7 @@ FIELDS = (
         "jsonb",
         {"str": "bar", "int": 1, "list": ["a", "b"], "nested": {"a": "b"}},
         pg_jsonb(min_size=0, max_size=5),
-        in_wrapper=psycopg2.extras.Json,
+        in_wrapper=Json,
     ),
     Field(
         "intenum",
@@ -196,7 +198,7 @@ FIELDS = (
     Field(
         "tstz_range",
         "tstzrange",
-        psycopg2.extras.DateTimeTZRange(
+        TimestamptzRange(
             lower=now(),
             upper=now() + datetime.timedelta(days=1),
             bounds="[)",
@@ -208,7 +210,7 @@ FIELDS = (
             strategies.sampled_from(["[]", "()", "[)", "(]"]),
         ).map(
             # and build the actual DateTimeTZRange object from these args
-            lambda args: psycopg2.extras.DateTimeTZRange(
+            lambda args: TimestamptzRange(
                 lower=args[0][0],
                 upper=args[0][1],
                 bounds=args[1],
@@ -247,7 +249,6 @@ def db_with_data(test_db, request):
     """Fixture to initialize a db with some data out of the "INIT_SQL above"""
     db = BaseDb.connect(test_db.info.dsn)
     with db.cursor() as cur:
-        psycopg2.extras.register_default_jsonb(cur)
         cur.execute(INIT_SQL)
     yield db
     db.conn.rollback()
@@ -257,7 +258,6 @@ def db_with_data(test_db, request):
 @pytest.mark.db
 def test_db_connect(db_with_data):
     with db_with_data.cursor() as cur:
-        psycopg2.extras.register_default_jsonb(cur)
         cur.execute(INSERT_SQL, STATIC_ROW_IN)
         cur.execute("select * from test_table;")
         output = convert_lines(cur)
@@ -267,7 +267,6 @@ def test_db_connect(db_with_data):
 
 def test_db_initialized(db_with_data):
     with db_with_data.cursor() as cur:
-        psycopg2.extras.register_default_jsonb(cur)
         cur.execute(INSERT_SQL, STATIC_ROW_IN)
         cur.execute("select * from test_table;")
         output = convert_lines(cur)
@@ -304,7 +303,7 @@ def test_db_copy_to_thread_exception(db_with_data):
     data = [(2**65, "foo", b"bar")]
 
     items = [dict(zip(COLUMNS, item)) for item in data]
-    with pytest.raises(psycopg2.errors.NumericValueOutOfRange):
+    with pytest.raises(psycopg.errors.NumericValueOutOfRange):
         db_with_data.copy_to(items, "test_table", COLUMNS)
 
 

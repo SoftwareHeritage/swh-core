@@ -62,7 +62,7 @@ def get_canonical_github_origin_url(
 
 
 class RateLimited(Exception):
-    def __init__(self, response):
+    def __init__(self, response: requests.Response) -> None:
         self.reset_time: Optional[int]
 
         # Figure out how long we need to sleep because of that rate limit

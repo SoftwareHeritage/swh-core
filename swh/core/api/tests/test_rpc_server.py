@@ -58,13 +58,13 @@ class TestStorage:
 
     @remote_api_endpoint("crashy/adminshutdown")
     def adminshutdown_crash(self, data, db=None, cur=None):
-        from psycopg2.errors import AdminShutdown
+        from psycopg.errors import AdminShutdown
 
         raise AdminShutdown("cluster is shutting down")
 
     @remote_api_endpoint("crashy/querycancelled")
     def querycancelled_crash(self, data, db=None, cur=None):
-        from psycopg2.errors import QueryCanceled
+        from psycopg.errors import QueryCanceled
 
         raise QueryCanceled("too big!")
 
@@ -181,8 +181,8 @@ def test_rpc_server_custom_exception(flask_app_client):
     assert data["args"] == ["try again later!"]
 
 
-def test_rpc_server_psycopg2_adminshutdown(flask_app_client):
-    pytest.importorskip("psycopg2")
+def test_rpc_server_psycopg_adminshutdown(flask_app_client):
+    pytest.importorskip("psycopg")
 
     res = flask_app_client.post(
         url_for("adminshutdown_crash"),
@@ -197,12 +197,12 @@ def test_rpc_server_psycopg2_adminshutdown(flask_app_client):
     assert res.mimetype == "application/x-msgpack", res.data
     data = msgpack.loads(res.data)
     assert data["type"] == "AdminShutdown"
-    assert data["module"] == "psycopg2.errors"
+    assert data["module"] == "psycopg.errors"
     assert data["args"] == ["cluster is shutting down"]
 
 
-def test_rpc_server_psycopg2_querycancelled(flask_app_client):
-    pytest.importorskip("psycopg2")
+def test_rpc_server_psycopg_querycancelled(flask_app_client):
+    pytest.importorskip("psycopg")
 
     res = flask_app_client.post(
         url_for("querycancelled_crash"),
@@ -217,7 +217,7 @@ def test_rpc_server_psycopg2_querycancelled(flask_app_client):
     assert res.mimetype == "application/x-msgpack", res.data
     data = msgpack.loads(res.data)
     assert data["type"] == "QueryCanceled"
-    assert data["module"] == "psycopg2.errors"
+    assert data["module"] == "psycopg.errors"
     assert data["args"] == ["too big!"]
 
 

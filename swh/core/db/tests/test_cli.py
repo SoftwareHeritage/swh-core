@@ -15,6 +15,12 @@ from swh.core.tests.test_cli import assert_result, assert_section_contains
 postgresql2 = factories.postgresql("postgresql_proc", dbname="tests2")
 
 
+def assert_no_pending_transaction(cursor):
+    sql = """SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction'"""
+    idle = cursor.execute(sql).fetchall()
+    assert idle == []
+
+
 def test_cli_swh_help(swhmain, cli_runner):
     swhmain.add_command(swhdb)
     result = cli_runner.invoke(swhmain, ["-h"])
@@ -99,10 +105,11 @@ def test_cli_swh_db_create_and_init_db(
 
     # the origin value in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, installed during db creation step)
-    with BaseDb.connect(conninfo).cursor() as cur:
-        cur.execute(f"select * from {table}")
-        origins = cur.fetchall()
-        assert len(origins) == 1
+    with BaseDb.connect(conninfo) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"select * from {table}")
+            origins = cur.fetchall()
+            assert len(origins) == 1
 
 
 def test_cli_swh_db_initialization_fail_without_creation_first(
@@ -154,10 +161,11 @@ def test_cli_swh_db_initialization_works_with_flags(
     assert_result(result)
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(postgresql.info.dsn).cursor() as cur:
-        cur.execute("select * from origin")
-        origins = cur.fetchall()
-        assert len(origins) == 1
+    with BaseDb.connect(postgresql.info.dsn) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select * from origin")
+            origins = cur.fetchall()
+            assert len(origins) == 1
 
 
 def test_cli_swh_db_initialization_with_env(
@@ -183,10 +191,11 @@ def test_cli_swh_db_initialization_with_env(
 
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(postgresql.info.dsn).cursor() as cur:
-        cur.execute("select * from origin")
-        origins = cur.fetchall()
-        assert len(origins) == 1
+    with BaseDb.connect(postgresql.info.dsn) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select * from origin")
+            origins = cur.fetchall()
+            assert len(origins) == 1
 
 
 def test_cli_swh_db_initialization_idempotent(
@@ -218,10 +227,11 @@ def test_cli_swh_db_initialization_idempotent(
 
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(postgresql.info.dsn).cursor() as cur:
-        cur.execute("select * from origin")
-        origins = cur.fetchall()
-        assert len(origins) == 1
+    with BaseDb.connect(postgresql.info.dsn) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select * from origin")
+            origins = cur.fetchall()
+            assert len(origins) == 1
 
 
 @pytest.mark.parametrize("with_module_config_key", [True, False])
@@ -252,10 +262,11 @@ def test_cli_swh_db_create_and_init_db_new_api(
 
     # the origin value in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, installed during db creation step)
-    with BaseDb.connect(conninfo).cursor() as cur:
-        cur.execute("select * from origin")
-        origins = cur.fetchall()
-        assert len(origins) == 1
+    with BaseDb.connect(conninfo) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select * from origin")
+            origins = cur.fetchall()
+            assert len(origins) == 1
 
 
 def test_cli_swh_db_init_report_sqlsh_error(
@@ -301,7 +312,8 @@ def test_cli_swh_db_upgrade_new_api(
 
     # This initializes the schema and data
     cfgfile = tmp_path / "config.yml"
-    cfgfile.write_text(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
+    with open(cfgfile, "w") as f:
+        f.write(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
     result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
     assert_result(result)
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", module_name])
@@ -358,9 +370,11 @@ def test_cli_swh_db_upgrade_new_api(
     assert swh_db_version(conninfo) == 4
 
     cnx = BaseDb.connect(conninfo)
-    with cnx.transaction() as cur:
-        cur.execute("drop table dbmodule")
-    assert swh_db_module(conninfo) is None
+    with cnx:
+        with cnx.transaction() as cur:
+            assert_no_pending_transaction(cur)
+            cur.execute("drop table dbmodule")
+        assert swh_db_module(conninfo) is None
 
     # db migration should recreate the missing dbmodule table
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
@@ -415,10 +429,11 @@ def test_cli_swh_db_version(swh_db_cli, mock_get_entry_points, postgresql):
 
     actual_db_version = swh_db_version(conninfo)
 
-    with BaseDb.connect(conninfo).cursor() as cur:
-        cur.execute("select version from dbversion order by version desc limit 1")
-        expected_version = cur.fetchone()[0]
-        assert actual_db_version == expected_version
+    with BaseDb.connect(conninfo) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select version from dbversion order by version desc limit 1")
+            expected_version = cur.fetchone()[0]
+            assert actual_db_version == expected_version
 
     assert_result(result)
     assert (

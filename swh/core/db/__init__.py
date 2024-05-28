@@ -13,14 +13,11 @@ import sys
 import threading
 from typing import Any, Callable, Iterable, Iterator, Mapping, Optional, Type, TypeVar
 
-import psycopg2
-import psycopg2.extras
-import psycopg2.pool
+import psycopg
+from psycopg.types.range import Range
+import psycopg_pool
 
 logger = logging.getLogger(__name__)
-
-
-psycopg2.extras.register_uuid()
 
 
 def render_array(data) -> str:
@@ -73,7 +70,7 @@ def value_as_pg_text(data: Any) -> str:
         return json.dumps(data)
     elif isinstance(data, (list, tuple)):
         return render_array(data)
-    elif isinstance(data, psycopg2.extras.Range):
+    elif isinstance(data, Range):
         return "%s%s,%s%s" % (
             "[" if data.lower_inc else "(",
             "-infinity" if data.lower_inf else value_as_pg_text(data.lower),
@@ -105,12 +102,6 @@ def escape_copy_column(column: str) -> str:
     return ret
 
 
-def typecast_bytea(value, cur):
-    if value is not None:
-        data = psycopg2.BINARY(value, cur)
-        return data.tobytes()
-
-
 BaseDbType = TypeVar("BaseDbType", bound="BaseDb")
 
 
@@ -121,60 +112,50 @@ class BaseDb:
 
     """
 
-    @staticmethod
-    def adapt_conn(conn: psycopg2.extensions.connection):
-        """Makes psycopg2 use 'bytes' to decode bytea instead of
-        'memoryview', for this connection."""
-        t_bytes = psycopg2.extensions.new_type((17,), "bytea", typecast_bytea)
-        psycopg2.extensions.register_type(t_bytes, conn)
-
-        t_bytes_array = psycopg2.extensions.new_array_type((1001,), "bytea[]", t_bytes)
-        psycopg2.extensions.register_type(t_bytes_array, conn)
-
     @classmethod
     def connect(cls: Type[BaseDbType], *args, **kwargs) -> BaseDbType:
         """factory method to create a DB proxy
 
-        Accepts all arguments of psycopg2.connect; only some specific
+        Accepts all arguments of psycopg.connect; only some specific
         possibilities are reported below.
 
         Args:
             connstring: libpq2 connection string
 
         """
-        conn = psycopg2.connect(*args, **kwargs)
+        conn = psycopg.connect(*args, **kwargs)
         return cls(conn)
 
     @classmethod
     def from_pool(
-        cls: Type[BaseDbType], pool: psycopg2.pool.AbstractConnectionPool
+        cls: Type[BaseDbType], pool: psycopg_pool.ConnectionPool
     ) -> BaseDbType:
         conn = pool.getconn()
         return cls(conn, pool=pool)
 
     def __init__(
         self,
-        conn: psycopg2.extensions.connection,
-        pool: Optional[psycopg2.pool.AbstractConnectionPool] = None,
+        conn: psycopg.Connection[Any],
+        pool: Optional[psycopg_pool.ConnectionPool] = None,
     ):
         """create a DB proxy
 
         Args:
-            conn: psycopg2 connection to the SWH DB
-            pool: psycopg2 pool of connections
+            conn: psycopg connection to the SWH DB
+            pool: psycopg pool of connections
 
         """
-        self.adapt_conn(conn)
         self.conn = conn
         self.pool = pool
+
+    def close(self):
+        return self.conn.close()
 
     def put_conn(self) -> None:
         if self.pool:
             self.pool.putconn(self.conn)
 
-    def cursor(
-        self, cur_arg: Optional[psycopg2.extensions.cursor] = None
-    ) -> psycopg2.extensions.cursor:
+    def cursor(self, cur_arg: Optional[psycopg.Cursor] = None) -> psycopg.Cursor:
         """get a cursor: from cur_arg if given, or a fresh one otherwise
 
         meant to avoid boilerplate if/then/else in methods that proxy stored
@@ -186,14 +167,21 @@ class BaseDb:
         else:
             return self.conn.cursor()
 
+    def __enter__(self):
+        self.conn.__enter__()
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        return self.conn.__exit__(*args, **kwargs)
+
     _cursor = cursor  # for bw compat
 
     @contextmanager
-    def transaction(self) -> Iterator[psycopg2.extensions.cursor]:
+    def transaction(self) -> Iterator[psycopg.Cursor]:
         """context manager to execute within a DB transaction
 
         Yields:
-            a psycopg2 cursor
+            a psycopg cursor
 
         """
         with self.conn.cursor() as cur:
@@ -210,7 +198,7 @@ class BaseDb:
         items: Iterable[Mapping[str, Any]],
         tblname: str,
         columns: Iterable[str],
-        cur: Optional[psycopg2.extensions.cursor] = None,
+        cur: Optional[psycopg.Cursor] = None,
         item_cb: Optional[Callable[[Any], Any]] = None,
         default_values: Optional[Mapping[str, Any]] = None,
     ) -> None:
@@ -240,9 +228,12 @@ class BaseDb:
             cursor = self.cursor(cur)
             with open(read_file, "r") as f:
                 try:
-                    cursor.copy_expert(
-                        "COPY %s (%s) FROM STDIN" % (tblname, ", ".join(columns)), f
-                    )
+                    with cursor.copy(
+                        "COPY %s (%s) FROM STDIN" % (tblname, ", ".join(columns))
+                    ) as c:
+                        while data := f.read(4096):
+                            c.write(data)
+
                 except Exception:
                     # Tell the main thread about the exception
                     exc_info = sys.exc_info()
@@ -293,5 +284,5 @@ class BaseDb:
                 # postgresql returned an error, let's raise it.
                 raise exc_info[1].with_traceback(exc_info[2])
 
-    def mktemp(self, tblname: str, cur: Optional[psycopg2.extensions.cursor] = None):
+    def mktemp(self, tblname: str, cur: Optional[psycopg.Cursor] = None):
         self.cursor(cur).execute("SELECT swh_mktemp(%s)", (tblname,))

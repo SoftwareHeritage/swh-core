@@ -440,33 +440,46 @@ def clean_scopes():
     scope._current_scope.set(None)
 
 
-@pytest.fixture()
-def mock_import_module(request, mocker, datadir):
-    mock = mocker.MagicMock
+# Some test don't have "db" available, so we need too work around it.
+try:
+    import swh.core.db
 
-    def import_module_mocker(name, package=None):
-        if not name.startswith("swh.test"):
-            return import_module(name, package)
+    swh.core.db.__doc__
+except ImportError:
 
-        m = request.node.get_closest_marker("init_version")
-        if m:
-            version = m.kwargs.get("version", 1)
-        else:
-            version = 3
-        if name.startswith("swh."):
-            name = name[4:]
-        modpath = name.split(".")
+    @pytest.fixture()
+    def mock_import_module(request, mocker, datadir):
+        return None
 
-        def get_datastore(*args, **kw):
-            return mock(current_version=version)
+else:
 
-        return mock(
-            __name__=name.split(".")[-1],
-            __file__=str(Path(datadir, *modpath, "__init__.py")),
-            get_datastore=get_datastore,
-        )
+    @pytest.fixture()
+    def mock_import_module(request, mocker, datadir):
+        mock = mocker.MagicMock
 
-    return mocker.patch("swh.core.db.db_utils.import_module", import_module_mocker)
+        def import_module_mocker(name, package=None):
+            if not name.startswith("swh.test"):
+                return import_module(name, package)
+
+            m = request.node.get_closest_marker("init_version")
+            if m:
+                version = m.kwargs.get("version", 1)
+            else:
+                version = 3
+            if name.startswith("swh."):
+                name = name[4:]
+            modpath = name.split(".")
+
+            def get_datastore(*args, **kw):
+                return mock(current_version=version)
+
+            return mock(
+                __name__=name.split(".")[-1],
+                __file__=str(Path(datadir, *modpath, "__init__.py")),
+                get_datastore=get_datastore,
+            )
+
+        return mocker.patch("swh.core.db.db_utils.import_module", import_module_mocker)
 
 
 @pytest.fixture()

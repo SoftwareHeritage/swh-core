@@ -28,7 +28,16 @@ def apply_options(cursor, options):
         cursor.execute("SHOW %s" % option)
         old_value = cursor.fetchall()[0][0]
         if old_value != value:
-            cursor.execute("SET LOCAL %s TO %%s" % option, (value,))
+            # We could also pre-format the option and value using:
+            #
+            #      (str(option), str(value))
+            #
+            # However using %s::text is going through the psycopg adapter
+            # system and is likely more robust.
+            cursor.execute(
+                "SELECT set_config(%s::text, %s::text, true)",
+                (option, value),
+            )
             old_options[option] = old_value
     return old_options
 
