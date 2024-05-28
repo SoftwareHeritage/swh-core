@@ -51,7 +51,7 @@ parsed_conffile = {
 
 
 @pytest.fixture
-def swh_config(tmp_path):
+def swh_config(tmp_path: Path):
     # create a temporary folder
     conffile = tmp_path / "config.yml"
     conf_contents = """
@@ -62,7 +62,8 @@ h: false
 ls: list, of, strings
 li: 1, 2, 3, 4
 """
-    conffile.open("w").write(conf_contents)
+    with open(conffile, "w") as f:
+        f.write(conf_contents)
     return conffile
 
 
