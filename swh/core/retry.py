@@ -1,11 +1,11 @@
-# Copyright (C) 2023  The Software Heritage developers
+# Copyright (C) 2023-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from typing import Callable
 
-from requests.exceptions import ConnectionError, HTTPError
+from requests.exceptions import ChunkedEncodingError, ConnectionError, HTTPError
 from requests.status_codes import codes
 from tenacity import retry as tenacity_retry
 from tenacity.stop import stop_after_attempt
@@ -28,7 +28,7 @@ def is_retryable_exception(e: Exception) -> bool:
     """
     Checks if an exception is worth retrying (connection, throttling or a server error).
     """
-    is_connection_error = isinstance(e, ConnectionError)
+    is_connection_error = isinstance(e, (ConnectionError, ChunkedEncodingError))
     is_500_error = (
         isinstance(e, HTTPError)
         and e.response is not None
