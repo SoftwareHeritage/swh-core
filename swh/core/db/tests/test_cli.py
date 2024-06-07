@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2022  The Software Heritage developers
+# Copyright (C) 2019-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -155,12 +155,18 @@ def test_cli_swh_db_initialization_with_env(
         swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
     )
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
-
     result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--dbname", db_params.dbname]
+        swhdb,
+        [
+            "init",
+            module_name,
+            "--dbname",
+            db_params.dbname,
+        ],
     )
 
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
+
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
     with BaseDb.connect(postgresql.info.dsn).cursor() as cur:
@@ -204,8 +210,14 @@ def test_cli_swh_db_initialization_idempotent(
         assert len(origins) == 1
 
 
+@pytest.mark.parametrize("with_module_config_key", [True, False])
 def test_cli_swh_db_create_and_init_db_new_api(
-    cli_runner, postgresql, mock_import_swhmodule, mocker, tmp_path
+    cli_runner,
+    postgresql,
+    mock_import_swhmodule,
+    mocker,
+    tmp_path,
+    with_module_config_key,
 ):
     """Create a db then initializing it should be ok for a "new style" datastore"""
     module_name = "test.cli"
@@ -217,8 +229,11 @@ def test_cli_swh_db_create_and_init_db_new_api(
     cfgfile.write_text(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
     result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", module_name])
 
+    cli_cmd = ["-C", cfgfile, "init", module_name]
+    if with_module_config_key:
+        cli_cmd.extend(["--module-config-key", module_name])
+    result = cli_runner.invoke(swhdb, cli_cmd)
     assert (
         result.exit_code == 0
     ), f"Unexpected output: {traceback.print_tb(result.exc_info[2])}"

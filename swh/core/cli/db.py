@@ -140,13 +140,19 @@ def db_init_admin(module: str, dbname: str) -> None:
     help="Database flavor.",
     default=None,
 )
+@click.option("--module-config-key", help="Module config key to lookup.", default=None)
 @click.pass_context
-def db_init(ctx, module, dbname, flavor):
+def db_init(ctx, module, dbname, flavor, module_config_key):
     """Initialize a database for the Software Heritage <module>.
 
     The database connection string can come from the --dbname option, or from
     the configuration file (see option ``--config-file`` in ``swh db --help``)
-    in the section named after the MODULE argument.
+    in the section named after the MODULE argument in most cases.
+
+    For the case of the configuration key entry does not match the module name (e.g.
+    module <storage.proxies.blocking> with a <blocking_admin> configuration key entry),
+    use the --module-config-key flag to explicit the expected key entry to read the `db`
+    information from (e.g. --module-config-key=blocking_admin).
 
     Example::
 
@@ -175,7 +181,7 @@ def db_init(ctx, module, dbname, flavor):
     if dbname is None:
         # use the db cnx from the config file; the expected config entry is the
         # given module name
-        cfg = ctx.obj["config"].get(module, {})
+        cfg = ctx.obj["config"].get(module_config_key or module, {})
         dbname = get_dburl_from_config(cfg)
     else:
         cfg = {"cls": "postgresql", "db": dbname}
