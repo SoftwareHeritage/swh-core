@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2018-2022  The Software Heritage developers
+# Copyright (C) 2018-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -252,6 +252,48 @@ def db_init(ctx, module, dbname, flavor, module_config_key):
             fg="red",
             bold=True,
         )
+
+
+@db.command(name="shell", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=True)
+@click.option(
+    "--dbname",
+    "--db-name",
+    "-d",
+    help="Database name or connection URI.",
+    default=None,
+    show_default=False,
+)
+@click.option("--module-config-key", help="Module config key to lookup.", default=None)
+@click.pass_context
+def db_shell(ctx, module, dbname, module_config_key):
+    """A subcommand to ease starting a psql shell using swh module configuration file.
+    This may be useful for extra troubleshooting session when the other 'swh db' clis
+    are not enough.
+
+    """
+
+    from subprocess import run
+
+    if dbname is None:
+        # use the db cnx from the config file; the expected config entry is either the given
+        # module_config_key or defaulting to the module name (if module_config_key is not
+        # provided)
+        cfg = ctx.obj["config"].get(module_config_key or module, {})
+        dbname = get_dburl_from_config(cfg)
+
+    if not dbname:
+        raise click.BadParameter(
+            "Missing the postgresql connection configuration. Either fix your "
+            "configuration file or use the [-d|--dbname|--db-name] option."
+        )
+
+    dbname_censored = " ".join(
+        elem for elem in dbname.split() if not elem.startswith("password=")
+    )
+    logger.info("Opening database shell for %r", dbname_censored)
+
+    run(["psql", dbname])
 
 
 @db.command(name="version", context_settings=CONTEXT_SETTINGS)
