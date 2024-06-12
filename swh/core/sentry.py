@@ -6,6 +6,7 @@
 from importlib.metadata import distribution
 import logging
 import os
+import sys
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -82,7 +83,10 @@ def init_sentry(
     )
 
     if sentry_dsn is None and not deferred_init:
-        logger.warning("Sentry DSN not provided, events will not be sent.")
+        # Don’t display a warning if there is a controlling terminal
+        # as errors can be monitored from there.
+        if not sys.stdout.isatty():
+            logger.warning("Sentry DSN not provided, events will not be sent.")
 
     import sentry_sdk
 
