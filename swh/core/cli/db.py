@@ -482,6 +482,10 @@ def db_upgrade(ctx, module, dbname, to_version, interactive, module_config_key):
 
 
 def get_dburl_from_config(cfg):
+    if cfg["cls"] == "pipeline":
+        # We know the database itself will always
+        # come last in a pipeline configuration.
+        cfg = cfg["steps"][-1]
     if cfg.get("cls") != "postgresql":
         raise click.BadParameter(
             "Configuration cls must be set to 'postgresql' for this command."
