@@ -1,7 +1,8 @@
-# Copyright (C) 2023  The Software Heritage developers
+# Copyright (C) 2023-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
+
 
 import pytest
 import requests
@@ -20,6 +21,11 @@ def make_request():
     return response
 
 
+@pytest.fixture
+def mock_sleep(mocker):
+    return mocker.patch("time.sleep")
+
+
 def assert_sleep_calls(mocker, mock_sleep, sleep_params):
     mock_sleep.assert_has_calls([mocker.call(param) for param in sleep_params])
 
@@ -33,7 +39,7 @@ def assert_sleep_calls(mocker, mock_sleep, sleep_params):
         codes.service_unavailable,
     ],
 )
-def test_http_retry(requests_mock, mocker, status_code):
+def test_http_retry(requests_mock, mocker, mock_sleep, status_code):
     data = {"result": {}}
     requests_mock.get(
         TEST_URL,
@@ -44,8 +50,6 @@ def test_http_retry(requests_mock, mocker, status_code):
         ],
     )
 
-    mock_sleep = mocker.patch.object(make_request.retry, "sleep")
-
     response = make_request()
 
     assert_sleep_calls(mocker, mock_sleep, [1, WAIT_EXP_BASE])
@@ -53,13 +57,11 @@ def test_http_retry(requests_mock, mocker, status_code):
     assert response.json() == data
 
 
-def test_http_retry_max_attemps(requests_mock, mocker):
+def test_http_retry_max_attemps(requests_mock, mocker, mock_sleep):
     requests_mock.get(
         TEST_URL,
         [{"status_code": codes.too_many_requests}] * (MAX_NUMBER_ATTEMPTS),
     )
-
-    mock_sleep = mocker.patch.object(make_request.retry, "sleep")
 
     with pytest.raises(requests.exceptions.HTTPError) as e:
         make_request()
@@ -80,7 +82,7 @@ def make_request_wait_fixed():
     return response
 
 
-def test_http_retry_wait_fixed(requests_mock, mocker):
+def test_http_retry_wait_fixed(requests_mock, mocker, mock_sleep):
     requests_mock.get(
         TEST_URL,
         [
@@ -89,8 +91,6 @@ def test_http_retry_wait_fixed(requests_mock, mocker):
             {"status_code": codes.ok},
         ],
     )
-
-    mock_sleep = mocker.patch.object(make_request_wait_fixed.retry, "sleep")
 
     make_request_wait_fixed()
 

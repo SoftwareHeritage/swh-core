@@ -4,4 +4,4 @@ python-magic
 pyyaml
 requests
 sentry-sdk >= 2
-tenacity
+tenacity >= 8.4.2
