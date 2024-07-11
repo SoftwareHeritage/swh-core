@@ -245,8 +245,10 @@ def merge_configs(base: Optional[Dict[str, Any]], other: Optional[Dict[str, Any]
         raise TypeError("Cannot merge a %s with a %s" % (type(base), type(other)))
 
     output = {}
-    allkeys = set(chain(base.keys(), other.keys()))
-    for k in allkeys:
+    for k in chain(base.keys(), other.keys()):
+        if k in output:
+            continue
+
         vb = base.get(k)
         vo = other.get(k)
 
