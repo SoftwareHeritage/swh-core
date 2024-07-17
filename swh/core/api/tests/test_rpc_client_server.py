@@ -131,7 +131,9 @@ def test_api_typeerror(swh_rpc_client, mocker):
     with pytest.raises(RemoteException) as exc_info:
         swh_rpc_client.raise_typeerror()
 
-    assert mocked_capture_exception.called_once_with(TypeError("Did I pass through?"))
+    passed_exc = mocked_capture_exception.call_args[0][0]
+    assert isinstance(passed_exc, TypeError)
+    assert passed_exc.args[0] == "Did I pass through?"
 
     assert exc_info.value.args[0]["type"] == "TypeError"
     assert exc_info.value.args[0]["args"] == ["Did I pass through?"]
