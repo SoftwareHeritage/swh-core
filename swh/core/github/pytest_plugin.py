@@ -85,9 +85,10 @@ def github_repo(i: int) -> Dict[str, Union[int, str]]:
     repo: Dict[str, Union[int, str]] = {
         "id": i,
         "html_url": f"https://github.com/origin/{i}",
+        "fork": False,
     }
 
-    # Set the pushed_at date on one of the origins
+    # Set the extra fields provided to the SWH GitHub lister on some repos
     if i == 4321:
         repo["pushed_at"] = "2018-11-08T13:16:24Z"
 
