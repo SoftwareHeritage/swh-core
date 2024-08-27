@@ -148,7 +148,7 @@ def test_api_raise_exception_exc_arg(swh_rpc_client):
         swh_rpc_client._post("raise_exception_exc_arg", data={})
 
     assert exc_info.value.args[0]["type"] == "Exception"
-    assert type(exc_info.value.args[0]["args"][0]) == Exception
+    assert type(exc_info.value.args[0]["args"][0]) is Exception
     assert str(exc_info.value.args[0]["args"][0]) == "error"
 
 

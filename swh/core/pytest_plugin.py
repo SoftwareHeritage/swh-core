@@ -339,7 +339,7 @@ class FakeSocket(object):
         self.payloads = deque()
 
     def send(self, payload):
-        assert type(payload) == bytes
+        assert type(payload) is bytes
         self.payloads.append(payload)
 
     def recv(self):

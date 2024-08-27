@@ -28,24 +28,20 @@ class ReraiseException(Exception):
 def rpc_client_class(requests_mock):
     class TestStorage:
         @remote_api_endpoint("test_endpoint_url")
-        def test_endpoint(self, test_data, db=None, cur=None):
-            ...
+        def test_endpoint(self, test_data, db=None, cur=None): ...
 
         @remote_api_endpoint("path/to/endpoint")
-        def something(self, data, db=None, cur=None):
-            ...
+        def something(self, data, db=None, cur=None): ...
 
         @remote_api_endpoint("serializer_test")
-        def serializer_test(self, data, db=None, cur=None):
-            ...
+        def serializer_test(self, data, db=None, cur=None): ...
 
         @remote_api_endpoint("overridden/endpoint")
         def overridden_method(self, data):
             return "foo"
 
         @remote_api_endpoint("request_too_large")
-        def request_too_large(self, data, db=None, cur=None):
-            ...
+        def request_too_large(self, data, db=None, cur=None): ...
 
     class Testclient(RPCClient):
         backend_class = TestStorage
@@ -132,7 +128,7 @@ def test_client_connexion_error(rpc_client, requests_mock):
     with pytest.raises(APIError) as exc_info:
         rpc_client._post("connection_error", data={})
 
-    assert type(exc_info.value.args[0]) == ConnectionError
+    assert type(exc_info.value.args[0]) is ConnectionError
     assert str(exc_info.value.args[0]) == error_message
 
 

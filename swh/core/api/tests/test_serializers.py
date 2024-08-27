@@ -179,7 +179,7 @@ def test_exception_serializer_round_trip_json():
     )
     actual_data = json_loads(json_data)
     assert "exception" in actual_data
-    assert type(actual_data["exception"]) == ConnectionError
+    assert type(actual_data["exception"]) is ConnectionError
     assert str(actual_data["exception"]) == error_message
 
 
@@ -188,7 +188,7 @@ def test_complex_exception_serializer_round_trip_json():
     json_data = json_dumps({"exception": exception})
     actual_data = json_loads(json_data)
     assert "exception" in actual_data
-    assert type(actual_data["exception"]) == Exception
+    assert type(actual_data["exception"]) is Exception
     assert str(actual_data["exception"]) == str(exception)
 
 
@@ -222,7 +222,7 @@ def test_exception_serializer_round_trip_msgpack():
     data = msgpack_dumps({"exception": ConnectionError(error_message)})
     actual_data = msgpack_loads(data)
     assert "exception" in actual_data
-    assert type(actual_data["exception"]) == ConnectionError
+    assert type(actual_data["exception"]) is ConnectionError
     assert str(actual_data["exception"]) == error_message
 
 
@@ -231,7 +231,7 @@ def test_complex_exception_serializer_round_trip_msgpack():
     data = msgpack_dumps({"exception": exception})
     actual_data = msgpack_loads(data)
     assert "exception" in actual_data
-    assert type(actual_data["exception"]) == Exception
+    assert type(actual_data["exception"]) is Exception
     assert str(actual_data["exception"]) == str(exception)
 
 
