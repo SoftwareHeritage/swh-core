@@ -415,9 +415,11 @@ class Statsd(object):
             value,
             metric_type,
             ("|@" + str(sample_rate)) if sample_rate != 1 else "",
-            ("|#" + ",".join("%s:%s" % (k, v) for (k, v) in sorted(tags.items())))
-            if tags
-            else "",
+            (
+                ("|#" + ",".join("%s:%s" % (k, v) for (k, v) in sorted(tags.items())))
+                if tags
+                else ""
+            ),
         )
         # Send it
         self._send(payload)
