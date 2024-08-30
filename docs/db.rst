@@ -126,7 +126,7 @@ Writing tests
 The ``swh.core.db.pytest_plugin`` provides a few helper tools to write unit
 tests for postgresql based datastores.
 
-By default, when using these fixtures, a posgresql server will be started (by
+By default, when using these fixtures, a postgresql server will be started (by
 the pytest_postgresql fixture) and a template database will be created using
 the ``postgresql_proc`` fixture factory provided by ``pytest_postgresql``.
 
