@@ -3,10 +3,10 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from importlib.metadata import entry_points
 import logging
 import warnings
 
+from backports.entry_points_selectable import entry_points
 import click
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
