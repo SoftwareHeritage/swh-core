@@ -6,6 +6,7 @@
 
 import logging
 from os import environ
+from typing import Optional
 import warnings
 
 import click
@@ -46,8 +47,7 @@ def db(ctx, config_file):
     "--db-name",
     "-d",
     help="Database name.",
-    default="softwareheritage-dev",
-    show_default=True,
+    default=None,
 )
 @click.option(
     "--template",
@@ -56,7 +56,8 @@ def db(ctx, config_file):
     default="template1",
     show_default=True,
 )
-def db_create(module, dbname, template):
+@click.pass_context
+def db_create(ctx, module, dbname, template):
     """Create a database for the Software Heritage <module>.
 
     and potentially execute superuser-level initialization steps.
@@ -81,52 +82,185 @@ def db_create(module, dbname, template):
     """
     from swh.core.db.db_utils import create_database_for_package
 
+    if dbname is None:
+        cfg = ctx.obj["config"].get(module, {})
+        dbname, cfg = get_dburl_from_config(cfg)
+
     logger.debug("db_create %s dn_name=%s", module, dbname)
     create_database_for_package(module, dbname, template)
 
 
 @db.command(name="init-admin", context_settings=CONTEXT_SETTINGS)
-@click.argument("module", required=True)
+@click.argument("module", metavar="MODULE-OR-CONFIG-PATH", required=True)
 @click.option(
     "--dbname",
     "--db-name",
     "-d",
     help="Database name.",
-    default="softwareheritage-dev",
-    show_default=True,
+    default=None,
 )
-def db_init_admin(module: str, dbname: str) -> None:
+@click.option(
+    "-a",
+    "--all",
+    "initialize_all",
+    help="superuser initialize all db found in the config file for the swh 'module'",
+    default=False,
+    is_flag=True,
+)
+@click.pass_context
+def db_init_admin(
+    ctx, module: str, dbname: Optional[str], initialize_all: bool
+) -> None:
     """Execute superuser-level initialization steps (e.g pg extensions, admin functions,
     ...)
+
+    Note: this command requires a postgresql connection with superuser permissions (e.g
+    postgres, swh-admin, ...)
+
+    If given, a db connection string will be used to connect to the database
+    and execute the initialization steps for the given module.
 
     Example::
 
         PGPASSWORD=... swh db init-admin -d swh-test scheduler
 
-    If you want to specify non-default postgresql connection parameters, please
+    If you want to specify non-default postgresql connection parameters, you can
     provide them using standard environment variables or by the mean of a
     properly crafted libpq connection URI. See psql(1) man page (section
     ENVIRONMENTS) for details.
 
-    Note: this command requires a postgresql connection with superuser permissions (e.g
-    postgres, swh-admin, ...)
-
-    Example::
+    Examples::
 
         \b
         PGPORT=5434 swh db init-admin scheduler
         swh db init-admin -d postgresql://superuser:passwd@pghost:5433/swh-scheduler \
           scheduler
 
+    If the db connection string is not given, it will be looked for in the
+    configuration file. Note that this step need admin right on the database,
+    so this usage is not meant for production environment (but rather test
+    environments.)
+
+    Example::
+
+        \b
+        $ cat conf.yml
+        storage:
+          cls: postgresql
+          db: postgresql://user:passwd@pghost:5433/swh-storage
+          objstorage:
+            cls: memory
+
+        \b
+        $ swh db -C conf.yml init-admin storage
+
+    The module can be given as a 'path' in the configuration file where the
+    configuration entry for the targeted database connection string can be
+    found. For example::
+
+        \b
+        $ cat conf.yml
+        storage:
+          cls: pipeline
+          steps:
+            - cls: masking
+              masking_db: postgresql:///?service=swh-masking-proxy
+            - cls: buffer
+            - cls: postgresql
+              db: postgresql://user:passwd@pghost:5433/swh-storage
+              objstorage:
+                cls: memory
+
+        \b
+        $ swh db -C conf.yml init-admin storage:steps:2:db
+
+    Warning: the 'path' must target the connection string entry in the config
+    file.
+
+    The --all option allows to execute superuser-level
+    initialization steps for all the datasabases found in the config file for
+    the <module>. For example::
+
+        \b
+        $ cat conf.yml
+        storage:
+          cls: pipeline
+          steps:
+            - cls: masking
+              masking_db: postgresql:///?service=swh-masking-proxy
+            - cls: buffer
+            - cls: postgresql
+              db: postgresql://user:passwd@pghost:5433/swh-storage
+              objstorage:
+                cls: memory
+
+        \b
+        $ swh db -C conf.yml init-admin -a storage
+
+    will run the superuser-level init for both the masking and main storage
+    declared in the 'storage' section of the config file.
+
     """
+    from swh.core.config import get_swh_backend_module, list_db_config_entries
     from swh.core.db.db_utils import init_admin_extensions
 
-    logger.debug("db_init_admin %s dbname=%s", module, dbname)
-    init_admin_extensions(module, dbname)
+    modules = []
+    dbnames = []
+
+    if initialize_all:
+        assert ":" not in module
+        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(ctx.obj["config"]):
+            if cfgmod == module:
+                fullmodule, _ = get_swh_backend_module(
+                    swh_package=cfgmod, cls=dbcfg["cls"]
+                )
+                dbnames.append(cnxstr)
+                modules.append(fullmodule)
+    else:
+        if dbname is not None:
+            # default behavior
+            cfg = {"cls": "postgresql", "db": dbname}
+            module, _ = get_swh_backend_module(swh_package=module, cls="postgresql")
+        else:
+            if ":" in module:  # it's a path to a config entry
+                # read the db access for module 'module' from the config file
+                swhmod, cfg, dbname = get_dburl_from_config_key(
+                    ctx.obj["config"], module
+                )
+                # the actual module is retrieved from the entry_point for the cls
+                module, _ = get_swh_backend_module(swh_package=swhmod, cls=cfg["cls"])
+            else:
+                # use the db cnx from the config file; the expected config entry is the
+                # given module name
+                cfg = ctx.obj["config"].get(module, {})
+                dbname, cfg = get_dburl_from_config(cfg)
+                # the actual module is retrieved from the entry_point for the cls
+                module, _ = get_swh_backend_module(swh_package=module, cls=cfg["cls"])
+        modules.append(module)
+        assert dbname is not None
+        dbnames.append(dbname)
+
+    for module, dbname in zip(modules, dbnames):
+        logger.debug("db_init_admin %s dbname=%s", module, dbname)
+        init_admin_extensions(module, dbname)
+
+
+@db.command(name="list", context_settings=CONTEXT_SETTINGS)
+@click.argument("module", required=False)
+@click.pass_context
+def db_list(ctx, module):
+    """List found DB configs under the <module> in the config file"""
+    from swh.core.config import list_db_config_entries
+
+    cfg = ctx.obj["config"]
+    for swhmod, path, dbcfg, db in list_db_config_entries(cfg):
+        if module and module != swhmod:
+            continue
+        print(path, dbcfg["cls"], db)
 
 
 @db.command(name="init", context_settings=CONTEXT_SETTINGS)
-@click.argument("module", required=True)
+@click.argument("module", metavar="MODULE-OR-CONFIG-PATH", required=True)
 @click.option(
     "--dbname",
     "--db-name",
@@ -141,56 +275,113 @@ def db_init_admin(module: str, dbname: str) -> None:
     default=None,
 )
 @click.option("--module-config-key", help="Module config key to lookup.", default=None)
+@click.option(
+    "-a",
+    "--all",
+    "initialize_all",
+    help="initialize all db found in the config file for the swh 'module'",
+    default=False,
+    is_flag=True,
+)
 @click.pass_context
-def db_init(ctx, module, dbname, flavor, module_config_key):
+def db_init(ctx, module, dbname, flavor, module_config_key, initialize_all):
     """Initialize a database for the Software Heritage <module>.
 
-    The database connection string can come from the --dbname option, or from
-    the configuration file (see option ``--config-file`` in ``swh db --help``)
-    in the section named after the MODULE argument in most cases.
+    As for the 'init-admin' command, the database connection string can come
+    either from the --dbname option or the configuration file (see option
+    ``--config-file`` in ``swh db --help``) in the section named after the
+    MODULE argument in most cases.
 
-    For the case of the configuration key entry does not match the module name (e.g.
-    module <storage.proxies.blocking> with a <blocking_admin> configuration key entry),
-    use the --module-config-key flag to explicit the expected key entry to read the `db`
-    information from (e.g. --module-config-key=blocking_admin).
-
-    Example::
+    When retrieved from within the configuration, the db connection string can
+    be looked after from any location in the configuration using the
+    <module-or-config-path> option. For example::
 
         \b
         $ cat conf.yml
         storage:
-          cls: postgresql
-          db: postgresql://user:passwd@pghost:5433/swh-storage
-          objstorage:
-            cls: memory
+          cls: pipeline
+          steps:
+            - cls: masking
+              masking_db: postgresql:///?service=swh-masking-proxy
+            - cls: buffer
+            - cls: postgresql
+              db: postgresql://user:passwd@pghost:5433/swh-storage
+              objstorage:
+                cls: memory
 
         \b
         $ swh db -C conf.yml init storage  # or
-        $ SWH_CONFIG_FILENAME=conf.yml swh db init storage
-        $ # or
+        $ SWH_CONFIG_FILENAME=conf.yml swh db init storage # or
         $ swh db init --dbname postgresql://user:passwd@pghost:5433/swh-storage storage
 
+        $ # to initialize the "main" storage db (expected to be the last element
+        $ # of a pipeline config),
+        $ # or to initialize the masking_db:
+        $ swh db -C conf.yml init storage:steps:0:masking_db
+
+    Note that the 'path' in the configuration file must target the connection
+    string entry itself.
+
+    Usage of --module-config-key is now deprecated in favor of "full-path"
+    module/config entry.
+
     """
+    from swh.core.config import get_swh_backend_module, list_db_config_entries
+
+    # TODO: sanity check all the incompatible options...
+
+    init_args = []
+    if initialize_all:
+        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(ctx.obj["config"]):
+            if cfgmod == module:
+                fullmodule, backend_class = get_swh_backend_module(
+                    swh_package=cfgmod, cls=dbcfg["cls"]
+                )
+                init_args.append((fullmodule, backend_class, cnxstr, dbcfg))
+    else:
+        if dbname is not None:
+            cfg = {"cls": "postgresql", "db": dbname}
+            module, backend_class = get_swh_backend_module(
+                swh_package=module, cls="postgresql"
+            )
+        else:
+            if ":" in module:  # it's a path to a config entry
+                swhmod, cfg, dbname = get_dburl_from_config_key(
+                    ctx.obj["config"], module
+                )
+                # the actual module is retrieved from the entry_point for the cls
+                module, backend_class = get_swh_backend_module(
+                    swh_package=swhmod, cls=cfg["cls"]
+                )
+            else:
+                # use the db cnx from the config file; the expected config entry is the
+                # given module name
+                cfg = ctx.obj["config"].get(module_config_key or module, {})
+                dbname, cfg = get_dburl_from_config(cfg)
+                # the actual module is retrieved from the entry_point for the cls
+                module, backend_class = get_swh_backend_module(
+                    swh_package=module, cls=cfg["cls"]
+                )
+        if not dbname:
+            raise click.BadParameter(
+                "Missing the postgresql connection configuration. Either fix your "
+                "configuration file or use the --dbname option."
+            )
+        init_args.append((module, backend_class, dbname, cfg))
+
+    # XXX it probably does not make much sense to have a non-None flavor when
+    # initializing several db at once... this case should raise an error
+    for swhmod, backend_class, dbname, cfg in init_args:
+        initialize_one(swhmod, backend_class, flavor, dbname, cfg)
+
+
+def initialize_one(module, backend_class, flavor, dbname, cfg):
     from swh.core.db.db_utils import (
         get_database_info,
         import_swhmodule,
         populate_database_for_package,
         swh_set_db_version,
     )
-
-    if dbname is None:
-        # use the db cnx from the config file; the expected config entry is the
-        # given module name
-        cfg = ctx.obj["config"].get(module_config_key or module, {})
-        dbname = get_dburl_from_config(cfg)
-    else:
-        cfg = {"cls": "postgresql", "db": dbname}
-
-    if not dbname:
-        raise click.BadParameter(
-            "Missing the postgresql connection configuration. Either fix your "
-            "configuration file or use the --dbname option."
-        )
 
     logger.debug("db_init %s flavor=%s dbname=%s", module, flavor, dbname)
 
@@ -207,6 +398,11 @@ def db_init(ctx, module, dbname, flavor, module_config_key):
         # let's do it; instantiate the data source to retrieve the current
         # (expected) db version
         datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
+        if datastore_factory is None and backend_class is not None:
+
+            def datastore_factory(cls, **cfg):
+                return backend_class(**cfg)
+
         if datastore_factory:
             datastore = datastore_factory(**cfg)
             if not hasattr(datastore, "current_version"):
@@ -280,7 +476,7 @@ def db_shell(ctx, module, dbname, module_config_key):
         # module_config_key or defaulting to the module name (if module_config_key is not
         # provided)
         cfg = ctx.obj["config"].get(module_config_key or module, {})
-        dbname = get_dburl_from_config(cfg)
+        dbname, cfg = get_dburl_from_config(cfg)
 
     if not dbname:
         raise click.BadParameter(
@@ -297,17 +493,25 @@ def db_shell(ctx, module, dbname, module_config_key):
 
 
 @db.command(name="version", context_settings=CONTEXT_SETTINGS)
-@click.argument("module", required=True)
+@click.argument("module", metavar="MODULE-OR-CONFIG-PATH", required=True)
 @click.option(
     "--history",
-    "show_all",
+    "show_history",
     help="Show version history.",
+    default=False,
+    is_flag=True,
+)
+@click.option(
+    "-a",
+    "--all",
+    "all_backends",
+    help="show version for all db found in the config file for the swh 'module'",
     default=False,
     is_flag=True,
 )
 @click.option("--module-config-key", help="Module config key to lookup.", default=None)
 @click.pass_context
-def db_version(ctx, module, show_all, module_config_key=None):
+def db_version(ctx, module, show_history, all_backends, module_config_key=None):
     """Print the database version for the Software Heritage.
 
     Example::
@@ -315,57 +519,77 @@ def db_version(ctx, module, show_all, module_config_key=None):
         \b
         swh db version -d swh-test
         swh db version scheduler
-        swh db version scrubber --module-config-key=scrubber_db
+        swh db version scrubber:scrubber_db
+        swh db version --all scrubber
 
     """
+    from swh.core.config import get_swh_backend_module, list_db_config_entries
     from swh.core.db.db_utils import get_database_info, import_swhmodule
 
-    # use the db cnx from the config file; the expected config entry is either the given
-    # module_config_key or defaulting to the module name (if module_config_key is not
-    # provided)
-    cfg = ctx.obj["config"].get(module_config_key or module, {})
-    dbname = get_dburl_from_config(cfg)
+    backends = []
 
-    if not dbname:
-        raise click.BadParameter(
-            "Missing the postgresql connection configuration. Either fix your "
-            "configuration file or use the --dbname option."
-        )
-
-    logger.debug("db_version dbname=%s", dbname)
-
-    db_module, db_version, db_flavor = get_database_info(dbname)
-    if db_module is None:
-        click.secho(
-            "WARNING the database does not have a dbmodule table.", fg="red", bold=True
-        )
-        db_module = module
-    assert db_module == module, f"{db_module} (in the db) != {module} (given)"
-
-    click.secho(f"module: {db_module}", fg="green", bold=True)
-
-    if db_flavor is not None:
-        click.secho(f"flavor: {db_flavor}", fg="green", bold=True)
-
-    # instantiate the data source to retrieve the current (expected) db version
-    datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
-    if datastore_factory:
-        datastore = datastore_factory(**cfg)
-        code_version = datastore.current_version
-        click.secho(
-            f"current code version: {code_version}",
-            fg="green" if code_version == db_version else "red",
-            bold=True,
-        )
-
-    if not show_all:
-        click.secho(f"version: {db_version}", fg="green", bold=True)
+    if all_backends:
+        assert ":" not in module
+        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(ctx.obj["config"]):
+            if cfgmod == module:
+                db_module, db_version, db_flavor = get_database_info(cnxstr)
+                backends.append((db_module, db_version, db_flavor, dbcfg, cnxstr))
     else:
-        from swh.core.db.db_utils import swh_db_versions
+        if ":" in module:  # it's a path to a config entry
+            swhmod, cfg, dbname = get_dburl_from_config_key(ctx.obj["config"], module)
+            # the actual module is retrieved from the entry_point for the cls
+            module, _ = get_swh_backend_module(swh_package=swhmod, cls=cfg["cls"])
+        else:
+            # use the db cnx from the config file; the expected config entry is the
+            # given module name
+            cfg = ctx.obj["config"].get(module_config_key or module, {})
+            dbname, cfg = get_dburl_from_config(cfg)
 
-        versions = swh_db_versions(dbname)
-        for version, tstamp, desc in versions:
-            click.echo(f"{version} [{tstamp}] {desc}")
+        if not dbname:
+            raise click.BadParameter(
+                "Missing the postgresql connection configuration. Either fix your "
+                "configuration file or use the --dbname option."
+            )
+
+        logger.debug("db_version dbname=%s", dbname)
+
+        db_module, db_version, db_flavor = get_database_info(dbname)
+        if db_module is None:
+            click.secho(
+                "WARNING the database does not have a dbmodule table.",
+                fg="red",
+                bold=True,
+            )
+            db_module = module
+        assert db_module == module, f"{db_module} (in the db) != {module} (given)"
+        backends.append((db_module, db_version, db_flavor, cfg, dbname))
+
+    for db_module, db_version, db_flavor, cfg, dbname in backends:
+        click.echo("")
+        click.secho(f"module: {db_module}", fg="green", bold=True)
+
+        if db_flavor is not None:
+            click.secho(f"flavor: {db_flavor}", fg="green", bold=True)
+
+        # instantiate the data source to retrieve the current (expected) db version
+        datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
+        if datastore_factory:
+            datastore = datastore_factory(**cfg)
+            code_version = datastore.current_version
+            click.secho(
+                f"current code version: {code_version}",
+                fg="green" if code_version == db_version else "red",
+                bold=True,
+            )
+
+        if not show_history:
+            click.secho(f"version: {db_version}", fg="green", bold=True)
+        else:
+            from swh.core.db.db_utils import swh_db_versions
+
+            versions = swh_db_versions(dbname)
+            for version, tstamp, desc in versions:
+                click.echo(f"{version} [{tstamp}] {desc}")
 
 
 @db.command(name="upgrade", context_settings=CONTEXT_SETTINGS)
@@ -393,8 +617,18 @@ def db_version(ctx, module, show_all, module_config_key=None):
 @click.option(
     "--module-config-key", help="Module configuration key to lookup.", default=None
 )
+@click.option(
+    "-a",
+    "--all",
+    "upgrade_all",
+    help="upgrade all db found in the config file for the swh 'module'",
+    default=False,
+    is_flag=True,
+)
 @click.pass_context
-def db_upgrade(ctx, module, dbname, to_version, interactive, module_config_key):
+def db_upgrade(
+    ctx, module, dbname, to_version, interactive, module_config_key, upgrade_all
+):
     """Upgrade the database for given module (to a given version if specified).
 
     Examples::
@@ -402,9 +636,10 @@ def db_upgrade(ctx, module, dbname, to_version, interactive, module_config_key):
         \b
         swh db upgrade storage
         swh db upgrade scheduler --to-version=10
-        swh db upgrade scrubber --to-version=10 --module-config-key=scrubber_db
+        swh db upgrade scrubber:scrubber_db --to-version=10
 
     """
+    from swh.core.config import get_swh_backend_module, list_db_config_entries
     from swh.core.db.db_utils import (
         get_database_info,
         import_swhmodule,
@@ -412,73 +647,105 @@ def db_upgrade(ctx, module, dbname, to_version, interactive, module_config_key):
         swh_set_db_module,
     )
 
-    # use the db cnx from the config file; the expected config entry is either the given
-    # module_config_key or defaulting to the module name (if module_config_key is not
-    # provided)
-    if dbname is None:
-        cfg = ctx.obj["config"].get(module_config_key or module, {})
-        dbname = get_dburl_from_config(cfg)
+    # TODO: mark --module-config-key as deprecated
+    # TODO: check options consistency
+
+    modules = []
+    dbnames = []
+    cfgs = []
+    if upgrade_all:
+        assert ":" not in module
+        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(ctx.obj["config"]):
+            if cfgmod == module:
+                fullmodule, _ = get_swh_backend_module(
+                    swh_package=cfgmod, cls=dbcfg["cls"]
+                )
+                dbnames.append(cnxstr)
+                modules.append(fullmodule)
+                cfgs.append(dbcfg)
     else:
-        cfg = {"cls": "postgresql", "db": dbname}
+        if dbname is not None:
+            # default behavior
+            cfg = {"cls": "postgresql", "db": dbname}
+            module, _ = get_swh_backend_module(swh_package=module, cls="postgresql")
+        else:
+            if ":" in module:  # it's a path to a config entry
+                swhmod, cfg, dbname = get_dburl_from_config_key(
+                    ctx.obj["config"], module
+                )
+                # the actual module is retrieved from the entry_point for the cls
+                module, _ = get_swh_backend_module(swh_package=swhmod, cls=cfg["cls"])
+            else:
+                # use the db cnx from the config file; the expected config entry is the
+                # given module name
+                cfg = ctx.obj["config"].get(module_config_key or module, {})
+                dbname, cfg = get_dburl_from_config(cfg)
+                module, _ = get_swh_backend_module(swh_package=module, cls=cfg["cls"])
+        dbnames.append(dbname)
+        cfgs.append(cfg)
+        modules.append(module)
 
-    if not dbname:
-        raise click.BadParameter(
-            "Missing the postgresql connection configuration. Either fix your "
-            "configuration file or use the --dbname option."
-        )
+    for dbname, module, cfg in zip(dbnames, modules, cfgs):
+        if not dbname:
+            raise click.BadParameter(
+                "Missing the postgresql connection configuration. Either fix your "
+                "configuration file or use the --dbname option."
+            )
 
-    logger.debug("db_version dbname=%s", dbname)
+        logger.debug("db_version dbname=%s", dbname)
 
-    db_module, db_version, db_flavor = get_database_info(dbname)
-    if db_module is None:
-        click.secho(
-            "Warning: the database does not have a dbmodule table.",
-            fg="yellow",
-            bold=True,
-        )
-        if interactive and not click.confirm(
-            f"Write the module information ({module}) in the database?", default=True
-        ):
-            raise click.BadParameter("Migration aborted.")
-        swh_set_db_module(dbname, module)
-        db_module = module
-
-    if db_module != module:
-        raise click.BadParameter(
-            f"Error: the given module ({module}) does not match the value "
-            f"stored in the database ({db_module})."
-        )
-
-    # instantiate the data source to retrieve the current (expected) db version
-    datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
-    if not datastore_factory:
-        raise click.UsageError(
-            "You cannot use this command on old-style datastore backend {db_module}"
-        )
-    datastore = datastore_factory(**cfg)
-    ds_version = datastore.current_version
-    if to_version is None:
-        to_version = ds_version
-    if to_version > ds_version:
-        raise click.UsageError(
-            f"The target version {to_version} is larger than the current version "
-            f"{ds_version} of the datastore backend {db_module}"
-        )
-
-    if to_version == db_version:
-        click.secho(
-            f"No migration needed: the current version is {db_version}",
-            fg="yellow",
-        )
-    else:
-        new_db_version = swh_db_upgrade(dbname, module, to_version)
-        click.secho(f"Migration to version {new_db_version} done", fg="green")
-        if new_db_version < ds_version:
+        db_module, db_version, db_flavor = get_database_info(dbname)
+        if db_module is None:
             click.secho(
-                "Warning: migration was not complete: "
-                f"the current version is {ds_version}",
+                "Warning: the database does not have a dbmodule table.",
+                fg="yellow",
+                bold=True,
+            )
+            if interactive and not click.confirm(
+                f"Write the module information ({module}) in the database?",
+                default=True,
+            ):
+                raise click.BadParameter("Migration aborted.")
+            swh_set_db_module(dbname, module)
+            db_module = module
+
+        if db_module != module:
+
+            raise click.BadParameter(
+                f"Error: the given module ({module}) does not match the value "
+                f"stored in the database ({db_module})."
+            )
+
+        # instantiate the data source to retrieve the current (expected) db version
+        datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
+        if not datastore_factory:
+            raise click.UsageError(
+                "You cannot use this command on old-style datastore backend {db_module}"
+            )
+        datastore = datastore_factory(**cfg)
+        ds_version = datastore.current_version
+        if to_version is None:
+            to_version = ds_version
+        if to_version > ds_version:
+            raise click.UsageError(
+                f"The target version {to_version} is larger than the current version "
+                f"{ds_version} of the datastore backend {db_module}"
+            )
+
+        if to_version == db_version:
+            click.secho(
+                f"No migration needed: the current version is {db_version}",
                 fg="yellow",
             )
+        else:
+            new_db_version = swh_db_upgrade(dbname, module, to_version)
+            click.secho(f"Migration to version {new_db_version} done", fg="green")
+            if new_db_version < ds_version:
+                click.secho(
+                    "Warning: migration was not complete: "
+                    f"the current version is {ds_version}",
+                    fg="yellow",
+                )
 
 
 def get_dburl_from_config(cfg):
@@ -493,4 +760,21 @@ def get_dburl_from_config(cfg):
     if "args" in cfg:
         # for bw compat
         cfg = cfg["args"]
-    return cfg.get("db")
+    return cfg.get("db"), cfg
+
+
+def get_dburl_from_config_key(cfg, key):
+    cfgpath = key.split(":")
+    swhmod = cfgpath[0]
+    for key_e in cfgpath[:-1]:
+        if isinstance(cfg, list):
+            cfg = cfg[int(key_e)]
+        else:
+            cfg = cfg[key_e]
+
+    if isinstance(cfg, list):
+        dburl = cfg[int(cfgpath[-1])]
+    else:
+        dburl = cfg[cfgpath[-1]]
+
+    return swhmod, cfg, dburl

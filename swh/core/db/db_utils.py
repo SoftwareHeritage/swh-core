@@ -261,11 +261,9 @@ def swh_set_db_module(
 
     Args:
       db_or_conninfo: A database connection, or a database connection info string
-      module: the swh module to register (without the leading 'swh.')
+      module: the swh module to register
     """
     update = False
-    if module.startswith("swh."):
-        module = module[4:]
 
     current_module = swh_db_module(db_or_conninfo)
     if current_module is not None:
@@ -481,6 +479,7 @@ def execute_values_generator(cur, sql, argslist, template=None, page_size=100):
 
 def import_swhmodule(modname):
     if not modname.startswith("swh."):
+        # TODO: show a deprecation warning; only accept fully qualified modules now
         modname = f"swh.{modname}"
     try:
         m = import_module(modname)
@@ -499,14 +498,18 @@ def get_sql_for_package(modname: str, upgrade: bool = False) -> List[pathlib.Pat
     m = import_swhmodule(modname)
     if m is None:
         raise ValueError(f"Module {modname} cannot be loaded")
+    moddir = pathlib.Path(m.__file__).parent
 
-    sqldir = pathlib.Path(m.__file__).parent / "sql"
+    while not (moddir / "sql").is_dir():
+        # for bw compat: look for the sql/ dir in the parent directory
+        moddir = moddir.parent
+        if moddir.name == "swh":
+            raise ValueError(
+                "Module {} does not provide a db schema (no sql/ dir)".format(modname)
+            )
+    sqldir = moddir / "sql"
     if upgrade:
         sqldir /= "upgrades"
-    if not sqldir.is_dir():
-        raise ValueError(
-            "Module {} does not provide a db schema (no sql/ dir)".format(modname)
-        )
     return sorted(sqldir.glob("*.sql"), key=lambda x: sortkey(x.name))
 
 

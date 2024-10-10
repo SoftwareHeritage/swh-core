@@ -7,8 +7,9 @@ from copy import deepcopy
 from itertools import chain
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
 
+from backports.entry_points_selectable import entry_points as get_entry_points
 from deprecated import deprecated
 import yaml
 
@@ -329,3 +330,54 @@ def load_from_envvar(default_config: Optional[Dict[str, Any]] = None) -> Dict[st
     cfg = read_raw_config(cfg_path)
     cfg = merge_configs(default_config or {}, cfg)
     return cfg
+
+
+def get_swh_backend_module(swh_package: str, cls: str) -> Tuple[str, type]:
+    entry_points = get_entry_points(group=f"swh.{swh_package}.classes")
+    try:
+        entry_point = entry_points[cls]
+    except KeyError:
+        raise ValueError(
+            "Unknown %s class `%s`. Supported: %s"
+            % (
+                swh_package,
+                cls,
+                ", ".join(entry_point.name for entry_point in entry_points),
+            )
+        ) from None
+    BackendCls = entry_point.load()
+    return entry_point.module, BackendCls
+
+
+def list_db_config_entries(cfg) -> Generator[Tuple[str, str, dict, str], None, None]:
+    """List all the db config entries in the given config structure
+
+    Generates quadruplets (module, path, cfg, cnxstr) where:
+
+    - the swh module name (aka top level config entries, eg. 'storage',
+      'scheduler', etc.)
+
+    - path: the path within the config structure of the (sub)config entry in
+      which the db connection has been found,
+
+    - cfg: the config subentry from the given gcfg in which the db config has
+      been found; it contains at least a 'cls' key,
+
+    - db: the db connection string
+
+    """
+
+    def look(cfg, path):
+        if "cls" in cfg:
+            for key, value in cfg.items():
+                if key == "db" or key.endswith("_db"):
+                    yield f"{path}:{key}", cfg, value
+                elif isinstance(value, list):
+                    for i, subcfg in enumerate(value):
+                        yield from look(subcfg, path=f"{path}:{key}:{i}")
+                elif isinstance(value, dict):
+                    yield from look(value, path=f"{path}:{key}")
+
+    for rootmodule, subcfg in cfg.items():
+        for path, cfg_entry, cnxstr in look(subcfg, rootmodule):
+            yield rootmodule, path, cfg_entry, cnxstr

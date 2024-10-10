@@ -25,7 +25,7 @@ from .test_cli import craft_conninfo
 
 
 def test_get_sql_for_package(mock_import_swhmodule):
-    module = "test.cli"
+    module = "test"
     files = get_sql_for_package(module)
     assert files
     assert [f.name for f in files] == [
@@ -37,7 +37,9 @@ def test_get_sql_for_package(mock_import_swhmodule):
     ]
 
 
-def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule):
+def test_db_utils_versions(
+    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module
+):
     """Check get_database_info, swh_db_versions and swh_db_module work ok
 
     This test checks db versions is properly initialized by the cli db init
@@ -45,7 +47,8 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule):
 
     mock_import_swhmodule should set the initial version to 3.
     """
-    module = "test.cli"
+    module = "test"
+    db_module = "test.cli"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -53,14 +56,14 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule):
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     # check the swh_db_module() function
-    assert swh_db_module(conninfo) == module
+    assert swh_db_module(conninfo) == db_module
 
     # the dbversion and dbmodule tables exists and are populated
     dbmodule, dbversion, dbflavor = get_database_info(conninfo)
     # check also the swh_db_versions() function
     versions = swh_db_versions(conninfo)
 
-    assert dbmodule == module
+    assert dbmodule == db_module
     assert dbversion == 3
     assert dbflavor == "default"
     # check also the swh_db_versions() function
@@ -78,7 +81,7 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule):
         )
 
     dbmodule, dbversion, dbflavor = get_database_info(conninfo)
-    assert dbmodule == module
+    assert dbmodule == db_module
     assert dbversion == 7
     assert dbflavor == "default"
 
@@ -92,9 +95,12 @@ def test_db_utils_versions(cli_runner, postgresql, mock_import_swhmodule):
             assert (now() - ts) < timedelta(seconds=1)
 
 
-def test_db_utils_upgrade(cli_runner, postgresql, mock_import_swhmodule, datadir):
+def test_db_utils_upgrade(
+    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module, datadir
+):
     """Check swh_db_upgrade"""
-    module = "test.cli"
+    module = "test"
+    db_module = "test.cli"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -102,7 +108,7 @@ def test_db_utils_upgrade(cli_runner, postgresql, mock_import_swhmodule, datadir
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     assert swh_db_version(conninfo) == 3
-    new_version = swh_db_upgrade(conninfo, module)
+    new_version = swh_db_upgrade(conninfo, db_module)
     assert new_version == 6
     assert swh_db_version(conninfo) == 6
 
@@ -110,7 +116,7 @@ def test_db_utils_upgrade(cli_runner, postgresql, mock_import_swhmodule, datadir
     # get rid of dates to ease checking
     versions = [(v[0], v[2]) for v in versions]
     assert versions[-1] == (3, "DB initialization")
-    sqlbasedir = path.join(datadir, module.split(".", 1)[1], "sql", "upgrades")
+    sqlbasedir = path.join(datadir, "cli", "sql", "upgrades")
 
     assert versions[1:-1] == [
         (i, f"Upgraded to version {i} using {sqlbasedir}/{i:03d}.sql")
@@ -132,10 +138,10 @@ def test_db_utils_upgrade(cli_runner, postgresql, mock_import_swhmodule, datadir
 
 
 def test_db_utils_swh_db_upgrade_sanity_checks(
-    cli_runner, postgresql, mock_import_swhmodule, datadir
+    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module, datadir
 ):
     """Check swh_db_upgrade"""
-    module = "test.cli"
+    module = "test"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -177,9 +183,12 @@ def test_db_utils_swh_db_upgrade_sanity_checks(
 
 
 @pytest.mark.parametrize("flavor", [None, "default", "flavorA", "flavorB"])
-def test_db_utils_flavor(cli_runner, postgresql, mock_import_swhmodule, flavor):
+def test_db_utils_flavor(
+    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module, flavor
+):
     """Check populate_database_for_package handle db flavor properly"""
-    module = "test.cli"
+    module = "test"
+    db_module = "test.cli"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -190,17 +199,19 @@ def test_db_utils_flavor(cli_runner, postgresql, mock_import_swhmodule, flavor):
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
     # check the swh_db_module() function
-    assert swh_db_module(conninfo) == module
+    assert swh_db_module(conninfo) == db_module
 
     # the dbversion and dbmodule tables exists and are populated
     dbmodule, _dbversion, dbflavor = get_database_info(conninfo)
-    assert dbmodule == module
+    assert dbmodule == db_module
     assert dbflavor == (flavor or "default")
 
 
-def test_db_utils_guest_permissions(cli_runner, postgresql, mock_import_swhmodule):
+def test_db_utils_guest_permissions(
+    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module
+):
     """Check populate_database_for_package handle db flavor properly"""
-    module = "test.cli"
+    module = "test"
     conninfo = craft_conninfo(postgresql)
     # breakpoint()
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
