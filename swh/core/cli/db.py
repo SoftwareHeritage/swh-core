@@ -299,11 +299,11 @@ def db_shell(ctx, module, dbname, module_config_key):
 @db.command(name="version", context_settings=CONTEXT_SETTINGS)
 @click.argument("module", required=True)
 @click.option(
-    "--all/--no-all",
+    "--history",
     "show_all",
     help="Show version history.",
     default=False,
-    show_default=True,
+    is_flag=True,
 )
 @click.option("--module-config-key", help="Module config key to lookup.", default=None)
 @click.pass_context
