@@ -436,29 +436,19 @@ def test_cli_swh_db_initadmin_and_init_db_from_config_path(
     # This initializes the schema and data
     cfgfile = tmp_path / "config.yml"
     cfgfile.write_text(
-        yaml.dump(
-            {
-                "test": {
-                    "cls": "something",
-                    "backend": {
-                        "cls": "pipeline",
-                        "steps": [
-                            {
-                                "cls": "cli",
-                                "db": conninfo,
-                            },
-                            {
-                                "cls": "cli",
-                                "backend": {
-                                    "cls": "cli2",
-                                    "cli_db": conninfo2,
-                                },
-                            },
-                        ],
-                    },
-                }
-            }
-        )
+        f"""
+test:
+  cls: something
+  backend:
+    cls: pipeline
+    steps:
+      - cls: cli
+        db: {conninfo}
+      - cls: cli
+        backend:
+          cls: cli2
+          cli_db: {conninfo2}
+    """
     )
     if initialize_all:
         result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", "test"])
@@ -506,29 +496,19 @@ def test_cli_swh_db_list_config_path(
 
     cfgfile = tmp_path / "config.yml"
     cfgfile.write_text(
-        yaml.dump(
-            {
-                "test": {
-                    "cls": "something",
-                    "backend": {
-                        "cls": "pipeline",
-                        "steps": [
-                            {
-                                "cls": "cli",
-                                "db": conninfo,
-                            },
-                            {
-                                "cls": "cli",
-                                "backend": {
-                                    "cls": "cli2",
-                                    "cli_db": conninfo2,
-                                },
-                            },
-                        ],
-                    },
-                }
-            }
-        )
+        f"""
+test:
+  cls: something
+  backend:
+    cls: pipeline
+    steps:
+      - cls: cli
+        db: {conninfo}
+      - cls: cli
+        backend:
+          cls: cli2
+          cli_db: {conninfo2}
+    """
     )
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "list"])
     assert_result(result)
@@ -556,29 +536,19 @@ def test_cli_swh_db_version_from_config(
 
     cfgfile = tmp_path / "config.yml"
     cfgfile.write_text(
-        yaml.dump(
-            {
-                "test": {
-                    "cls": "something",
-                    "backend": {
-                        "cls": "pipeline",
-                        "steps": [
-                            {
-                                "cls": "cli",
-                                "db": conninfo,
-                            },
-                            {
-                                "cls": "cli",
-                                "backend": {
-                                    "cls": "cli2",
-                                    "cli_db": conninfo2,
-                                },
-                            },
-                        ],
-                    },
-                }
-            }
-        )
+        f"""
+test:
+  cls: something
+  backend:
+    cls: pipeline
+    steps:
+      - cls: cli
+        db: {conninfo}
+      - cls: cli
+        backend:
+          cls: cli2
+          cli_db: {conninfo2}
+    """
     )
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", "test"])
     assert_result(result)
@@ -654,29 +624,19 @@ def test_cli_swh_db_upgrade_from_config(
 
     cfgfile = tmp_path / "config.yml"
     cfgfile.write_text(
-        yaml.dump(
-            {
-                "test": {
-                    "cls": "something",
-                    "backend": {
-                        "cls": "pipeline",
-                        "steps": [
-                            {
-                                "cls": "cli",
-                                "db": conninfo,
-                            },
-                            {
-                                "cls": "cli",
-                                "backend": {
-                                    "cls": "cli2",
-                                    "cli_db": conninfo2,
-                                },
-                            },
-                        ],
-                    },
-                }
-            }
-        )
+        f"""
+test:
+  cls: something
+  backend:
+    cls: pipeline
+    steps:
+      - cls: cli
+        db: {conninfo}
+      - cls: cli
+        backend:
+          cls: cli2
+          cli_db: {conninfo2}
+    """
     )
 
     module_name = "test"
@@ -789,29 +749,19 @@ def test_cli_swh_db_upgrade_all(
 
     cfgfile = tmp_path / "config.yml"
     cfgfile.write_text(
-        yaml.dump(
-            {
-                "test": {
-                    "cls": "something",
-                    "backend": {
-                        "cls": "pipeline",
-                        "steps": [
-                            {
-                                "cls": "cli",
-                                "db": conninfo,
-                            },
-                            {
-                                "cls": "cli",
-                                "backend": {
-                                    "cls": "cli2",
-                                    "cli_db": conninfo2,
-                                },
-                            },
-                        ],
-                    },
-                }
-            }
-        )
+        f"""
+test:
+  cls: something
+  backend:
+    cls: pipeline
+    steps:
+      - cls: cli
+        db: {conninfo}
+      - cls: cli
+        backend:
+          cls: cli2
+          cli_db: {conninfo2}
+    """
     )
 
     module_name = "test"
