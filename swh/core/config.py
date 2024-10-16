@@ -332,8 +332,17 @@ def load_from_envvar(default_config: Optional[Dict[str, Any]] = None) -> Dict[st
     return cfg
 
 
-def get_swh_backend_module(swh_package: str, cls: str) -> Tuple[str, type]:
+def get_swh_backend_module(swh_package: str, cls: str) -> Tuple[str, Optional[type]]:
     entry_points = get_entry_points(group=f"swh.{swh_package}.classes")
+    if not entry_points:
+        # it's an "old-style" swh package, not declaring its classes entry point
+        logger.warning(
+            f"swh package does not yet declare the swh.{swh_package}.classes "
+            "endpoint. Make sure all your swh dependencies are up to date."
+        )
+        if not swh_package.startswith("swh."):
+            swh_package = f"swh.{swh_package}"
+        return swh_package, None
     try:
         entry_point = entry_points[cls]
     except KeyError:

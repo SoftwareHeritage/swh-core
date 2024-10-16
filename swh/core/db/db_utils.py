@@ -12,6 +12,7 @@ from os import path
 import pathlib
 import re
 import subprocess
+from types import ModuleType
 from typing import Collection, Dict, Iterator, List, Optional, Tuple, Union, cast
 
 import psycopg2
@@ -22,6 +23,7 @@ from psycopg2.extensions import encodings as pgencodings
 from psycopg2.extensions import make_dsn
 from psycopg2.extensions import parse_dsn as _parse_dsn
 
+from swh.core.config import get_swh_backend_module
 from swh.core.utils import numfile_sortkey as sortkey
 
 logger = logging.getLogger(__name__)
@@ -171,9 +173,17 @@ def swh_db_upgrade(
         raise ValueError("Unable to retrieve the current version of the database")
     if db_module is None:
         raise ValueError("Unable to retrieve the module of the database")
+    if ":" in db_module and ":" not in modname:
+        logger.warn(
+            f"modname {modname} should have been given as a backend reference "
+            "(<package>:<cls>); this can happen for swh package not yet updated "
+            "to swh.core>=3.6; using 'postgresql' as cls."
+        )
+        modname = f"{modname}:postgresql"
     if db_module != modname:
         raise ValueError(
-            "The stored module of the database is different than the given one"
+            f"The stored module of the database {db_module} "
+            f"is different than the given one {modname}"
         )
 
     sqlfiles = [
@@ -181,7 +191,6 @@ def swh_db_upgrade(
         for fname in get_sql_for_package(modname, upgrade=True)
         if "-" not in fname.stem and db_version < int(fname.stem) <= to_version
     ]
-
     if not sqlfiles:
         return db_version
 
@@ -485,9 +494,16 @@ def execute_values_generator(cur, sql, argslist, template=None, page_size=100):
         yield from cur
 
 
-def import_swhmodule(modname):
+def import_swhmodule(modname: str) -> Optional[ModuleType]:
+    # TODO: move import_swhmodule in swh.core.config, but swh-scrubber needs to
+    # be aware of that befaore it can happen...
+    if ":" in modname:
+        # new style: look for the actual module in the 'swh.<package>.classes'
+        # entrypoint
+        package, cls = modname.split(":", 1)
+        modname, _ = get_swh_backend_module(swh_package=package, cls=cls)
+
     if not modname.startswith("swh."):
-        # TODO: show a deprecation warning; only accept fully qualified modules now
         modname = f"swh.{modname}"
     try:
         m = import_module(modname)
@@ -506,6 +522,8 @@ def get_sql_for_package(modname: str, upgrade: bool = False) -> List[pathlib.Pat
     m = import_swhmodule(modname)
     if m is None:
         raise ValueError(f"Module {modname} cannot be loaded")
+    if m.__file__ is None:
+        raise ValueError(f"Module {modname} is not valid (no __file__)")
     moddir = pathlib.Path(m.__file__).parent
 
     while not (moddir / "sql").is_dir():
