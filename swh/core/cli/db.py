@@ -6,7 +6,7 @@
 
 import logging
 from os import environ
-from typing import Optional
+from typing import Any, Dict, List, Optional, Tuple
 import warnings
 
 import click
@@ -137,7 +137,7 @@ def db_init_admin(
           scheduler
 
     If the db connection string is not given, it will be looked for in the
-    configuration file. Note that this step need admin right on the database,
+    configuration file. Note that this step needs admin right on the database,
     so this usage is not meant for production environment (but rather test
     environments.)
 
@@ -201,48 +201,16 @@ def db_init_admin(
     declared in the 'storage' section of the config file.
 
     """
-    from swh.core.config import get_swh_backend_module, list_db_config_entries
     from swh.core.db.db_utils import init_admin_extensions
 
-    package = module
-    args = []
+    args = handle_cmd_args(
+        cfg=ctx.obj["config"],
+        module=module,
+        do_all=initialize_all,
+        dbname=dbname,
+    )
 
-    if initialize_all:
-        assert ":" not in module
-        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(ctx.obj["config"]):
-            if cfgmod == module:
-                fullmodule, _ = get_swh_backend_module(
-                    swh_package=cfgmod, cls=dbcfg["cls"]
-                )
-                args.append((cfgmod, fullmodule, cnxstr, dbcfg))
-    else:
-        if dbname is not None:
-            # default behavior
-            cfg = {"cls": "postgresql", "db": dbname}
-            fullmodule, _ = get_swh_backend_module(swh_package=module, cls="postgresql")
-        else:
-            if ":" in module:  # it's a path to a config entry
-                # read the db access for module 'module' from the config file
-                package, cfg, dbname = get_dburl_from_config_key(
-                    ctx.obj["config"], module
-                )
-                # the actual module is retrieved from the entry_point for the cls
-                fullmodule, _ = get_swh_backend_module(
-                    swh_package=package, cls=cfg["cls"]
-                )
-            else:
-                # use the db cnx from the config file; the expected config entry is the
-                # given module name
-                cfg = ctx.obj["config"].get(module, {})
-                dbname, cfg = get_dburl_from_config(cfg)
-                # the actual module is retrieved from the entry_point for the cls
-                fullmodule, _ = get_swh_backend_module(
-                    swh_package=module, cls=cfg["cls"]
-                )
-        assert dbname is not None
-        args.append((package, fullmodule, dbname, cfg))
-
-    for package, fullmodule, dbname, cfg in args:
+    for package, fullmodule, _, dbname, cfg in args:
         logger.debug("db_init_admin %s:%s dbname=%s", package, cfg["cls"], dbname)
         init_admin_extensions(f"{package}:{cfg['cls']}", dbname)
 
@@ -328,53 +296,19 @@ def db_init(ctx, module, dbname, flavor, module_config_key, initialize_all):
     module/config entry.
 
     """
-    from swh.core.config import get_swh_backend_module, list_db_config_entries
 
     # TODO: sanity check all the incompatible options...
-
-    package = module
-    init_args = []
-    if initialize_all:
-        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(ctx.obj["config"]):
-            if cfgmod == module:
-                fullmodule, backend_class = get_swh_backend_module(
-                    swh_package=cfgmod, cls=dbcfg["cls"]
-                )
-                init_args.append((cfgmod, fullmodule, backend_class, cnxstr, dbcfg))
-    else:
-        if dbname is not None:
-            cfg = {"cls": "postgresql", "db": dbname}
-            fullmodule, backend_class = get_swh_backend_module(
-                swh_package=module, cls="postgresql"
-            )
-        else:
-            if ":" in module:  # it's a path to a config entry
-                package, cfg, dbname = get_dburl_from_config_key(
-                    ctx.obj["config"], module
-                )
-                # the actual module is retrieved from the entry_point for the cls
-                fullmodule, backend_class = get_swh_backend_module(
-                    swh_package=package, cls=cfg["cls"]
-                )
-            else:
-                # use the db cnx from the config file; the expected config entry is the
-                # given package name
-                cfg = ctx.obj["config"].get(module_config_key or module, {})
-                dbname, cfg = get_dburl_from_config(cfg)
-                # the actual module is retrieved from the entry_point for the cls
-                fullmodule, backend_class = get_swh_backend_module(
-                    swh_package=module, cls=cfg["cls"]
-                )
-        if not dbname:
-            raise click.BadParameter(
-                "Missing the postgresql connection configuration. Either fix your "
-                "configuration file or use the --dbname option."
-            )
-        init_args.append((package, fullmodule, backend_class, dbname, cfg))
-
     # XXX it probably does not make much sense to have a non-None flavor when
     # initializing several db at once... this case should raise an error
-    for package, fullmodule, backend_class, dbname, cfg in init_args:
+
+    args = handle_cmd_args(
+        cfg=ctx.obj["config"],
+        module=module,
+        do_all=initialize_all,
+        dbname=dbname,
+    )
+
+    for package, fullmodule, backend_class, dbname, cfg in args:
         initialize_one(package, fullmodule, backend_class, flavor, dbname, cfg)
 
 
@@ -526,58 +460,29 @@ def db_version(ctx, module, show_history, all_backends, module_config_key=None):
         swh db version --all scrubber
 
     """
-    from swh.core.config import get_swh_backend_module, list_db_config_entries
-    from swh.core.db.db_utils import get_database_info, import_swhmodule
+    from swh.core.db.db_utils import (
+        get_database_info,
+        import_swhmodule,
+        swh_db_versions,
+    )
 
-    backends = []
+    backends = handle_cmd_args(
+        cfg=ctx.obj["config"],
+        module=module,
+        do_all=all_backends,
+        config_key=module_config_key,
+    )
 
-    if all_backends:
-        assert ":" not in module
-        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(ctx.obj["config"]):
-            if cfgmod == module:
-                _, backend_class = get_swh_backend_module(
-                    swh_package=cfgmod, cls=dbcfg["cls"]
-                )
-                db_module, db_version, db_flavor = get_database_info(cnxstr)
-                backends.append(
-                    (db_module, db_version, db_flavor, dbcfg, cnxstr, backend_class)
-                )
-    else:
-        if ":" in module:  # it's a path to a config entry
-            swhmod, cfg, dbname = get_dburl_from_config_key(ctx.obj["config"], module)
-            # the actual module is retrieved from the entry_point for the cls
-            _, backend_class = get_swh_backend_module(
-                swh_package=swhmod, cls=cfg["cls"]
-            )
-            module = f"{swhmod}:{cfg['cls']}"
-        else:
-            # use the db cnx from the config file; the expected config entry is the
-            # given module name
-            cfg = ctx.obj["config"].get(module_config_key or module, {})
-            dbname, cfg = get_dburl_from_config(cfg)
-            _, backend_class = get_swh_backend_module(
-                swh_package=module, cls=cfg["cls"]
-            )
-        if not dbname:
-            raise click.BadParameter(
-                "Missing the postgresql connection configuration. Either fix your "
-                "configuration file or use the --dbname option."
-            )
-
-        logger.debug("db_version dbname=%s", dbname)
-
-        db_module, db_version, db_flavor = get_database_info(dbname)
+    for package, _, backend_class, cnxstr, cfg in backends:
+        db_module, db_version, db_flavor = get_database_info(cnxstr)
         if db_module is None:
             click.secho(
                 "WARNING the database does not have a dbmodule table.",
                 fg="red",
                 bold=True,
             )
-            db_module = module
-        assert db_module == module, f"{db_module} (in the db) != {module} (given)"
-        backends.append((db_module, db_version, db_flavor, cfg, dbname, backend_class))
+            db_module = f"{package}:{cfg['cls']}"
 
-    for db_module, db_version, db_flavor, cfg, dbname, backend_class in backends:
         click.echo("")
         click.secho(f"module: {db_module}", fg="green", bold=True)
         if ":" not in db_module:
@@ -609,9 +514,7 @@ def db_version(ctx, module, show_history, all_backends, module_config_key=None):
         if not show_history:
             click.secho(f"version: {db_version}", fg="green", bold=True)
         else:
-            from swh.core.db.db_utils import swh_db_versions
-
-            versions = swh_db_versions(dbname)
+            versions = swh_db_versions(cnxstr)
             for version, tstamp, desc in versions:
                 click.echo(f"{version} [{tstamp}] {desc}")
 
@@ -663,7 +566,6 @@ def db_upgrade(
         swh db upgrade scrubber:scrubber_db --to-version=10
 
     """
-    from swh.core.config import get_swh_backend_module, list_db_config_entries
     from swh.core.db.db_utils import (
         get_database_info,
         import_swhmodule,
@@ -674,52 +576,17 @@ def db_upgrade(
     # TODO: mark --module-config-key as deprecated
     # TODO: check options consistency
 
-    package = module
-    args = []
-    if upgrade_all:
-        assert ":" not in module
-        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(ctx.obj["config"]):
-            if cfgmod == module:
-                fullmodule, backend_class = get_swh_backend_module(
-                    swh_package=cfgmod, cls=dbcfg["cls"]
-                )
-                args.append((cfgmod, fullmodule, backend_class, cnxstr, dbcfg))
-    else:
-        if dbname is not None:
-            # default behavior
-            cfg = {"cls": "postgresql", "db": dbname}
-            fullmodule, backend_class = get_swh_backend_module(
-                swh_package=module, cls="postgresql"
-            )
-        else:
-            if ":" in module:  # it's a path to a config entry
-                package, cfg, dbname = get_dburl_from_config_key(
-                    ctx.obj["config"], module
-                )
-                # the actual module is retrieved from the entry_point for the cls
-                fullmodule, backend_class = get_swh_backend_module(
-                    swh_package=package, cls=cfg["cls"]
-                )
-            else:
-                # use the db cnx from the config file; the expected config entry is the
-                # given module name
-                cfg = ctx.obj["config"].get(module_config_key or module, {})
-                dbname, cfg = get_dburl_from_config(cfg)
-                fullmodule, backend_class = get_swh_backend_module(
-                    swh_package=module, cls=cfg["cls"]
-                )
-        args.append((package, fullmodule, backend_class, dbname, cfg))
+    backends = handle_cmd_args(
+        cfg=ctx.obj["config"],
+        module=module,
+        do_all=upgrade_all,
+        dbname=dbname,
+        config_key=module_config_key,
+    )
 
-    for package, fullmodule, backend_class, dbname, cfg in args:
-        go_to_version = to_version
-        # for dbname, module, cfg in zip(dbnames, modules, cfgs):
-        if not dbname:
-            raise click.BadParameter(
-                "Missing the postgresql connection configuration. Either fix your "
-                "configuration file or use the --dbname option."
-            )
-
+    for package, fullmodule, backend_class, dbname, cfg in backends:
         logger.debug("db_version dbname=%s", dbname)
+        go_to_version = to_version
         db_module, db_version, db_flavor = get_database_info(dbname)
         backend = f"{package}:{cfg['cls']}"
         if db_module is None:
@@ -818,3 +685,95 @@ def get_dburl_from_config_key(cfg, key):
         dburl = cfg[cfgpath[-1]]
 
     return swhmod, cfg, dburl
+
+
+def handle_cmd_args(
+    cfg: Dict[str, Any],
+    module: str,
+    do_all: bool = False,
+    dbname: Optional[str] = None,
+    config_key: Optional[str] = None,
+) -> List[Tuple[str, str, Optional[type], str, Dict[str, Any]]]:
+    """Helper function to build the list of backends to handle in a cli command
+
+    For each identified backend, returns a tuple:
+      (package, module, backend_class, cnxstr, cfg)
+    where:
+      - `package`: the (swh) package this backend is implemented in (e.g.
+        'storage', 'scheduler' etc.)
+      - `module`: the (full path) module in which the backend class can be found
+        (e.g. 'swh.storage.postgresql.storage')
+      - `backend_class`: the class implementing the backend,
+      - `cnxstr`: the (libpq) connection string to the database,
+      - `cfg`: the config structure in which this backend is configured; if the
+        backend is defined in a nested configuration, this is only the most
+        specific config structure for this backend.
+
+    For each backend, the code implementing the backend class needs to be
+    registered in the `swh.<package>.classes` entry point under the
+    `cfg["cls"]` name. However, there is bw compatibility for swh packages not
+    yet updated to register these backends in the entry points.
+
+    If `dbname` is given, return only one element in the list, with a config made
+    of {'cls': 'postgresql', 'db': dbname}.
+
+    If `do_all` is True, look for every backend in the configuration (cfg) under
+    the section `module`.
+
+    If `module` is a simple word ('storage', 'scheduler', etc.), look for the
+    last db backend found in the config file under the `module` section.
+
+    If `module` is like "storage:steps:0:db", look for this config entry in the
+    config file.
+
+    If `module` is an actual module path (e.g. 'storage.proxies.masking'), then
+    `dbname` must be given and the configuration is not looked for in the
+    config file.
+
+    Note: this rather complex logic will be simplified when all the swh
+    packages are updated and do not need bw compat handling code any more.
+    """
+    from swh.core.config import get_swh_backend_module, list_db_config_entries
+
+    package = module
+    backends = []
+
+    if do_all:
+        assert ":" not in module
+        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(cfg):
+            if cfgmod == module:
+                fullmodule, backend_class = get_swh_backend_module(
+                    swh_package=cfgmod, cls=dbcfg["cls"]
+                )
+                backends.append((cfgmod, fullmodule, backend_class, cnxstr, dbcfg))
+    else:
+        if dbname is not None:
+            # default behavior
+            dbcfg = {"cls": "postgresql", "db": dbname}
+            fullmodule, backend_class = get_swh_backend_module(
+                swh_package=module, cls="postgresql"
+            )
+        else:
+            if ":" in module:  # it's a path to a config entry
+                # read the db access for module 'module' from the config file
+                package, dbcfg, dbname = get_dburl_from_config_key(cfg, module)
+                # the actual module is retrieved from the entry_point for the cls
+                fullmodule, backend_class = get_swh_backend_module(
+                    swh_package=package, cls=dbcfg["cls"]
+                )
+            else:
+                # use the db cnx from the config file; the expected config entry is the
+                # given module name
+                dbname, dbcfg = get_dburl_from_config(cfg.get(config_key or module, {}))
+                # the actual module is retrieved from the entry_point for the cls
+                fullmodule, backend_class = get_swh_backend_module(
+                    swh_package=module, cls=dbcfg["cls"]
+                )
+        if not dbname:
+            raise click.BadParameter(
+                "Missing the postgresql connection configuration. Either fix your "
+                "configuration file or use the --dbname option."
+            )
+
+        backends.append((package, fullmodule, backend_class, dbname, dbcfg))
+    return backends
