@@ -351,10 +351,10 @@ def test_cli_swh_db_upgrade_new_api(
     assert_result(result)
     assert "Warning: the database does not have a dbmodule table." in result.output
     assert (
-        "Write the module information (test.cli) in the database? [Y/n]"
+        "Write the module information (test:postgresql) in the database? [Y/n]"
         in result.output
     )
-    assert swh_db_module(conninfo) == "test.cli"
+    assert swh_db_module(conninfo) == "test:postgresql"
 
 
 @pytest.mark.init_version(version=5)
@@ -568,7 +568,7 @@ test:
     assert (
         result.output
         == """
-module: test.cli
+module: test:cli
 flavor: default
 current code version: 3
 version: 3
@@ -582,7 +582,7 @@ version: 3
     assert (
         result.output
         == """
-module: test.cli2
+module: test:cli2
 current code version: 3
 version: 3
 """
@@ -594,12 +594,12 @@ version: 3
     assert (
         result.output
         == """
-module: test.cli
+module: test:cli
 flavor: default
 current code version: 3
 version: 3
 
-module: test.cli2
+module: test:cli2
 current code version: 3
 version: 3
 """
@@ -650,8 +650,8 @@ test:
     assert swh_db_version(conninfo2) == 1
 
     for module_name, config_path, cnxstr in (
-        ("test.cli", "test:backend:steps:0:db", conninfo),
-        ("test.cli2", "test:backend:steps:1:backend:cli_db", conninfo2),
+        ("test:cli", "test:backend:steps:0:db", conninfo),
+        ("test:cli2", "test:backend:steps:1:backend:cli_db", conninfo2),
     ):
         current_version = 1
         # XXX hack hack hack: change the current test (pytest.)marker's

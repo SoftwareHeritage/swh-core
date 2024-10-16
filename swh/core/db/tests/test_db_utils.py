@@ -49,7 +49,7 @@ def test_db_utils_versions(
     mock_import_swhmodule should set the initial version to 3.
     """
     module = "test"
-    db_module = "test.cli"
+    db_module = "test:postgresql"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -101,7 +101,7 @@ def test_db_utils_upgrade(
 ):
     """Check swh_db_upgrade"""
     module = "test"
-    db_module = "test.cli"
+    db_module = "test:postgresql"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
@@ -189,7 +189,7 @@ def test_db_utils_flavor(
 ):
     """Check populate_database_for_package handle db flavor properly"""
     module = "test"
-    db_module = "test.cli"
+    db_module = "test:postgresql"
     conninfo = craft_conninfo(postgresql)
     result = cli_runner.invoke(swhdb, ["init-admin", module, "--dbname", conninfo])
     assert result.exit_code == 0, f"Unexpected output: {result.output}"
