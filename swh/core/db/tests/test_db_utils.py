@@ -26,6 +26,7 @@ from .test_cli import craft_conninfo
 
 def test_get_sql_for_package(mock_import_swhmodule):
     module = "test"
+
     files = get_sql_for_package(module)
     assert files
     assert [f.name for f in files] == [

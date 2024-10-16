@@ -444,7 +444,7 @@ test:
     steps:
       - cls: cli
         db: {conninfo}
-      - cls: cli
+      - cls: stuff
         backend:
           cls: cli2
           cli_db: {conninfo2}
@@ -654,6 +654,8 @@ test:
         ("test.cli2", "test:backend:steps:1:backend:cli_db", conninfo2),
     ):
         current_version = 1
+        # XXX hack hack hack: change the current test (pytest.)marker's
+        # init_version arg, this one is used in mock_import_swhmodule...
         request.node.get_closest_marker("init_version").kwargs[
             "version"
         ] = current_version
@@ -663,29 +665,28 @@ test:
         assert_result(result)
         assert swh_db_version(cnxstr) == 1
 
-        # XXX hack hack hack
         # advertise current version as 3, a simple upgrade should get us there, but
         # no further
-        current_version = 3
+        current_version = 2
         request.node.get_closest_marker("init_version").kwargs[
             "version"
         ] = current_version
         result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", config_path])
         assert_result(result)
-        assert swh_db_version(cnxstr) == 3
+        assert swh_db_version(cnxstr) == 2
 
         # an attempt to go further should not do anything
         result = cli_runner.invoke(
             swhdb, ["-C", cfgfile, "upgrade", config_path, "--to-version", 5]
         )
         assert result.exit_code != 0
-        assert swh_db_version(cnxstr) == 3
+        assert swh_db_version(cnxstr) == 2
         # an attempt to go lower should not do anything
         result = cli_runner.invoke(
-            swhdb, ["-C", cfgfile, "upgrade", config_path, "--to-version", 2]
+            swhdb, ["-C", cfgfile, "upgrade", config_path, "--to-version", 1]
         )
         assert_result(result)
-        assert swh_db_version(cnxstr) == 3
+        assert swh_db_version(cnxstr) == 2
 
         # advertise current version as 6, an upgrade with --to-version 4 should
         # stick to the given version 4 and no further

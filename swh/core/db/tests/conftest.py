@@ -67,10 +67,14 @@ def mock_import_swhmodule(request, mocker, datadir):
     def import_swhmodule_mock(modname):
         if modname.startswith("test"):
             # this insanity really should be cleaned up...
+            if ":" in modname:
+                modname, cls = modname.split(":", 1)
+            else:
+                cls = "cli"
             if "." in modname:
                 dirname = modname.split(".", 1)[1]
             else:
-                dirname = "cli"
+                dirname = cls
 
             m = request.node.get_closest_marker("init_version")
             if m:
