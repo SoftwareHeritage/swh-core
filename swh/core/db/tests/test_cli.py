@@ -15,6 +15,17 @@ from swh.core.db.db_utils import import_swhmodule, swh_db_module, swh_db_version
 from swh.core.tests.test_cli import assert_section_contains
 
 
+def assert_result(result):
+    if result.exception:
+        assert result.exit_code == 0, (
+            "Unexpected exception: "
+            f"{''.join(traceback.format_tb(result.exc_info[2]))}"
+            f"\noutput: {result.output}"
+        )
+    else:
+        assert result.exit_code == 0, f"Unexpected output: {result.output}"
+
+
 def test_cli_swh_help(swhmain, cli_runner):
     swhmain.add_command(swhdb)
     result = cli_runner.invoke(swhmain, ["-h"])
@@ -80,12 +91,12 @@ def test_cli_swh_db_create_and_init_db(cli_runner, postgresql, mock_import_swhmo
     conninfo = craft_conninfo(postgresql, "new-db")
     # This creates the db and installs the necessary admin extensions
     result = cli_runner.invoke(swhdb, ["create", module_name, "--dbname", conninfo])
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     # This initializes the schema and data
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
 
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     # the origin value in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, installed during db creation step)
@@ -132,11 +143,11 @@ def test_cli_swh_db_initialization_works_with_flags(
     conninfo = craft_conninfo(postgresql)
 
     result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
 
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
     with BaseDb.connect(postgresql.info.dsn).cursor() as cur:
@@ -154,7 +165,7 @@ def test_cli_swh_db_initialization_with_env(
     result = cli_runner.invoke(
         swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
     )
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
     result = cli_runner.invoke(
         swhdb,
         [
@@ -165,7 +176,7 @@ def test_cli_swh_db_initialization_with_env(
         ],
     )
 
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
@@ -185,22 +196,22 @@ def test_cli_swh_db_initialization_idempotent(
     result = cli_runner.invoke(
         swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
     )
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     result = cli_runner.invoke(
         swhdb, ["init", module_name, "--dbname", db_params.dbname]
     )
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     result = cli_runner.invoke(
         swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
     )
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     result = cli_runner.invoke(
         swhdb, ["init", module_name, "--dbname", db_params.dbname]
     )
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
@@ -228,7 +239,7 @@ def test_cli_swh_db_create_and_init_db_new_api(
     cfgfile = tmp_path / "config.yml"
     cfgfile.write_text(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
     result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     cli_cmd = ["-C", cfgfile, "init", module_name]
     if with_module_config_key:
@@ -281,7 +292,7 @@ def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp
     cfgfile = tmp_path / "config.yml"
     cfgfile.write_text(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
     result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", module_name])
 
     assert (
@@ -299,6 +310,7 @@ def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp
     # no further
     current_version = 3
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
+    assert_result(result)
     assert swh_db_version(conninfo) == 3
 
     # an attempt to go further should not do anything
@@ -336,7 +348,7 @@ def test_cli_swh_db_upgrade_new_api(cli_runner, postgresql, datadir, mocker, tmp
 
     # db migration should recreate the missing dbmodule table
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
-    assert result.exit_code == 0
+    assert_result(result)
     assert "Warning: the database does not have a dbmodule table." in result.output
     assert (
         "Write the module information (test.cli) in the database? [Y/n]"
@@ -378,7 +390,7 @@ def test_cli_swh_db_init_version_ok(cli_runner, postgresql, datadir, mocker, tmp
 
     # call the db init stuff WITHOUT a config file
     result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
 
     assert (
@@ -395,7 +407,7 @@ def test_cli_swh_db_version(swh_db_cli, mock_import_swhmodule, postgresql):
     conninfo = craft_conninfo(postgresql, "test-db-version")
     # This creates the db and installs the necessary admin extensions
     result = cli_runner.invoke(swhdb, ["create", module_name, "--dbname", conninfo])
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
 
     # This initializes the schema and data
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
@@ -407,7 +419,7 @@ def test_cli_swh_db_version(swh_db_cli, mock_import_swhmodule, postgresql):
         expected_version = cur.fetchone()[0]
         assert actual_db_version == expected_version
 
-    assert result.exit_code == 0, f"Unexpected output: {result.output}"
+    assert_result(result)
     assert (
         f"initialized (flavor default) at version {expected_version}" in result.output
     )
