@@ -271,7 +271,13 @@ def swh_set_db_module(
             logger.info("The database module is already set to %s", module)
             return
 
-        if not force:
+        if ":" not in current_module and ":" in module:
+            logger.warning(
+                "The database module needs to be updated (from '%s' to '%s')",
+                current_module,
+                module,
+            )
+        elif not force:
             raise ValueError(
                 "The database module is already set to a value %s "
                 "different than given %s",
@@ -285,6 +291,8 @@ def swh_set_db_module(
         if not db:
             return None
 
+        # recreate the dbmodule table if need be
+        # XXX is this still relevant somehow?
         sqlfiles = [
             fname
             for fname in get_sql_for_package("swh.core.db")
@@ -529,9 +537,12 @@ def populate_database_for_package(
       Tuple with three elements: whether the database has been initialized; the current
       version of the database; if it exists, the flavor of the database.
     """
+
     current_version = swh_db_version(conninfo)
     if current_version is not None:
         dbflavor = swh_db_flavor(conninfo)
+        # check/update the dbmodule table
+        swh_set_db_module(conninfo, modname)
         return False, current_version, dbflavor
 
     def globalsortkey(key):
