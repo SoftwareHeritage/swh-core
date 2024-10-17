@@ -814,7 +814,11 @@ def handle_cmd_args(
     else:
         if dbname is not None:
             # default behavior
-            dbcfg = {"cls": "postgresql", "db": dbname}
+            if ":" in module:
+                module, cls = module.split(":", 1)
+            else:
+                cls = "postgresql"
+            dbcfg = {"cls": cls, "db": dbname}
             fullmodule, backend_class = get_swh_backend_module(
                 swh_package=module, cls="postgresql"
             )
