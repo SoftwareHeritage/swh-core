@@ -326,9 +326,9 @@ def test_merge_config_type_error():
             config.merge_configs({"a": {}}, {"a": v})
 
 
-def test_load_from_envvar_no_environment_var_swh_config_filename_set():
+def test_load_from_envvar_no_environment_var_swh_config_filename_set(monkeypatch):
     """Without SWH_CONFIG_FILENAME set, load_from_envvar raises"""
-
+    monkeypatch.delenv("SWH_CONFIG_FILENAME", raising=False)
     with pytest.raises(AssertionError, match="SWH_CONFIG_FILENAME environment"):
         config.load_from_envvar()
 
