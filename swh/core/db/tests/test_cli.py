@@ -457,8 +457,8 @@ test:
         assert_result(result)
     else:
         for config_path in (
-            "test.backend.steps.0.db",
-            "test.backend.steps.1.backend.cli_db",
+            "test.backend.steps.0",
+            "test.backend.steps.1.backend",
         ):
             result = cli_runner.invoke(
                 swhdb, ["-C", cfgfile, "init-admin", "-p", config_path]
@@ -517,8 +517,8 @@ test:
     assert (
         result.output
         == f"""\
-test.backend.steps.0.db cli {conninfo}
-test.backend.steps.1.backend.cli_db cli2 {conninfo2}
+test.backend.steps.0 cli {conninfo}
+test.backend.steps.1.backend cli2 {conninfo2}
 """
     )
 
@@ -549,7 +549,7 @@ test:
       - cls: cli
         backend:
           cls: cli2
-          cli_db: {conninfo2}
+          db: {conninfo2}
     """
     )
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", "test"])
@@ -564,7 +564,7 @@ test:
 
     # but we can ask for each entry
     result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.0.db"]
+        swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.0"]
     )
     assert_result(result)
     assert (
@@ -578,7 +578,7 @@ version: 3
     )
 
     result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.1.backend.cli_db"]
+        swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.1.backend"]
     )
     assert_result(result)
     assert (
@@ -652,8 +652,8 @@ test:
     assert swh_db_version(conninfo2) == 1
 
     for module_name, config_path, cnxstr in (
-        ("test:cli", "test.backend.steps.0.db", conninfo),
-        ("test:cli2", "test.backend.steps.1.backend.cli_db", conninfo2),
+        ("test:cli", "test.backend.steps.0", conninfo),
+        ("test:cli2", "test.backend.steps.1.backend", conninfo2),
     ):
         current_version = 1
         # XXX hack hack hack: change the current test (pytest.)marker's
@@ -763,7 +763,7 @@ test:
       - cls: cli
         backend:
           cls: cli2
-          cli_db: {conninfo2}
+          db: {conninfo2}
     """
     )
 

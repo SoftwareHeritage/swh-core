@@ -162,9 +162,9 @@ def db_init_admin(
         \b
         $ swh db -C conf.yml init-admin storage
 
-    The module can be given as a 'path' in the configuration file where the
-    configuration entry for the targeted database connection string can be
-    found. For example::
+    With '-p', the module is interpreted as a 'path' in the configuration file
+    where the configuration entry for the targeted database connection string
+    can be found. For example::
 
         \b
         $ cat conf.yml
@@ -180,10 +180,7 @@ def db_init_admin(
                 cls: memory
 
         \b
-        $ swh db -C conf.yml init-admin -p storage.steps.2.db
-
-    Warning: the 'path' must target the connection string entry in the config
-    file.
+        $ swh db -C conf.yml init-admin -p storage.steps.2
 
     The --all option allows to execute superuser-level
     initialization steps for all the datasabases found in the config file for
@@ -306,10 +303,7 @@ def db_init(
         $ # to initialize the "main" storage db (expected to be the last element
         $ # of a pipeline config),
         $ # or to initialize the masking_db:
-        $ swh db -C conf.yml init -p storage.steps.0.masking_db
-
-    Note that the 'path' in the configuration file must target the connection
-    string entry itself.
+        $ swh db -C conf.yml init -p storage.steps.0
 
     Usage of --module-config-key is now deprecated in favor of "full-path"
     module/config entry.
@@ -732,18 +726,27 @@ def get_dburl_from_config_key(cfg, path):
             break
     cfg = cfg[swhmod]
 
-    for key_e in cfgpath[:-1]:
+    for key_e in cfgpath:
         if isinstance(cfg, list):
             cfg = cfg[int(key_e)]
         else:
             cfg = cfg[key_e]
 
-    if isinstance(cfg, list):
-        dburl = cfg[int(cfgpath[-1])]
+    assert isinstance(cfg, dict)
+    if "db" in cfg:
+        cnxstr = cfg["db"]
     else:
-        dburl = cfg[cfgpath[-1]]
+        # TODO: kill this when possible
+        for key in cfg:
+            if key.endswith("_db"):
+                cnxstr = cfg[key]
+                break
+        else:
+            raise ValueError(
+                f"no database connection string found in the configuration at {path}"
+            )
 
-    return swhmod, cfg, dburl
+    return swhmod, cfg, cnxstr
 
 
 def handle_cmd_args(

@@ -380,7 +380,7 @@ def list_db_config_entries(cfg) -> Generator[Tuple[str, str, dict, str], None, N
         if "cls" in cfg:
             for key, value in cfg.items():
                 if key == "db" or key.endswith("_db"):
-                    yield f"{path}.{key}", cfg, value
+                    yield path, cfg, value
                 elif isinstance(value, list):
                     for i, subcfg in enumerate(value):
                         yield from look(subcfg, path=f"{path}.{key}.{i}")
