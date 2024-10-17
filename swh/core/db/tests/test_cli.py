@@ -457,14 +457,16 @@ test:
         assert_result(result)
     else:
         for config_path in (
-            "test:backend:steps:0:db",
-            "test:backend:steps:1:backend:cli_db",
+            "test.backend.steps.0.db",
+            "test.backend.steps.1.backend.cli_db",
         ):
             result = cli_runner.invoke(
-                swhdb, ["-C", cfgfile, "init-admin", config_path]
+                swhdb, ["-C", cfgfile, "init-admin", "-p", config_path]
             )
             assert_result(result)
-            result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", config_path])
+            result = cli_runner.invoke(
+                swhdb, ["-C", cfgfile, "init", "-p", config_path]
+            )
             assert_result(result)
 
     # the origin value in the scripts uses a hash function (which implementation wise
@@ -515,8 +517,8 @@ test:
     assert (
         result.output
         == f"""\
-test:backend:steps:0:db cli {conninfo}
-test:backend:steps:1:backend:cli_db cli2 {conninfo2}
+test.backend.steps.0.db cli {conninfo}
+test.backend.steps.1.backend.cli_db cli2 {conninfo2}
 """
     )
 
@@ -562,7 +564,7 @@ test:
 
     # but we can ask for each entry
     result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "version", "test:backend:steps:0:db"]
+        swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.0.db"]
     )
     assert_result(result)
     assert (
@@ -576,7 +578,7 @@ version: 3
     )
 
     result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "version", "test:backend:steps:1:backend:cli_db"]
+        swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.1.backend.cli_db"]
     )
     assert_result(result)
     assert (
@@ -650,8 +652,8 @@ test:
     assert swh_db_version(conninfo2) == 1
 
     for module_name, config_path, cnxstr in (
-        ("test:cli", "test:backend:steps:0:db", conninfo),
-        ("test:cli2", "test:backend:steps:1:backend:cli_db", conninfo2),
+        ("test:cli", "test.backend.steps.0.db", conninfo),
+        ("test:cli2", "test.backend.steps.1.backend.cli_db", conninfo2),
     ):
         current_version = 1
         # XXX hack hack hack: change the current test (pytest.)marker's
@@ -661,7 +663,7 @@ test:
         ] = current_version
         # the upgrade should not do anything because the datastore does advertise
         # version 1
-        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", config_path])
+        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", "-p", config_path])
         assert_result(result)
         assert swh_db_version(cnxstr) == 1
 
@@ -671,19 +673,19 @@ test:
         request.node.get_closest_marker("init_version").kwargs[
             "version"
         ] = current_version
-        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", config_path])
+        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", "-p", config_path])
         assert_result(result)
         assert swh_db_version(cnxstr) == 2
 
         # an attempt to go further should not do anything
         result = cli_runner.invoke(
-            swhdb, ["-C", cfgfile, "upgrade", config_path, "--to-version", 5]
+            swhdb, ["-C", cfgfile, "upgrade", "-p", config_path, "--to-version", 5]
         )
         assert result.exit_code != 0
         assert swh_db_version(cnxstr) == 2
         # an attempt to go lower should not do anything
         result = cli_runner.invoke(
-            swhdb, ["-C", cfgfile, "upgrade", config_path, "--to-version", 1]
+            swhdb, ["-C", cfgfile, "upgrade", "-p", config_path, "--to-version", 1]
         )
         assert_result(result)
         assert swh_db_version(cnxstr) == 2
@@ -695,7 +697,7 @@ test:
             "version"
         ] = current_version
         result = cli_runner.invoke(
-            swhdb, ["-C", cfgfile, "upgrade", config_path, "--to-version", 4]
+            swhdb, ["-C", cfgfile, "upgrade", "-p", config_path, "--to-version", 4]
         )
         assert_result(result)
         assert swh_db_version(cnxstr) == 4
@@ -722,7 +724,7 @@ test:
         assert swh_db_module(cnxstr) is None
 
         # db migration should recreate the missing dbmodule table
-        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", config_path])
+        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", "-p", config_path])
         assert_result(result)
         assert "Warning: the database does not have a dbmodule table." in result.output
         assert (

@@ -107,9 +107,17 @@ def db_create(ctx, module, dbname, template):
     default=False,
     is_flag=True,
 )
+@click.option(
+    "-p",
+    "--module-is-path",
+    "module_is_path",
+    help="If set, inpterpret the given 'module' as a config 'json path' within the config file",
+    default=False,
+    is_flag=True,
+)
 @click.pass_context
 def db_init_admin(
-    ctx, module: str, dbname: Optional[str], initialize_all: bool
+    ctx, module: str, dbname: Optional[str], initialize_all: bool, module_is_path: bool
 ) -> None:
     """Execute superuser-level initialization steps (e.g pg extensions, admin functions,
     ...)
@@ -172,7 +180,7 @@ def db_init_admin(
                 cls: memory
 
         \b
-        $ swh db -C conf.yml init-admin storage:steps:2:db
+        $ swh db -C conf.yml init-admin -p storage.steps.2.db
 
     Warning: the 'path' must target the connection string entry in the config
     file.
@@ -208,6 +216,7 @@ def db_init_admin(
         module=module,
         do_all=initialize_all,
         dbname=dbname,
+        is_path=module_is_path,
     )
 
     for package, fullmodule, _, dbname, cfg in args:
@@ -253,8 +262,18 @@ def db_list(ctx, module):
     default=False,
     is_flag=True,
 )
+@click.option(
+    "-p",
+    "--module-is-path",
+    "module_is_path",
+    help="If set, inpterpret the given 'module' as a config 'json path' within the config file",
+    default=False,
+    is_flag=True,
+)
 @click.pass_context
-def db_init(ctx, module, dbname, flavor, module_config_key, initialize_all):
+def db_init(
+    ctx, module, dbname, flavor, module_config_key, initialize_all, module_is_path
+):
     """Initialize a database for the Software Heritage <module>.
 
     As for the 'init-admin' command, the database connection string can come
@@ -287,7 +306,7 @@ def db_init(ctx, module, dbname, flavor, module_config_key, initialize_all):
         $ # to initialize the "main" storage db (expected to be the last element
         $ # of a pipeline config),
         $ # or to initialize the masking_db:
-        $ swh db -C conf.yml init storage:steps:0:masking_db
+        $ swh db -C conf.yml init -p storage.steps.0.masking_db
 
     Note that the 'path' in the configuration file must target the connection
     string entry itself.
@@ -306,6 +325,7 @@ def db_init(ctx, module, dbname, flavor, module_config_key, initialize_all):
         module=module,
         do_all=initialize_all,
         dbname=dbname,
+        is_path=module_is_path,
     )
 
     for package, fullmodule, backend_class, dbname, cfg in args:
@@ -447,8 +467,18 @@ def db_shell(ctx, module, dbname, module_config_key):
     is_flag=True,
 )
 @click.option("--module-config-key", help="Module config key to lookup.", default=None)
+@click.option(
+    "-p",
+    "--module-is-path",
+    "module_is_path",
+    help="If set, inpterpret the given 'module' as a config 'json path' within the config file",
+    default=False,
+    is_flag=True,
+)
 @click.pass_context
-def db_version(ctx, module, show_history, all_backends, module_config_key=None):
+def db_version(
+    ctx, module, show_history, all_backends, module_config_key, module_is_path
+):
     """Print the database version for the Software Heritage.
 
     Example::
@@ -471,6 +501,7 @@ def db_version(ctx, module, show_history, all_backends, module_config_key=None):
         module=module,
         do_all=all_backends,
         config_key=module_config_key,
+        is_path=module_is_path,
     )
 
     for package, _, backend_class, cnxstr, cfg in backends:
@@ -552,9 +583,24 @@ def db_version(ctx, module, show_history, all_backends, module_config_key=None):
     default=False,
     is_flag=True,
 )
+@click.option(
+    "-p",
+    "--module-is-path",
+    "module_is_path",
+    help="If set, inpterpret the given 'module' as a config 'json path' within the config file",
+    default=False,
+    is_flag=True,
+)
 @click.pass_context
 def db_upgrade(
-    ctx, module, dbname, to_version, interactive, module_config_key, upgrade_all
+    ctx,
+    module,
+    dbname,
+    to_version,
+    interactive,
+    module_config_key,
+    upgrade_all,
+    module_is_path,
 ):
     """Upgrade the database for given module (to a given version if specified).
 
@@ -582,6 +628,7 @@ def db_upgrade(
         do_all=upgrade_all,
         dbname=dbname,
         config_key=module_config_key,
+        is_path=module_is_path,
     )
 
     for package, fullmodule, backend_class, dbname, cfg in backends:
@@ -670,9 +717,21 @@ def get_dburl_from_config(cfg):
     return cfg.get("db"), cfg
 
 
-def get_dburl_from_config_key(cfg, key):
-    cfgpath = key.split(":")
-    swhmod = cfgpath[0]
+def get_dburl_from_config_key(cfg, path):
+    # the first section level in the config may contain dotted keys, so deal
+    # with it
+
+    for key in cfg:
+        if path.startswith(f"{key}."):
+            swhmod = key
+            cfgpath = path[len(key) + 1 :].split(".")
+            break
+        if key == path:
+            swhmod = key
+            cfgpath = []
+            break
+    cfg = cfg[swhmod]
+
     for key_e in cfgpath[:-1]:
         if isinstance(cfg, list):
             cfg = cfg[int(key_e)]
@@ -690,6 +749,7 @@ def get_dburl_from_config_key(cfg, key):
 def handle_cmd_args(
     cfg: Dict[str, Any],
     module: str,
+    is_path: bool = False,
     do_all: bool = False,
     dbname: Optional[str] = None,
     config_key: Optional[str] = None,
@@ -723,8 +783,8 @@ def handle_cmd_args(
     If `module` is a simple word ('storage', 'scheduler', etc.), look for the
     last db backend found in the config file under the `module` section.
 
-    If `module` is like "storage:steps:0:db", look for this config entry in the
-    config file.
+    If `is_path` is True, interpret the 'module' as the path to the config entry
+    to use in the config file.
 
     If `module` is an actual module path (e.g. 'storage.proxies.masking'), then
     `dbname` must be given and the configuration is not looked for in the
@@ -735,11 +795,16 @@ def handle_cmd_args(
     """
     from swh.core.config import get_swh_backend_module, list_db_config_entries
 
+    if is_path:
+        if do_all:
+            raise ValueError("Cannot use both 'all' and a specific config target")
+        if dbname:
+            raise ValueError("Cannot use both 'dbaname' and a specific config target")
+
     package = module
     backends = []
 
     if do_all:
-        assert ":" not in module
         for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(cfg):
             if cfgmod == module:
                 fullmodule, backend_class = get_swh_backend_module(
@@ -754,7 +819,7 @@ def handle_cmd_args(
                 swh_package=module, cls="postgresql"
             )
         else:
-            if ":" in module:  # it's a path to a config entry
+            if is_path:
                 # read the db access for module 'module' from the config file
                 package, dbcfg, dbname = get_dburl_from_config_key(cfg, module)
                 # the actual module is retrieved from the entry_point for the cls

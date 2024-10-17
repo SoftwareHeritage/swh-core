@@ -69,6 +69,9 @@ def mock_import_swhmodule(request, mocker, datadir):
             # this insanity really should be cleaned up...
             if ":" in modname:
                 modname, cls = modname.split(":", 1)
+                if cls == "postgresql":
+                    # default test backend is cli
+                    cls = "cli"
             else:
                 cls = "cli"
             if cls == "postgresql":
