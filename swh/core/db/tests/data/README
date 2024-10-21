@@ -1,0 +1,25 @@
+This directory contains sql code for test backends for the swh.core.db
+lifecycyle handling tools.
+
+The default backend name being 'postgresql', the directory previously named as
+'cli' is now 'postgresql'.
+
+The usage of these test backends depends on the 2 mockup functions for
+import_swhmodule and get_swh_backend_module defined in conftest.py
+
+The package name must be 'test', then the 'cls' is used to select the directory
+in which the sql/ subdirectory will be used to initialize/upgrade the test
+database.
+
+The idea is a configuration like:
+
+test:
+  cls: pipeline
+  steps:
+    - cls: postgres
+      db: <dbcnx1>
+    - cls: cli2
+      db: <dbcnx2>
+
+will define 2 'swh.core.db' powered backends initialized from (resp.)
+'./postgresql/sql' and './cli2/sql'.

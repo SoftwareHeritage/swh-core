@@ -38,9 +38,7 @@ def test_get_sql_for_package(mock_import_swhmodule):
     ]
 
 
-def test_db_utils_versions(
-    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module
-):
+def test_db_utils_versions(cli_runner, postgresql, mock_get_swh_backend_module):
     """Check get_database_info, swh_db_versions and swh_db_module work ok
 
     This test checks db versions is properly initialized by the cli db init
@@ -96,9 +94,7 @@ def test_db_utils_versions(
             assert (now() - ts) < timedelta(seconds=1)
 
 
-def test_db_utils_upgrade(
-    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module, datadir
-):
+def test_db_utils_upgrade(cli_runner, postgresql, mock_get_swh_backend_module, datadir):
     """Check swh_db_upgrade"""
     module = "test"
     db_module = "test:postgresql"
@@ -117,7 +113,7 @@ def test_db_utils_upgrade(
     # get rid of dates to ease checking
     versions = [(v[0], v[2]) for v in versions]
     assert versions[-1] == (3, "DB initialization")
-    sqlbasedir = path.join(datadir, "cli", "sql", "upgrades")
+    sqlbasedir = path.join(datadir, "postgresql", "sql", "upgrades")
 
     assert versions[1:-1] == [
         (i, f"Upgraded to version {i} using {sqlbasedir}/{i:03d}.sql")
@@ -139,7 +135,7 @@ def test_db_utils_upgrade(
 
 
 def test_db_utils_swh_db_upgrade_sanity_checks(
-    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module, datadir
+    cli_runner, postgresql, mock_get_swh_backend_module, datadir
 ):
     """Check swh_db_upgrade"""
     module = "test"
@@ -184,9 +180,7 @@ def test_db_utils_swh_db_upgrade_sanity_checks(
 
 
 @pytest.mark.parametrize("flavor", [None, "default", "flavorA", "flavorB"])
-def test_db_utils_flavor(
-    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module, flavor
-):
+def test_db_utils_flavor(cli_runner, postgresql, mock_get_swh_backend_module, flavor):
     """Check populate_database_for_package handle db flavor properly"""
     module = "test"
     db_module = "test:postgresql"
@@ -209,7 +203,7 @@ def test_db_utils_flavor(
 
 
 def test_db_utils_guest_permissions(
-    cli_runner, postgresql, mock_import_swhmodule, mock_get_swh_backend_module
+    cli_runner, postgresql, mock_get_swh_backend_module
 ):
     """Check populate_database_for_package handle db flavor properly"""
     module = "test"

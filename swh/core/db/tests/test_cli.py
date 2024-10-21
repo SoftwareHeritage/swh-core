@@ -89,7 +89,6 @@ def craft_conninfo(test_db, dbname=None) -> str:
 def test_cli_swh_db_create_and_init_db(
     cli_runner,
     postgresql,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
 ):
     """Create a db then initializing it should be ok"""
@@ -144,7 +143,6 @@ def test_cli_swh_db_initialization_fail_without_extension(
 def test_cli_swh_db_initialization_works_with_flags(
     cli_runner,
     postgresql,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
 ):
     """Init commands with carefully crafted libpq conninfo works"""
@@ -165,7 +163,7 @@ def test_cli_swh_db_initialization_works_with_flags(
 
 
 def test_cli_swh_db_initialization_with_env(
-    swh_db_cli, mock_import_swhmodule, mock_get_swh_backend_module, postgresql
+    swh_db_cli, mock_get_swh_backend_module, postgresql
 ):
     """Init commands with standard environment variables works"""
     module_name = "test"  # it's mocked here
@@ -194,7 +192,7 @@ def test_cli_swh_db_initialization_with_env(
 
 
 def test_cli_swh_db_initialization_idempotent(
-    swh_db_cli, mock_import_swhmodule, mock_get_swh_backend_module, postgresql
+    swh_db_cli, mock_get_swh_backend_module, postgresql
 ):
     """Multiple runs of the init commands are idempotent"""
     module_name = "test"  # mocked
@@ -232,7 +230,6 @@ def test_cli_swh_db_initialization_idempotent(
 def test_cli_swh_db_create_and_init_db_new_api(
     cli_runner,
     postgresql,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
     mocker,
     tmp_path,
@@ -269,7 +266,6 @@ def test_cli_swh_db_create_and_init_db_new_api(
 def test_cli_swh_db_upgrade_new_api(
     request,
     cli_runner,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
     postgresql,
     datadir,
@@ -361,7 +357,6 @@ def test_cli_swh_db_upgrade_new_api(
 def test_cli_swh_db_init_version_ok(
     request,
     cli_runner,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
     postgresql,
     datadir,
@@ -386,9 +381,7 @@ def test_cli_swh_db_init_version_ok(
     assert swh_db_version(conninfo) == current_version
 
 
-def test_cli_swh_db_version(
-    swh_db_cli, mock_import_swhmodule, mock_get_swh_backend_module, postgresql
-):
+def test_cli_swh_db_version(swh_db_cli, mock_get_swh_backend_module, postgresql):
     module_name = "test"
     cli_runner, db_params = swh_db_cli
 
@@ -418,7 +411,6 @@ def test_cli_swh_db_initadmin_and_init_db_from_config_path(
     cli_runner,
     postgresql,
     postgresql2,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
     mocker,
     tmp_path,
@@ -442,7 +434,7 @@ test:
   backend:
     cls: pipeline
     steps:
-      - cls: cli
+      - cls: postgresql
         db: {conninfo}
       - cls: stuff
         backend:
@@ -487,7 +479,6 @@ def test_cli_swh_db_list_config_path(
     cli_runner,
     postgresql,
     postgresql2,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
     mocker,
     tmp_path,
@@ -504,7 +495,7 @@ test:
   backend:
     cls: pipeline
     steps:
-      - cls: cli
+      - cls: postgresql
         db: {conninfo}
       - cls: cli
         backend:
@@ -517,7 +508,7 @@ test:
     assert (
         result.output
         == f"""\
-test.backend.steps.0 cli {conninfo}
+test.backend.steps.0 postgresql {conninfo}
 test.backend.steps.1.backend cli2 {conninfo2}
 """
     )
@@ -527,7 +518,6 @@ def test_cli_swh_db_version_from_config(
     cli_runner,
     postgresql,
     postgresql2,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
     mocker,
     tmp_path,
@@ -544,7 +534,7 @@ test:
   backend:
     cls: pipeline
     steps:
-      - cls: cli
+      - cls: postgresql
         db: {conninfo}
       - cls: cli
         backend:
@@ -570,7 +560,7 @@ test:
     assert (
         result.output
         == """
-module: test:cli
+module: test:postgresql
 flavor: default
 current code version: 3
 version: 3
@@ -596,7 +586,7 @@ version: 3
     assert (
         result.output
         == """
-module: test:cli
+module: test:postgresql
 flavor: default
 current code version: 3
 version: 3
@@ -612,7 +602,6 @@ version: 3
 def test_cli_swh_db_upgrade_from_config(
     request,
     cli_runner,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
     postgresql,
     postgresql2,
@@ -632,7 +621,7 @@ test:
   backend:
     cls: pipeline
     steps:
-      - cls: cli
+      - cls: postgresql
         db: {conninfo}
       - cls: cli
         backend:
@@ -652,7 +641,7 @@ test:
     assert swh_db_version(conninfo2) == 1
 
     for module_name, config_path, cnxstr in (
-        ("test:cli", "test.backend.steps.0", conninfo),
+        ("test:postgresql", "test.backend.steps.0", conninfo),
         ("test:cli2", "test.backend.steps.1.backend", conninfo2),
     ):
         current_version = 1
@@ -738,7 +727,6 @@ test:
 def test_cli_swh_db_upgrade_all(
     request,
     cli_runner,
-    mock_import_swhmodule,
     mock_get_swh_backend_module,
     postgresql,
     postgresql2,
@@ -758,7 +746,7 @@ test:
   backend:
     cls: pipeline
     steps:
-      - cls: cli
+      - cls: postgresql
         db: {conninfo}
       - cls: cli
         backend:

@@ -11,7 +11,6 @@ import psycopg2
 import pytest
 from pytest_postgresql import factories
 
-from swh.core.config import get_swh_backend_module
 from swh.core.db.db_utils import import_swhmodule
 
 os.environ["LC_ALL"] = "C.UTF-8"
@@ -46,20 +45,11 @@ def mock_import_swhmodule(request, mocker, datadir):
     """This bypasses the module manipulation to make import_swhmodule return a mock
     object suitable for data test files listing via get_sql_for_package.
 
-    For a given module `test.<mod>`, return a MagicMock object with a __name__
-    set to `<mod>` and __file__ pointing to `data/<mod>/__init__.py`.
+    For a given backend `test:<cls>`, return a MagicMock object with a __name__
+    set to `test` and __file__ pointing to `data/<cls>/__init__.py`.
 
     The Mock object also defines a `get_datastore()` attribute on which the
     `current_version` attribute is set to 3.
-
-    Typical usage::
-
-      def test_xxx(cli_runner, mock_import_swhmodule):
-        conninfo = craft_conninfo(test_db, "new-db")
-        module_name = "test.cli"
-        # the command below will use sql scripts from
-        #     swh/core/db/tests/data/cli/sql/*.sql
-        cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
 
     """
     mock = mocker.MagicMock
@@ -69,14 +59,8 @@ def mock_import_swhmodule(request, mocker, datadir):
             # this insanity really should be cleaned up...
             if ":" in modname:
                 modname, cls = modname.split(":", 1)
-                if cls == "postgresql":
-                    # default test backend is cli
-                    cls = "cli"
             else:
-                cls = "cli"
-            if cls == "postgresql":
-                # default backend for tests is cli
-                cls = "cli"
+                cls = "postgresql"
             if "." in modname:
                 dirname = modname.split(".", 1)[1]
             else:
@@ -87,6 +71,7 @@ def mock_import_swhmodule(request, mocker, datadir):
                 version = m.kwargs.get("version", 1)
             else:
                 version = 3
+
             def get_datastore(*args, **kw):
                 return mock(current_version=version)
 
@@ -102,11 +87,14 @@ def mock_import_swhmodule(request, mocker, datadir):
 
 
 @pytest.fixture()
-def mock_get_swh_backend_module(request, mocker, datadir):
-    """This bypasses the entry_point based module loading tool.
+def mock_get_swh_backend_module(request, mocker, datadir, mock_import_swhmodule):
+    """This bypasses the swh.core backend loading mechanism
 
-    For a given module `test.<mod>`, return a MagicMock object with a __name__
-    set to `<mod>` and __file__ pointing to `data/<mod>/__init__.py`.
+    It mock both the entry_point based module loading tool
+    (get_swh_backend_module) and the "normal" module loader (import_swhmodule).
+
+    For a given backend `test:<cls>`, return a MagicMock object with a __name__
+    set to `test` and __file__ pointing to `data/<cls>/__init__.py`.
 
     The Mock object also defines a `get_datastore()` attribute on which the
     `current_version` attribute is set to 3.
@@ -115,9 +103,10 @@ def mock_get_swh_backend_module(request, mocker, datadir):
 
       def test_xxx(cli_runner, mock_import_swhmodule):
         conninfo = craft_conninfo(test_db, "new-db")
-        module_name = "test.cli"
+        module_name = "test"
         # the command below will use sql scripts from
-        #     swh/core/db/tests/data/cli/sql/*.sql
+        #     swh/core/db/tests/data/postgresal/sql/*.sql
+        # 'postgresql' being the default backend cls.
         cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
 
     """
@@ -127,15 +116,12 @@ def mock_get_swh_backend_module(request, mocker, datadir):
 
         assert swh_package == "test"
 
-        if cls == "postgresql":
-            # default backend for tests is cli
-            cls = "cli"
-
         m = request.node.get_closest_marker("init_version")
         if m:
             version = m.kwargs.get("version", 1)
         else:
             version = 3
+
         def get_datastore(*args, **kw):
             return mock(current_version=version)
 
