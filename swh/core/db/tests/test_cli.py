@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 from subprocess import CalledProcessError
-import traceback
 
 import pytest
 from pytest_postgresql import factories
@@ -13,20 +12,9 @@ import yaml
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
 from swh.core.db.db_utils import swh_db_module, swh_db_version
-from swh.core.tests.test_cli import assert_section_contains
+from swh.core.tests.test_cli import assert_result, assert_section_contains
 
 postgresql2 = factories.postgresql("postgresql_proc", dbname="tests2")
-
-
-def assert_result(result):
-    if result.exception:
-        assert result.exit_code == 0, (
-            "Unexpected exception: "
-            f"{''.join(traceback.format_tb(result.exc_info[2]))}"
-            f"\noutput: {result.output}"
-        )
-    else:
-        assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
 
 def test_cli_swh_help(swhmain, cli_runner):
@@ -265,9 +253,7 @@ def test_cli_swh_db_create_and_init_db_new_api(
     if with_module_config_key:
         cli_cmd.extend(["--module-config-key", module_name])
     result = cli_runner.invoke(swhdb, cli_cmd)
-    assert (
-        result.exit_code == 0
-    ), f"Unexpected output: {traceback.print_tb(result.exc_info[2])}"
+    assert_result(result)
 
     # the origin value in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, installed during db creation step)

@@ -20,8 +20,9 @@ from swh.core.db.db_utils import (
 )
 from swh.core.db.db_utils import get_database_info, get_sql_for_package, now
 from swh.core.db.db_utils import parse_dsn_or_dbname as parse_dsn
+from swh.core.tests.test_cli import assert_result
 
-from .test_cli import assert_result, craft_conninfo
+from .test_cli import craft_conninfo
 
 
 def test_get_sql_for_package(mock_import_module):

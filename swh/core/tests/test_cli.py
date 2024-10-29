@@ -6,6 +6,7 @@
 from importlib.metadata import distribution
 import logging
 import textwrap
+import traceback
 from typing import List
 
 import click
@@ -31,6 +32,17 @@ help_msg_snippets = (
         ),
     ),
 )
+
+
+def assert_result(result):
+    if result.exception:
+        assert result.exit_code == 0, (
+            "Unexpected exception: "
+            f"{''.join(traceback.format_tb(result.exc_info[2]))}"
+            f"\noutput: {result.output}"
+        )
+    else:
+        assert result.exit_code == 0, f"Unexpected output: {result.output}"
 
 
 def get_section(cli_output: str, section: str) -> List[str]:
@@ -85,13 +97,13 @@ def patched_dictconfig(mocker):
 def test_swh_help(swhmain):
     runner = CliRunner()
     result = runner.invoke(swhmain, ["-h"])
-    assert result.exit_code == 0
+    assert_result(result)
     for section, snippets in help_msg_snippets:
         for snippet in snippets:
             assert_section_contains(result.output, section, snippet)
 
     result = runner.invoke(swhmain, ["--help"])
-    assert result.exit_code == 0
+    assert_result(result)
     for section, snippets in help_msg_snippets:
         for snippet in snippets:
             assert_section_contains(result.output, section, snippet)
@@ -113,7 +125,7 @@ def test_command(swhmain, mocker):
         release=None,
         environment=None,
     )
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == "Hello SWH!"
 
 
@@ -126,7 +138,7 @@ def test_loglevel_default(caplog, swhmain):
 
     runner = CliRunner()
     result = runner.invoke(swhmain, ["test"])
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == """Hello SWH!"""
 
 
@@ -139,7 +151,7 @@ def test_loglevel_error(caplog, swhmain):
 
     runner = CliRunner()
     result = runner.invoke(swhmain, ["-l", "ERROR", "test"])
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == """Hello SWH!"""
 
 
@@ -152,7 +164,7 @@ def test_loglevel_debug(caplog, swhmain):
 
     runner = CliRunner()
     result = runner.invoke(swhmain, ["-l", "DEBUG", "test"])
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == """Hello SWH!"""
 
 
@@ -165,7 +177,7 @@ def test_sentry(swhmain, mocker):
     runner = CliRunner()
     sentry_sdk_init = mocker.patch("sentry_sdk.init")
     result = runner.invoke(swhmain, ["--sentry-dsn", "test_dsn", "test"])
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
         dsn="test_dsn",
@@ -187,7 +199,7 @@ def test_sentry_debug(swhmain, mocker):
     result = runner.invoke(
         swhmain, ["--sentry-dsn", "test_dsn", "--sentry-debug", "test"]
     )
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
         dsn="test_dsn",
@@ -211,7 +223,7 @@ def test_sentry_env(swhmain, mocker):
         "SWH_SENTRY_DEBUG": "1",
     }
     result = runner.invoke(swhmain, ["test"], env=env, auto_envvar_prefix="SWH")
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == """Hello SWH!"""
     sentry_sdk_init.assert_called_once_with(
         dsn="test_dsn",
@@ -236,7 +248,7 @@ def test_sentry_env_main_package(swhmain, mocker):
         "SWH_SENTRY_ENVIRONMENT": "tests",
     }
     result = runner.invoke(swhmain, ["test"], env=env, auto_envvar_prefix="SWH")
-    assert result.exit_code == 0
+    assert_result(result)
 
     version = distribution("swh.core").version
 
@@ -302,7 +314,7 @@ def test_log_config(log_config_path, swhmain, patched_dictconfig):
         ],
     )
 
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == "Hello SWH!"
 
 
@@ -334,7 +346,7 @@ def test_log_config_log_level_interaction(log_config_path, swhmain, patched_dict
         ],
     )
 
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == "Hello SWH!"
 
 
@@ -358,7 +370,7 @@ def test_multiple_log_level_behavior(swhmain):
         ],
     )
 
-    assert result.exit_code == 0, result.output
+    assert_result(result)
 
 
 def test_invalid_log_level(swhmain):
@@ -388,18 +400,18 @@ def test_aliased_command(swhmain):
 
     # check we have only 'canonical-test' listed in the usage help msg
     result = runner.invoke(swhmain, ["-h"])
-    assert result.exit_code == 0
+    assert_result(result)
     assert "canonical-test  A test command." in result.output
     assert "othername" not in result.output
 
     # check we can execute the cmd with 'canonical-test'
     result = runner.invoke(swhmain, ["canonical-test"])
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == """Hello SWH!"""
 
     # check we can also execute the cmd with the alias 'othername'
     result = runner.invoke(swhmain, ["othername"])
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output.strip() == """Hello SWH!"""
 
 
@@ -421,7 +433,7 @@ def test_documentation(caplog, swhmain):
 
     runner = CliRunner()
     result = runner.invoke(swhmain, ["test", "--help"])
-    assert result.exit_code == 0
+    assert_result(result)
     assert result.output == textwrap.dedent(
         """\
         Usage: swh test [OPTIONS]
