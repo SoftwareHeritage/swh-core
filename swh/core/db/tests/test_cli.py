@@ -92,7 +92,7 @@ def craft_conninfo(test_db, dbname=None) -> str:
     [("test", "origin"), ("test:postgresql", "origin"), ("test:cli2", "origin2")],
 )
 def test_cli_swh_db_create_and_init_db(
-    cli_runner, postgresql, mock_get_swh_backend_module, module_table
+    cli_runner, postgresql, mock_get_entry_points, module_table
 ):
     """Create a db then initializing it should be ok"""
     module_name, table = module_table
@@ -114,7 +114,7 @@ def test_cli_swh_db_create_and_init_db(
 
 
 def test_cli_swh_db_initialization_fail_without_creation_first(
-    cli_runner, postgresql, mock_import_swhmodule
+    cli_runner, postgresql, mock_import_module
 ):
     """Init command on an inexisting db cannot work"""
     module_name = "test"  # it's mocked here
@@ -128,7 +128,7 @@ def test_cli_swh_db_initialization_fail_without_creation_first(
 
 
 def test_cli_swh_db_initialization_fail_without_extension(
-    cli_runner, postgresql, mock_import_swhmodule
+    cli_runner, postgresql, mock_import_module
 ):
     """Init command cannot work without privileged extension.
 
@@ -152,7 +152,7 @@ def test_cli_swh_db_initialization_fail_without_extension(
 def test_cli_swh_db_initialization_works_with_flags(
     cli_runner,
     postgresql,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
 ):
     """Init commands with carefully crafted libpq conninfo works"""
     module_name = "test"  # it's mocked here
@@ -172,7 +172,7 @@ def test_cli_swh_db_initialization_works_with_flags(
 
 
 def test_cli_swh_db_initialization_with_env(
-    swh_db_cli, mock_get_swh_backend_module, postgresql
+    swh_db_cli, mock_get_entry_points, postgresql
 ):
     """Init commands with standard environment variables works"""
     module_name = "test"  # it's mocked here
@@ -201,7 +201,7 @@ def test_cli_swh_db_initialization_with_env(
 
 
 def test_cli_swh_db_initialization_idempotent(
-    swh_db_cli, mock_get_swh_backend_module, postgresql
+    swh_db_cli, mock_get_entry_points, postgresql
 ):
     """Multiple runs of the init commands are idempotent"""
     module_name = "test"  # mocked
@@ -239,7 +239,7 @@ def test_cli_swh_db_initialization_idempotent(
 def test_cli_swh_db_create_and_init_db_new_api(
     cli_runner,
     postgresql,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
     mocker,
     tmp_path,
     with_module_config_key,
@@ -275,7 +275,7 @@ def test_cli_swh_db_create_and_init_db_new_api(
 def test_cli_swh_db_upgrade_new_api(
     request,
     cli_runner,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
     postgresql,
     datadir,
     mocker,
@@ -366,7 +366,7 @@ def test_cli_swh_db_upgrade_new_api(
 def test_cli_swh_db_init_version_ok(
     request,
     cli_runner,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
     postgresql,
     datadir,
     mocker,
@@ -390,7 +390,7 @@ def test_cli_swh_db_init_version_ok(
     assert swh_db_version(conninfo) == current_version
 
 
-def test_cli_swh_db_version(swh_db_cli, mock_get_swh_backend_module, postgresql):
+def test_cli_swh_db_version(swh_db_cli, mock_get_entry_points, postgresql):
     module_name = "test"
     cli_runner, db_params = swh_db_cli
 
@@ -420,7 +420,7 @@ def test_cli_swh_db_initadmin_and_init_db_from_config_path(
     cli_runner,
     postgresql,
     postgresql2,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
     mocker,
     tmp_path,
     initialize_all,
@@ -488,7 +488,7 @@ def test_cli_swh_db_list_config_path(
     cli_runner,
     postgresql,
     postgresql2,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
     mocker,
     tmp_path,
 ):
@@ -527,7 +527,7 @@ def test_cli_swh_db_version_from_config(
     cli_runner,
     postgresql,
     postgresql2,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
     mocker,
     tmp_path,
 ):
@@ -611,7 +611,7 @@ version: 3
 def test_cli_swh_db_upgrade_from_config(
     request,
     cli_runner,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
     postgresql,
     postgresql2,
     datadir,
@@ -736,7 +736,7 @@ test:
 def test_cli_swh_db_upgrade_all(
     request,
     cli_runner,
-    mock_get_swh_backend_module,
+    mock_get_entry_points,
     postgresql,
     postgresql2,
     datadir,

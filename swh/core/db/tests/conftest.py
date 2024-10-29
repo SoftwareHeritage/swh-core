@@ -3,15 +3,15 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from importlib import import_module
 import os
+from pathlib import Path
 
 from click.testing import CliRunner
 from hypothesis import HealthCheck
 import psycopg2
 import pytest
 from pytest_postgresql import factories
-
-from swh.core.db.db_utils import import_swhmodule
 
 os.environ["LC_ALL"] = "C.UTF-8"
 
@@ -41,96 +41,64 @@ def cli_runner():
 
 
 @pytest.fixture()
-def mock_import_swhmodule(request, mocker, datadir):
-    """This bypasses the module manipulation to make import_swhmodule return a mock
-    object suitable for data test files listing via get_sql_for_package.
-
-    For a given backend `test:<cls>`, return a MagicMock object with a __name__
-    set to `test` and __file__ pointing to `data/<cls>/__init__.py`.
-
-    The Mock object also defines a `get_datastore()` attribute on which the
-    `current_version` attribute is set to 3.
-
-    """
+def mock_import_module(request, mocker, datadir):
     mock = mocker.MagicMock
 
-    def import_swhmodule_mock(modname):
-        if modname.startswith("test"):
-            # this insanity really should be cleaned up...
-            if ":" in modname:
-                modname, cls = modname.split(":", 1)
-            else:
-                cls = "postgresql"
-            if "." in modname:
-                dirname = modname.split(".", 1)[1]
-            else:
-                dirname = cls
-
-            m = request.node.get_closest_marker("init_version")
-            if m:
-                version = m.kwargs.get("version", 1)
-            else:
-                version = 3
-
-            def get_datastore(*args, **kw):
-                return mock(current_version=version)
-
-            return mock(
-                __name__=modname,
-                __file__=os.path.join(datadir, dirname, "__init__.py"),
-                get_datastore=get_datastore,
-            )
-        else:
-            return import_swhmodule(modname)
-
-    return mocker.patch("swh.core.db.db_utils.import_swhmodule", import_swhmodule_mock)
-
-
-@pytest.fixture()
-def mock_get_swh_backend_module(request, mocker, datadir, mock_import_swhmodule):
-    """This bypasses the swh.core backend loading mechanism
-
-    It mock both the entry_point based module loading tool
-    (get_swh_backend_module) and the "normal" module loader (import_swhmodule).
-
-    For a given backend `test:<cls>`, return a MagicMock object with a __name__
-    set to `test` and __file__ pointing to `data/<cls>/__init__.py`.
-
-    The Mock object also defines a `get_datastore()` attribute on which the
-    `current_version` attribute is set to 3.
-
-    Typical usage::
-
-      def test_xxx(cli_runner, mock_import_swhmodule):
-        conninfo = craft_conninfo(test_db, "new-db")
-        module_name = "test"
-        # the command below will use sql scripts from
-        #     swh/core/db/tests/data/postgresal/sql/*.sql
-        # 'postgresql' being the default backend cls.
-        cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
-
-    """
-    mock = mocker.MagicMock
-
-    def get_swh_backend_module_mock(swh_package, cls):
-
-        assert swh_package == "test"
+    def import_module_mocker(name, package=None):
+        if not name.startswith("swh.test"):
+            return import_module(name, package)
 
         m = request.node.get_closest_marker("init_version")
         if m:
             version = m.kwargs.get("version", 1)
         else:
             version = 3
+        if name.startswith("swh."):
+            name = name[4:]
+        modpath = name.split(".")
 
         def get_datastore(*args, **kw):
             return mock(current_version=version)
 
-        return f"{swh_package}.{cls}", mock(
-            __name__=swh_package,
-            __file__=os.path.join(datadir, cls, "__init__.py"),
+        return mock(
+            __name__=name.split(".")[-1],
+            __file__=os.path.join(datadir, *modpath, "__init__.py"),
             get_datastore=get_datastore,
         )
 
-    return mocker.patch(
-        "swh.core.config.get_swh_backend_module", get_swh_backend_module_mock
-    )
+    return mocker.patch("swh.core.db.db_utils.import_module", import_module_mocker)
+
+
+@pytest.fixture()
+def mock_get_entry_points(request, mocker, datadir, mock_import_module):
+    mock = mocker.MagicMock
+
+    def get_entry_points_mocker(group):
+        m = request.node.get_closest_marker("init_version")
+        if m:
+            version = m.kwargs.get("version", 1)
+        else:
+            version = 3
+
+        class EntryPoints(dict):
+            def __iter__(self):
+                return iter(self.values())
+
+        entrypoints = EntryPoints()
+        for entry in (Path(datadir) / "test").iterdir():
+            if entry.is_dir():
+                ep = mock(
+                    module=f"swh.test.{entry.name}",
+                    load=lambda: mock(current_version=version),
+                )
+                # needed to overwrite the Mock's name argument, see
+                # https://docs.python.org/3/library/unittest.mock.html#mock-names-and-the-name-attribute
+                ep.name = entry.name
+                entrypoints[entry.name] = ep
+        return entrypoints
+
+    return mocker.patch("swh.core.config.get_entry_points", get_entry_points_mocker)
+
+
+# for bw compat
+mock_get_swh_backend_module = mock_get_entry_points
