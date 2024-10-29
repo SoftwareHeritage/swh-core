@@ -89,7 +89,13 @@ def craft_conninfo(test_db, dbname=None) -> str:
 
 @pytest.mark.parametrize(
     "module_table",
-    [("test", "origin"), ("test:postgresql", "origin"), ("test:cli2", "origin2")],
+    [
+        ("test", "origin"),
+        ("test.postgresql", "origin"),
+        ("test:postgresql", "origin"),
+        ("test:cli2", "origin2"),
+        ("test.cli2", "origin2"),
+    ],
 )
 def test_cli_swh_db_create_and_init_db(
     cli_runner, postgresql, mock_get_entry_points, module_table

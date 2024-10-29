@@ -358,6 +358,21 @@ def get_swh_backend_module(swh_package: str, cls: str) -> Tuple[str, Optional[ty
     return entry_point.module, BackendCls
 
 
+def get_swh_backend_from_fullmodule(
+    fullmodule: str,
+) -> Tuple[Optional[str], Optional[str]]:
+    if not fullmodule.startswith("swh."):
+        fullmodule = f"swh.{fullmodule}"
+    package = fullmodule.split(".")[1]
+
+    entry_points = get_entry_points(group=f"swh.{package}.classes")
+    for entry_point in entry_points:
+        if entry_point.module == fullmodule:
+            return package, entry_point.name
+
+    return None, None
+
+
 def list_db_config_entries(cfg) -> Generator[Tuple[str, str, dict, str], None, None]:
     """List all the db config entries in the given config structure
 

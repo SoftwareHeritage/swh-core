@@ -800,7 +800,11 @@ def handle_cmd_args(
     Note: this rather complex logic will be simplified when all the swh
     packages are updated and do not need bw compat handling code any more.
     """
-    from swh.core.config import get_swh_backend_module, list_db_config_entries
+    from swh.core.config import (
+        get_swh_backend_from_fullmodule,
+        get_swh_backend_module,
+        list_db_config_entries,
+    )
 
     if is_path:
         if do_all:
@@ -824,7 +828,14 @@ def handle_cmd_args(
             if ":" in module:
                 module, cls = module.split(":", 1)
             else:
-                cls = "postgresql"
+                assert module is not None
+                backend_package, backend_cls = get_swh_backend_from_fullmodule(module)
+                if backend_package is None:
+                    cls = "postgresql"
+                else:
+                    assert backend_cls is not None
+                    module = backend_package
+                    cls = backend_cls
             dbcfg = {"cls": cls, "db": dbname}
             fullmodule, backend_class = get_swh_backend_module(
                 swh_package=module, cls=cls
