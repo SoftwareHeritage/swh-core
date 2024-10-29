@@ -706,7 +706,9 @@ def execute_sqlfiles(
     flavor_set = False
     for sqlfile in sqlfiles:
         logger.debug(f"execute SQL file {sqlfile} dbname={conninfo}")
-        subprocess.check_call(psql_command + ["-f", str(sqlfile)])
+        subprocess.run(
+            psql_command + ["-f", str(sqlfile)], check=True, capture_output=True
+        )
 
         if (
             flavor is not None

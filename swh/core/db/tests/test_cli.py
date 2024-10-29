@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from subprocess import CalledProcessError
 import traceback
 
 import pytest
@@ -122,6 +123,8 @@ def test_cli_swh_db_initialization_fail_without_creation_first(
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     # Fails because we cannot connect to an inexisting db
     assert result.exit_code == 1, f"Unexpected output: {result.output}"
+    assert isinstance(result.exception, CalledProcessError)
+    assert b'FATAL:  database "inexisting-db" does not exist' in result.exception.stderr
 
 
 def test_cli_swh_db_initialization_fail_without_extension(
@@ -132,13 +135,18 @@ def test_cli_swh_db_initialization_fail_without_extension(
     In this test, the schema needs privileged extension to work.
 
     """
-    module_name = "test"  # it's mocked here
+    module_name = "test.postgresql"  # it's mocked here
     conninfo = craft_conninfo(postgresql)
 
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     # Fails as the function `public.digest` is not installed, init-admin calls is needed
     # first (the next tests show such behavior)
     assert result.exit_code == 1, f"Unexpected output: {result.output}"
+    assert isinstance(result.exception, CalledProcessError)
+    assert (
+        b"ERROR:  function public.digest(text, unknown) does not exist"
+        in result.exception.stderr
+    )
 
 
 def test_cli_swh_db_initialization_works_with_flags(
