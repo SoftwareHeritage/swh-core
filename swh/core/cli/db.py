@@ -82,12 +82,16 @@ def db_create(ctx, module, dbname, template):
     """
     from swh.core.db.db_utils import create_database_for_package
 
-    if dbname is None:
-        cfg = ctx.obj["config"].get(module, {})
-        dbname, cfg = get_dburl_from_config(cfg)
+    args = handle_cmd_args(
+        cfg=ctx.obj["config"],
+        module=module,
+        do_all=False,
+        dbname=dbname,
+        is_path=False,
+    )
 
-    logger.debug("db_create %s dn_name=%s", module, dbname)
-    create_database_for_package(module, dbname, template)
+    for package, fullmodule, backend_class, dbname, cfg in args:
+        create_database_for_package(fullmodule, dbname, template)
 
 
 @db.command(name="init-admin", context_settings=CONTEXT_SETTINGS)
@@ -823,8 +827,9 @@ def handle_cmd_args(
                 cls = "postgresql"
             dbcfg = {"cls": cls, "db": dbname}
             fullmodule, backend_class = get_swh_backend_module(
-                swh_package=module, cls="postgresql"
+                swh_package=module, cls=cls
             )
+            package = module
         else:
             if is_path:
                 # read the db access for module 'module' from the config file

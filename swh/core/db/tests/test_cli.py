@@ -86,15 +86,16 @@ def craft_conninfo(test_db, dbname=None) -> str:
     return f"postgresql://{db_params.user}@{db_params.host}:{db_params.port}/{dbname}"
 
 
+@pytest.mark.parametrize(
+    "module_table",
+    [("test", "origin"), ("test:postgresql", "origin"), ("test:cli2", "origin2")],
+)
 def test_cli_swh_db_create_and_init_db(
-    cli_runner,
-    postgresql,
-    mock_get_swh_backend_module,
+    cli_runner, postgresql, mock_get_swh_backend_module, module_table
 ):
     """Create a db then initializing it should be ok"""
-    module_name = "test"
-
-    conninfo = craft_conninfo(postgresql, "new-db")
+    module_name, table = module_table
+    conninfo = craft_conninfo(postgresql, f"db-{module_name}")
     # This creates the db and installs the necessary admin extensions
     result = cli_runner.invoke(swhdb, ["create", module_name, "--dbname", conninfo])
     assert_result(result)
@@ -106,7 +107,7 @@ def test_cli_swh_db_create_and_init_db(
     # the origin value in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, installed during db creation step)
     with BaseDb.connect(conninfo).cursor() as cur:
-        cur.execute("select * from origin")
+        cur.execute(f"select * from {table}")
         origins = cur.fetchall()
         assert len(origins) == 1
 
