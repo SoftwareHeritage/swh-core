@@ -5,8 +5,10 @@
 
 from collections import deque
 from functools import partial
+from importlib import import_module
 import logging
 from os import path
+from pathlib import Path
 import re
 from typing import Dict, List, Optional
 from urllib.parse import unquote, urlparse
@@ -418,3 +420,73 @@ def clean_scopes():
     scope._global_scope = None
     scope._isolation_scope.set(None)
     scope._current_scope.set(None)
+
+
+@pytest.fixture()
+def mock_import_module(request, mocker, datadir):
+    mock = mocker.MagicMock
+
+    def import_module_mocker(name, package=None):
+        if not name.startswith("swh.test"):
+            return import_module(name, package)
+
+        m = request.node.get_closest_marker("init_version")
+        if m:
+            version = m.kwargs.get("version", 1)
+        else:
+            version = 3
+        if name.startswith("swh."):
+            name = name[4:]
+        modpath = name.split(".")
+
+        def get_datastore(*args, **kw):
+            return mock(current_version=version)
+
+        return mock(
+            __name__=name.split(".")[-1],
+            __file__=str(Path(datadir, *modpath, "__init__.py")),
+            get_datastore=get_datastore,
+        )
+
+    return mocker.patch("swh.core.db.db_utils.import_module", import_module_mocker)
+
+
+@pytest.fixture()
+def mock_get_entry_points(request, mocker, datadir, mock_import_module):
+    mock = mocker.MagicMock
+
+    def get_entry_points_mocker(group):
+        m = request.node.get_closest_marker("init_version")
+        if m:
+            version = m.kwargs.get("version", 1)
+        else:
+            version = 3
+
+        class EntryPoints(dict):
+            def __iter__(self):
+                return iter(self.values())
+
+        package = group[4:-8]  # remove 'swh.' and '.classes'
+        entrypoints = EntryPoints()
+        pkgdir = Path(datadir) / package
+        if pkgdir.is_dir():
+            for entry in pkgdir.iterdir():
+                if entry.is_dir():
+                    ep = mock(
+                        module=f"swh.{package}.{entry.name}",
+                        load=lambda: mock(
+                            current_version=version,
+                            __doc__="A mockup backend for tests",
+                        ),
+                    )
+                    # needed to overwrite the Mock's name argument, see
+                    # https://docs.python.org/3/library/unittest.mock.html#mock-names-and-the-name-attribute
+                    ep.name = entry.name
+                    entrypoints[entry.name] = ep
+        return entrypoints
+
+    return mocker.patch("swh.core.config.get_entry_points", get_entry_points_mocker)
+
+
+# for bw compat
+mock_get_swh_backend_module = mock_get_entry_points
