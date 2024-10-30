@@ -471,7 +471,7 @@ def mock_get_entry_points(request, mocker, datadir, mock_import_module):
         pkgdir = Path(datadir) / package
         if pkgdir.is_dir():
             for entry in pkgdir.iterdir():
-                if entry.is_dir():
+                if not entry.name.startswith("_") and entry.is_dir():
                     ep = mock(
                         module=f"swh.{package}.{entry.name}",
                         load=lambda: mock(
