@@ -273,7 +273,10 @@ class RPCTestAdapter(BaseAdapter):
         response.status_code = resp.status_code
 
         # Make headers case-insensitive.
-        response.headers = CaseInsensitiveDict(getattr(resp, "headers", {}))
+        headers = getattr(resp, "headers")
+        response.headers = CaseInsensitiveDict(
+            headers.to_wsgi_list() if headers else []
+        )
 
         # Set encoding.
         response.encoding = get_encoding_from_headers(response.headers)
