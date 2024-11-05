@@ -3,8 +3,6 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from subprocess import CalledProcessError
-
 import pytest
 from pytest_postgresql import factories
 import yaml
@@ -117,8 +115,7 @@ def test_cli_swh_db_initialization_fail_without_creation_first(
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
     # Fails because we cannot connect to an inexisting db
     assert result.exit_code == 1, f"Unexpected output: {result.output}"
-    assert isinstance(result.exception, CalledProcessError)
-    assert b'FATAL:  database "inexisting-db" does not exist' in result.exception.stderr
+    assert 'FATAL:  database "inexisting-db" does not exist' in result.output
 
 
 def test_cli_swh_db_initialization_fail_without_extension(
@@ -136,10 +133,8 @@ def test_cli_swh_db_initialization_fail_without_extension(
     # Fails as the function `public.digest` is not installed, init-admin calls is needed
     # first (the next tests show such behavior)
     assert result.exit_code == 1, f"Unexpected output: {result.output}"
-    assert isinstance(result.exception, CalledProcessError)
     assert (
-        b"ERROR:  function public.digest(text, unknown) does not exist"
-        in result.exception.stderr
+        "ERROR:  function public.digest(text, unknown) does not exist" in result.output
     )
 
 
@@ -261,6 +256,30 @@ def test_cli_swh_db_create_and_init_db_new_api(
         cur.execute("select * from origin")
         origins = cur.fetchall()
         assert len(origins) == 1
+
+
+def test_cli_swh_db_init_report_sqlsh_error(
+    cli_runner,
+    postgresql,
+    mock_get_entry_points,
+    mocker,
+    tmp_path,
+):
+    """Create a db then initializing it should be ok for a "new style" datastore"""
+    module_name = "test:fail"
+
+    conninfo = craft_conninfo(postgresql)
+
+    # This initializes the schema and data
+    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
+    assert_result(result)
+
+    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
+    assert result.exit_code == 1
+    assert (
+        "test/fail/sql/40-funcs.sql:6: "
+        "ERROR:  function public.digest(text, unknown) does not exist"
+    ) in result.output
 
 
 @pytest.mark.init_version(version=2)

@@ -23,3 +23,6 @@ test:
 
 will define 2 'swh.core.db' powered backends initialized from (resp.)
 './postgresql/sql' and './cli2/sql'.
+
+The 'test:fail' backend is expected to fail when trying to initialize the
+database (missing the pgcrypto extension, so the psql execution should fail).

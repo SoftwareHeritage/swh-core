@@ -6,6 +6,7 @@
 
 import logging
 from os import environ
+from subprocess import CalledProcessError
 from typing import Any, Dict, List, Optional, Tuple
 import warnings
 
@@ -340,9 +341,17 @@ def initialize_one(package, module, backend_class, flavor, dbname, cfg):
 
     logger.debug("db_init %s flavor=%s dbname=%s", module, flavor, dbname)
     dbmodule = f"{package}:{cfg['cls']}"
-    initialized, dbversion, dbflavor = populate_database_for_package(
-        dbmodule, dbname, flavor
-    )
+    try:
+        initialized, dbversion, dbflavor = populate_database_for_package(
+            dbmodule, dbname, flavor
+        )
+    except CalledProcessError as exc:
+        click.secho("Error during database setup", fg="red", bold=True)
+        click.echo(str(exc))
+        click.echo("Process output:")
+        click.echo(exc.stderr)
+        raise click.Abort()
+
     if dbversion is not None:
         click.secho(
             "ERROR: the database version has been populated by sql init scripts. "
