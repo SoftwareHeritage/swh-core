@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2023  The Software Heritage developers
+# Copyright (C) 2015-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -26,7 +26,11 @@ from deprecated import deprecated
 from flask import Flask, Request, Response, abort, request
 import requests
 import sentry_sdk
+from tenacity.before_sleep import before_sleep_log
+from tenacity.wait import wait_fixed
 from werkzeug.exceptions import HTTPException
+
+from swh.core.retry import http_retry, retry_if_exception
 
 from .negotiation import Formatter as FormatterBase
 from .negotiation import Negotiator as NegotiatorBase
@@ -40,6 +44,8 @@ from .serializers import (
     msgpack_dumps,
     msgpack_loads,
 )
+
+RETRY_WAIT_INTERVAL = 10
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +217,10 @@ class RPCClient(metaclass=MetaRPCClient):
       reraise_exceptions: On server errors, if any of the exception classes in
         this list has the same name as the error name, then the exception will
         be instantiated and raised instead of a generic RemoteException.
+      enable_requests_retry: If set to :const:`True`, requests sent by the client will
+        be retried when encountering specific errors. Default policy is to retry when
+        connection errors or transient remote exceptions are raised. Subclasses can
+        change that policy by overriding the :meth:`retry_policy` method.
 
     """
 
@@ -238,6 +248,11 @@ class RPCClient(metaclass=MetaRPCClient):
     extra_type_decoders: Dict[str, Callable] = {}
     """Value of `extra_decoders` passed to `json_loads` or `msgpack_loads`
     to be able to deserialize more object types."""
+    enable_requests_retry: bool = False
+    """If set to :const:`True`, requests sent by the client will be retried
+    when encountering specific errors. Default policy is to retry when connection
+    errors or transient remote exceptions are raised. Subclasses can change that
+    policy by overriding the :meth:`retry_policy` method."""
 
     def __init__(
         self,
@@ -250,12 +265,15 @@ class RPCClient(metaclass=MetaRPCClient):
         adapter_kwargs: Optional[Dict[str, Any]] = None,
         api_exception: Optional[Type[Exception]] = None,
         reraise_exceptions: Optional[List[Type[Exception]]] = None,
+        enable_requests_retry: Optional[bool] = None,
         **kwargs,
     ):
         if api_exception:
             self.api_exception = api_exception
         if reraise_exceptions:
             self.reraise_exceptions = reraise_exceptions
+        if enable_requests_retry is not None:
+            self.enable_requests_retry = enable_requests_retry
         base_url = url if url.endswith("/") else url + "/"
         self.url = base_url
 
@@ -277,6 +295,28 @@ class RPCClient(metaclass=MetaRPCClient):
         self.timeout = timeout
 
         self.chunk_size = chunk_size
+
+        if self.enable_requests_retry:
+
+            retry = http_retry(
+                retry=self.retry_policy,
+                wait=wait_fixed(RETRY_WAIT_INTERVAL),
+                before_sleep=before_sleep_log(logger, logging.WARNING),
+            )
+            setattr(self, "_get", retry(self._get))
+            setattr(self, "_post", retry(self._post))
+
+    def retry_policy(self, retry_state):
+        return retry_if_exception(
+            retry_state,
+            lambda e: (
+                isinstance(e, TransientRemoteException)
+                or (
+                    isinstance(e, self.api_exception)
+                    and isinstance(e.args[0], requests.exceptions.ConnectionError)
+                )
+            ),
+        )
 
     def _url(self, endpoint):
         return "%s%s" % (self.url, endpoint)

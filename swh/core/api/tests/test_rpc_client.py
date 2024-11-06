@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022  The Software Heritage developers
+# Copyright (C) 2018-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -9,6 +9,7 @@ import pytest
 from requests.exceptions import ConnectionError
 
 from swh.core.api import (
+    RETRY_WAIT_INTERVAL,
     APIError,
     RemoteException,
     RPCClient,
@@ -16,6 +17,7 @@ from swh.core.api import (
     remote_api_endpoint,
 )
 from swh.core.api.serializers import exception_to_dict, msgpack_dumps
+from swh.core.retry import MAX_NUMBER_ATTEMPTS
 
 from .test_serializers import ExtraType, extra_decoders, extra_encoders
 
@@ -48,6 +50,7 @@ def rpc_client_class(requests_mock):
         extra_type_encoders = extra_encoders
         extra_type_decoders = extra_decoders
         reraise_exceptions = [ReraiseException]
+        enable_requests_retry = True
 
         def overridden_method(self, data):
             return "bar"
@@ -115,10 +118,11 @@ def test_client_request_too_large(rpc_client):
     assert exc_info.value.args[1].status_code == 413
 
 
-def test_client_connexion_error(rpc_client, requests_mock):
+def test_client_connexion_error(rpc_client, requests_mock, mocker):
     """
     ConnectionError should be wrapped and raised as an APIError.
     """
+    mock_sleep = mocker.patch("time.sleep")
     error_message = "unreachable host"
     requests_mock.post(
         re.compile("mock://example.com/connection_error"),
@@ -130,6 +134,14 @@ def test_client_connexion_error(rpc_client, requests_mock):
 
     assert type(exc_info.value.args[0]) is ConnectionError
     assert str(exc_info.value.args[0]) == error_message
+
+    # check request retries on connection errors
+    mock_sleep.assert_has_calls(
+        [
+            mocker.call(param)
+            for param in [RETRY_WAIT_INTERVAL] * (MAX_NUMBER_ATTEMPTS - 1)
+        ]
+    )
 
 
 def _exception_response(exception, status_code):
@@ -144,10 +156,11 @@ def _exception_response(exception, status_code):
     return callback
 
 
-def test_client_reraise_exception(rpc_client, requests_mock):
+def test_client_reraise_exception(rpc_client, requests_mock, mocker):
     """
     Exception caught server-side and whitelisted will be raised again client-side.
     """
+    mock_sleep = mocker.patch("time.sleep")
     error_message = "something went wrong"
     endpoint = "reraise_exception"
 
@@ -163,10 +176,12 @@ def test_client_reraise_exception(rpc_client, requests_mock):
         rpc_client._post(endpoint, data={})
 
     assert str(exc_info.value) == error_message
+    # no request retry for such exception
+    mock_sleep.assert_not_called()
 
 
 @pytest.mark.parametrize("status_code", [400, 500, 502, 503])
-def test_client_raise_remote_exception(rpc_client, requests_mock, status_code):
+def test_client_raise_remote_exception(rpc_client, requests_mock, status_code, mocker):
     """
     Exception caught server-side and not whitelisted will be wrapped and raised
     as a RemoteException client-side.
@@ -181,6 +196,7 @@ def test_client_raise_remote_exception(rpc_client, requests_mock, status_code):
             status_code=status_code,
         ),
     )
+    mock_sleep = mocker.patch("time.sleep")
 
     with pytest.raises(RemoteException) as exc_info:
         rpc_client._post(endpoint, data={})
@@ -189,8 +205,17 @@ def test_client_raise_remote_exception(rpc_client, requests_mock, status_code):
     assert str(exc_info.value.args[0]["message"]) == error_message
     if status_code in (502, 503):
         assert isinstance(exc_info.value, TransientRemoteException)
+        # check request retry on transient remote exception
+        mock_sleep.assert_has_calls(
+            [
+                mocker.call(param)
+                for param in [RETRY_WAIT_INTERVAL] * (MAX_NUMBER_ATTEMPTS - 1)
+            ]
+        )
     else:
         assert not isinstance(exc_info.value, TransientRemoteException)
+        # no request retry on other remote exceptions
+        mock_sleep.assert_not_called()
 
 
 @pytest.mark.parametrize(
