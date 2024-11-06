@@ -339,6 +339,35 @@ def initialize_one(package, module, backend_class, flavor, dbname, cfg):
         swh_set_db_version,
     )
 
+    # identify the datastore version first, otherwise if we start populating
+    # the database but the backend cannot be initialized to retrieve the
+    # current version, then we are in a broken state where the database is
+    # mostly set up but the version; which is then used to decide whether the
+    # db is initialized or not for any subsequent 'swh db' command...
+    datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
+    if datastore_factory is None and backend_class is not None:
+
+        def datastore_factory(cls, **cfg):
+            return backend_class(**cfg)
+
+    code_version = None
+    if datastore_factory:
+        # TODO: try not to instantiate the backend class; most of the time, the
+        #       current_version will be a class attribute...
+        datastore = datastore_factory(**cfg)
+        if hasattr(datastore, "current_version"):
+            code_version = datastore.current_version
+            logger.info(
+                "Initializing database version to %s from the %s datastore",
+                code_version,
+                module,
+            )
+    if code_version is None:
+        click.secho(
+            "Error: cannot identify the backend datastore version", fg="red", bold=True
+        )
+        raise click.Abort()
+
     logger.debug("db_init %s flavor=%s dbname=%s", module, flavor, dbname)
     dbmodule = f"{package}:{cfg['cls']}"
     try:
@@ -361,27 +390,7 @@ def initialize_one(package, module, backend_class, flavor, dbname, cfg):
         # db version has not been populated by sql init scripts (new style),
         # let's do it; instantiate the data source to retrieve the current
         # (expected) db version
-        datastore_factory = getattr(import_swhmodule(module), "get_datastore", None)
-        if datastore_factory is None and backend_class is not None:
-
-            def datastore_factory(cls, **cfg):
-                return backend_class(**cfg)
-
-        if datastore_factory:
-            datastore = datastore_factory(**cfg)
-            if not hasattr(datastore, "current_version"):
-                logger.warning(
-                    "Datastore %s does not declare the " "'current_version' attribute",
-                    datastore,
-                )
-            else:
-                code_version = datastore.current_version
-                logger.info(
-                    "Initializing database version to %s from the %s datastore",
-                    code_version,
-                    module,
-                )
-                swh_set_db_version(dbname, code_version, desc="DB initialization")
+        swh_set_db_version(dbname, code_version, desc="DB initialization")
 
     dbversion = get_database_info(dbname)[1]
     if dbversion is None:
