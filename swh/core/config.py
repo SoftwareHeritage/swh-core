@@ -1,9 +1,10 @@
-# Copyright (C) 2015-2020  The Software Heritage developers
+# Copyright (C) 2015-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from copy import deepcopy
+from functools import lru_cache
 from itertools import chain
 import logging
 import os
@@ -332,6 +333,7 @@ def load_from_envvar(default_config: Optional[Dict[str, Any]] = None) -> Dict[st
     return cfg
 
 
+@lru_cache()
 def get_swh_backend_module(swh_package: str, cls: str) -> Tuple[str, Optional[type]]:
     entry_points = get_entry_points(group=f"swh.{swh_package}.classes")
     if not entry_points:
@@ -358,6 +360,7 @@ def get_swh_backend_module(swh_package: str, cls: str) -> Tuple[str, Optional[ty
     return entry_point.module, BackendCls
 
 
+@lru_cache()
 def get_swh_backend_from_fullmodule(
     fullmodule: str,
 ) -> Tuple[Optional[str], Optional[str]]:
