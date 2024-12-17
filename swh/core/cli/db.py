@@ -828,7 +828,7 @@ def handle_cmd_args(
         if do_all:
             raise ValueError("Cannot use both 'all' and a specific config target")
         if dbname:
-            raise ValueError("Cannot use both 'dbaname' and a specific config target")
+            raise ValueError("Cannot use both 'dbname' and a specific config target")
 
     package = module
     backends = []
