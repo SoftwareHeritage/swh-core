@@ -737,6 +737,7 @@ def get_dburl_from_config_key(cfg, path):
     # the first section level in the config may contain dotted keys, so deal
     # with it
 
+    swhmod = None
     for key in cfg:
         if path.startswith(f"{key}."):
             swhmod = key
@@ -746,6 +747,10 @@ def get_dburl_from_config_key(cfg, path):
             swhmod = key
             cfgpath = []
             break
+
+    if not swhmod:
+        raise ValueError(f"Module configuration key for <{path}> was not found!")
+
     cfg = cfg[swhmod]
 
     for key_e in cfgpath:
