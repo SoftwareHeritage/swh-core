@@ -11,6 +11,7 @@ and redefining functions and variables they want.
 May be imported by gunicorn using
 `--config 'python:swh.core.api.gunicorn_config'`."""
 
+from typing import Optional
 
 from ..sentry import init_sentry
 
@@ -24,6 +25,7 @@ def post_fork(
     sentry_integrations=None,
     extra_sentry_kwargs={},
     disable_logging_events=True,
+    traces_sample_rate: Optional[float] = None,
 ):
     # Initializes sentry as soon as possible in gunicorn's worker processes.
 
@@ -38,4 +40,5 @@ def post_fork(
         integrations=sentry_integrations,
         extra_kwargs=extra_sentry_kwargs,
         disable_logging_events=disable_logging_events,
+        traces_sample_rate=traces_sample_rate,
     )

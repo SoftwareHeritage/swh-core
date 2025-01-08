@@ -29,6 +29,7 @@ def test_post_fork_default(mocker):
         debug=False,
         release="0.0.0",
         environment=None,
+        traces_sample_rate=None,
     )
 
 
@@ -53,6 +54,7 @@ def test_post_fork_with_dsn_env(mocker):
         debug=False,
         release=None,
         environment=None,
+        traces_sample_rate=None,
     )
 
 
@@ -87,6 +89,7 @@ def test_post_fork_with_package_env(mocker):
         debug=False,
         release="swh.core@" + version,
         environment="tests",
+        traces_sample_rate=None,
     )
 
 
@@ -114,6 +117,7 @@ def test_post_fork_debug(mocker):
         debug=True,
         release=None,
         environment=None,
+        traces_sample_rate=None,
     )
 
 
@@ -134,6 +138,7 @@ def test_post_fork_no_flask(mocker):
         debug=False,
         release=None,
         environment=None,
+        traces_sample_rate=None,
     )
 
 
@@ -152,6 +157,7 @@ def test_post_fork_override_logging_events_envvar(mocker):
         debug=False,
         release=None,
         environment=None,
+        traces_sample_rate=None,
     )
 
 
@@ -178,4 +184,58 @@ def test_post_fork_extras(mocker):
         bar="baz",
         release=None,
         environment=None,
+        traces_sample_rate=None,
+    )
+
+
+def test_post_fork_traces_sample_rate(mocker):
+    flask_integration = object()  # unique object to check for equality
+    logging_integration = object()  # unique object to check for equality
+    mocker.patch(
+        "sentry_sdk.integrations.flask.FlaskIntegration", new=lambda: flask_integration
+    )
+    mocker.patch(
+        "sentry_sdk.integrations.logging.LoggingIntegration",
+        new=lambda event_level: logging_integration,
+    )
+    sentry_sdk_init = mocker.patch("sentry_sdk.init")
+    mocker.patch.dict(os.environ, {"SWH_SENTRY_DSN": "test_dsn"})
+
+    gunicorn_config.post_fork(None, None, traces_sample_rate=1.0)
+
+    sentry_sdk_init.assert_called_once_with(
+        dsn="test_dsn",
+        integrations=[flask_integration, logging_integration],
+        debug=False,
+        release=None,
+        environment=None,
+        traces_sample_rate=1.0,
+    )
+
+
+def test_post_fork_override_traces_sample_rate_envvar(mocker):
+    flask_integration = object()  # unique object to check for equality
+    logging_integration = object()  # unique object to check for equality
+    mocker.patch(
+        "sentry_sdk.integrations.flask.FlaskIntegration", new=lambda: flask_integration
+    )
+    mocker.patch(
+        "sentry_sdk.integrations.logging.LoggingIntegration",
+        new=lambda event_level: logging_integration,
+    )
+    sentry_sdk_init = mocker.patch("sentry_sdk.init")
+    mocker.patch.dict(
+        os.environ,
+        {"SWH_SENTRY_DSN": "test_dsn", "SWH_SENTRY_TRACES_SAMPLE_RATE": "0.999"},
+    )
+
+    gunicorn_config.post_fork(None, None)
+
+    sentry_sdk_init.assert_called_once_with(
+        dsn="test_dsn",
+        integrations=[flask_integration, logging_integration],
+        debug=False,
+        release=None,
+        environment=None,
+        traces_sample_rate=0.999,
     )

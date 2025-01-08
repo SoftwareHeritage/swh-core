@@ -46,6 +46,37 @@ def override_with_bool_envvar(envvar: str, default: bool) -> bool:
         return default
 
 
+def override_with_float_envvar(
+    envvar: str, default: Optional[float]
+) -> Optional[float]:
+    """Override `default` with the environment variable `envvar` casted as a float.
+
+    `default` is returned if the environment variable `envvar` is missing or if
+    we're not able to cast it to a float.
+
+    Args:
+        envvar: the name of the environment variable
+        default: default value
+
+    Returns:
+        A float or `default`
+    """
+    envvalue = os.environ.get(envvar)
+    if envvalue is None:
+        return default
+    try:
+        return float(envvalue)
+    except ValueError:
+        logger.warning(
+            "Could not interpret environment variable %s=%r as float, "
+            "using default value %s",
+            envvar,
+            envvalue,
+            default,
+        )
+        return default
+
+
 def init_sentry(
     sentry_dsn: Optional[str] = None,
     *,
@@ -54,10 +85,11 @@ def init_sentry(
     debug: bool = False,
     disable_logging_events: bool = False,
     integrations: Optional[List] = None,
+    traces_sample_rate: Optional[float] = None,
     extra_kwargs: Optional[Dict] = None,
     deferred_init: bool = False,
-):
-    """Configure the sentry integration
+) -> None:
+    """Configure the sentry integration.
 
     Args:
       sentry_dsn: Sentry DSN; where sentry report will be sent. Overridden by
@@ -70,10 +102,12 @@ def init_sentry(
         log entries as Sentry events. Overridden by
         :envvar:`SWH_SENTRY_DISABLE_LOGGING_EVENTS`
       integrations: list of dedicated Sentry integrations to include
+      traces_sample_rate: a number between 0 and 1, controlling the percentage chance a
+        given transaction will be sent to Sentry. Overridden by
+        :envvar:`SWH_SENTRY_TRACES_SAMPLE_RATE`
       extra_kwargs: dict of additional parameters passed to :func:`sentry_sdk.init`
       deferred_init: indicates that sentry will be properly initialized in subsequent
         calls and that no warnings about missing DSN should be logged
-
     """
     if integrations is None:
         integrations = []
@@ -101,10 +135,17 @@ def init_sentry(
 
         integrations.append(LoggingIntegration(event_level=None))
 
+    # to completely disable tracing `traces_sample_rate` should be set to None instead
+    # of 0.0
+    traces_sample_rate = override_with_float_envvar(
+        "SWH_SENTRY_TRACES_SAMPLE_RATE", traces_sample_rate
+    )
+
     sentry_sdk.init(
         release=get_sentry_release(main_package, sentry_dsn),
         environment=environment,
         dsn=sentry_dsn,
+        traces_sample_rate=traces_sample_rate,
         integrations=integrations,
         debug=debug,
         **extra_kwargs,

@@ -9,7 +9,11 @@ import pytest
 import sentry_sdk
 from sentry_sdk import capture_exception, capture_message, set_tag
 
-from swh.core.sentry import init_sentry, override_with_bool_envvar
+from swh.core.sentry import (
+    init_sentry,
+    override_with_bool_envvar,
+    override_with_float_envvar,
+)
 
 SENTRY_DSN = "https://user@example.org/1234"
 
@@ -42,6 +46,31 @@ def test_override_with_bool_envvar_logging(monkeypatch, caplog):
         assert len(caplog.records) == 1
         assert (
             "OVERRIDE_WITH_BOOL_ENVVAR='not a boolean env value'"
+            in caplog.records[0].getMessage()
+        )
+        assert f"using default value {default}" in caplog.records[0].getMessage()
+        assert caplog.records[0].levelname == "WARNING"
+
+
+@pytest.mark.parametrize(
+    "envvalue,retval",
+    (("1.0", 1.0), ("0.0", 0.0), ("0", 0.0), ("a", None)),
+)
+def test_override_with_float_envvar(monkeypatch, envvalue: str, retval: bool):
+    envvar = "OVERRIDE_WITH_FLOAT_ENVVAR"
+    monkeypatch.setenv(envvar, envvalue)
+    assert override_with_float_envvar(envvar, None) == retval
+
+
+def test_override_with_float_envvar_logging(monkeypatch, caplog):
+    envvar = "OVERRIDE_WITH_FLOAT_ENVVAR"
+    monkeypatch.setenv(envvar, "not a float env value")
+    for default in (None, 1.0):
+        caplog.clear()
+        assert override_with_float_envvar(envvar, default) == default
+        assert len(caplog.records) == 1
+        assert (
+            "OVERRIDE_WITH_FLOAT_ENVVAR='not a float env value'"
             in caplog.records[0].getMessage()
         )
         assert f"using default value {default}" in caplog.records[0].getMessage()
@@ -160,3 +189,14 @@ def test_sentry_deferred_init(caplog, deferred_init):
         )
     else:
         assert not caplog.records
+
+
+@pytest.mark.parametrize("traces_sample_rate", [1.0, 0.0, None])
+def test_sentry_traces_sample_rate(caplog, traces_sample_rate):
+    init_sentry(None, traces_sample_rate=traces_sample_rate)
+    client = sentry_sdk.get_client()
+    if traces_sample_rate is not None:
+        assert client.options["traces_sample_rate"] == traces_sample_rate
+    else:
+        assert client.options["enable_tracing"] is None
+        assert client.options["traces_sample_rate"] is None

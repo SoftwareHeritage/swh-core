@@ -124,6 +124,7 @@ def test_command(swhmain, mocker):
         integrations=[],
         release="0.0.0",
         environment=None,
+        traces_sample_rate=None,
     )
     assert_result(result)
     assert result.output.strip() == "Hello SWH!"
@@ -185,6 +186,7 @@ def test_sentry(swhmain, mocker):
         integrations=[],
         release=None,
         environment=None,
+        traces_sample_rate=None,
     )
 
 
@@ -207,6 +209,7 @@ def test_sentry_debug(swhmain, mocker):
         integrations=[],
         release=None,
         environment=None,
+        traces_sample_rate=None,
     )
 
 
@@ -231,6 +234,7 @@ def test_sentry_env(swhmain, mocker):
         integrations=[],
         release=None,
         environment=None,
+        traces_sample_rate=None,
     )
 
 
@@ -259,6 +263,7 @@ def test_sentry_env_main_package(swhmain, mocker):
         integrations=[],
         release="swh.core@" + version,
         environment="tests",
+        traces_sample_rate=None,
     )
 
 
