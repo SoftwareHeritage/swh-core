@@ -12,11 +12,17 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
-def get_sentry_release(main_package: Optional[str] = None):
+def get_sentry_release(
+    main_package: Optional[str] = None, sentry_dsn: Optional[str] = None
+):
     main_package = os.environ.get("SWH_MAIN_PACKAGE", main_package)
     if main_package:
         version = distribution(main_package).version
         return f"{main_package}@{version}"
+    elif sentry_dsn is None:
+        # return a dummy release when sentry_dsn is None to avoid side effects
+        # related to sentry_sdk calling git command for fetching release info
+        return "0.0.0"
     else:
         return None
 
@@ -96,7 +102,7 @@ def init_sentry(
         integrations.append(LoggingIntegration(event_level=None))
 
     sentry_sdk.init(
-        release=get_sentry_release(main_package),
+        release=get_sentry_release(main_package, sentry_dsn),
         environment=environment,
         dsn=sentry_dsn,
         integrations=integrations,

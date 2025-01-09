@@ -122,7 +122,7 @@ def test_command(swhmain, mocker):
         dsn=None,
         debug=False,
         integrations=[],
-        release=None,
+        release="0.0.0",
         environment=None,
     )
     assert_result(result)

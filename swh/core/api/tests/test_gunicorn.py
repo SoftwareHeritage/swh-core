@@ -27,7 +27,7 @@ def test_post_fork_default(mocker):
         dsn=None,
         integrations=[flask_integration, logging_integration],
         debug=False,
-        release=None,
+        release="0.0.0",
         environment=None,
     )
 
