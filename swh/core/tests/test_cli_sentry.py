@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import os
 
 from click.testing import CliRunner
 import pytest
@@ -14,7 +15,7 @@ from swh.core.tests.test_cli import assert_result
 def response_context_callback(request, context):
     """Add link headers to mocked Sentry REST API responses"""
     base_url = f"{request.scheme}://{request.netloc}{request.path}"
-    if not request.query:
+    if "cursor" not in request.query:
         context.headers["Link"] = f'<{base_url}?cursor=0:100:0>; rel="next"'
     else:
         context.headers["Link"] = f'<{base_url}?cursor=0:200:0>; rel="next"'
@@ -23,6 +24,8 @@ def response_context_callback(request, context):
 requests_mock_sentry = requests_mock_datadir_factory(
     response_context_callback=response_context_callback
 )
+
+SENTRY_ISSUE_ID = "112726"
 
 
 @pytest.fixture
@@ -36,7 +39,8 @@ def swhmain(swhmain):
 def test_sentry_extract_origin_urls(swhmain, requests_mock_sentry):
     runner = CliRunner()
     result = runner.invoke(
-        swhmain, ["sentry", "extract-origin-urls", "-t", "sentry-token", "-i", "112726"]
+        swhmain,
+        ["sentry", "extract-origin-urls", "-t", "sentry-token", "-i", SENTRY_ISSUE_ID],
     )
     assert_result(result)
     expected_output = """
@@ -46,3 +50,22 @@ opam+https://opam.ocaml.org/packages/cgi/
 opam+https://opam.ocaml.org/packages/combine/
 """
     assert result.output.strip() == expected_output.strip("\n")
+
+
+def test_sentry_extract_scheduler_tasks(swhmain, requests_mock_sentry, datadir):
+    runner = CliRunner()
+    result = runner.invoke(
+        swhmain,
+        [
+            "sentry",
+            "extract-scheduler-tasks",
+            "-t",
+            "sentry-token",
+            "-i",
+            SENTRY_ISSUE_ID,
+        ],
+    )
+    assert_result(result)
+    csv_tasks_file = os.path.join(datadir, "sentry_expected_scheduler_tasks.csv")
+    with open(csv_tasks_file, "r") as tasks_csv:
+        assert result.output.strip() == tasks_csv.read()

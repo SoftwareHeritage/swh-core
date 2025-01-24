@@ -1,0 +1,56 @@
+[
+    {
+        "tags": [
+            {
+                "key": "environment",
+                "value": "production"
+            },
+            {
+                "key": "swh.loader.origin_url",
+                "value": "opam+https://opam.ocaml.org/packages/cgi/"
+            }
+        ],
+        "context": {
+            "celery-job": {
+                "args": [],
+                "kwargs": {
+                    "lister_instance_name": "opam.ocaml.org",
+                    "lister_name": "opam",
+                    "opam_instance": "opam.ocaml.org",
+                    "opam_package": "cgi",
+                    "opam_root": "/tmp/opam/",
+                    "opam_url": "https://opam.ocaml.org",
+                    "url": "opam+https://opam.ocaml.org/packages/cgi/"
+                },
+                "task_name": "swh.loader.package.opam.tasks.LoadOpam"
+            }
+        }
+    },
+    {
+        "tags": [
+            {
+                "key": "environment",
+                "value": "production"
+            },
+            {
+                "key": "swh.loader.origin_url",
+                "value": "opam+https://opam.ocaml.org/packages/combine/"
+            }
+        ],
+        "context": {
+            "celery-job": {
+                "args": [],
+                "kwargs": {
+                    "lister_instance_name": "opam.ocaml.org",
+                    "lister_name": "opam",
+                    "opam_instance": "opam.ocaml.org",
+                    "opam_package": "combine",
+                    "opam_root": "/tmp/opam/",
+                    "opam_url": "https://opam.ocaml.org",
+                    "url": "opam+https://opam.ocaml.org/packages/combine/"
+                },
+                "task_name": "swh.loader.package.opam.tasks.LoadOpam"
+            }
+        }
+    }
+]

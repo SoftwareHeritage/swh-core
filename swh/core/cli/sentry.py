@@ -64,6 +64,7 @@ def _process_sentry_events_pages(
     sentry_token,
     sentry_issue_number,
     events_page_process_callback: Callable[[List[Dict[str, Any]]], None],
+    full_sentry_responses: bool = False,
 ):
     import requests
 
@@ -71,6 +72,8 @@ def _process_sentry_events_pages(
     sentry_issue_events_url = (
         f"{sentry_api_base_url}/issues/{sentry_issue_number}/events/"
     )
+    if full_sentry_responses:
+        sentry_issue_events_url += "?full=true"
     while True:
         response = requests.get(
             sentry_issue_events_url, headers={"Authorization": f"Bearer {sentry_token}"}
@@ -108,3 +111,44 @@ def extract_origin_urls(sentry_url, sentry_token, sentry_issue_number, environme
 
     for origin_url in sorted(origin_urls):
         click.echo(origin_url)
+
+
+@sentry.command(name="extract-scheduler-tasks", context_settings=CONTEXT_SETTINGS)
+@common_options
+def extract_scheduler_tasks(sentry_url, sentry_token, sentry_issue_number, environment):
+    """Extract scheduler task parameters from events.
+
+    This command allows to extract scheduler task parameters from Sentry events related to
+    a Software Heritage scheduler task and dumps a CSV file to stdout that can be consumed
+    by the CLI command:
+
+    $ swh scheduler task schedule --columns type --columns kwargs <csv_file>.
+    """
+    import csv
+    import json
+    import sys
+
+    task_params = {}
+
+    def _extract_scheduler_tasks(events):
+        for event in events:
+            celery_job = event.get("context", {}).get("celery-job", {})
+            task_name = celery_job.get("task_name")
+            task_param = celery_job.get("kwargs")
+            if task_param:
+                key = tuple([task_name] + list(task_param.values()))
+                task_params[key] = (task_name, task_param)
+
+    _process_sentry_events_pages(
+        sentry_url,
+        sentry_token,
+        sentry_issue_number,
+        _extract_scheduler_tasks,
+        full_sentry_responses=True,
+    )
+
+    csv_writer = csv.writer(sys.stdout)
+    for task_type, task_param in sorted(
+        task_params.values(), key=lambda p: p[1].get("url", "")
+    ):
+        csv_writer.writerow([task_type, json.dumps(task_param)])
