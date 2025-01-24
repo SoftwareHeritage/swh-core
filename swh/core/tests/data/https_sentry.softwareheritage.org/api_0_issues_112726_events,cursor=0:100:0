@@ -1,0 +1,56 @@
+[
+    {
+        "tags": [
+            {
+                "key": "environment",
+                "value": "production"
+            },
+            {
+                "key": "swh.loader.origin_url",
+                "value": "opam+https://opam.ocaml.org/packages/bitv/"
+            }
+        ],
+        "context": {
+            "celery-job": {
+                "args": [],
+                "kwargs": {
+                    "lister_instance_name": "opam.ocaml.org",
+                    "lister_name": "opam",
+                    "opam_instance": "opam.ocaml.org",
+                    "opam_package": "bitv",
+                    "opam_root": "/tmp/opam/",
+                    "opam_url": "https://opam.ocaml.org",
+                    "url": "opam+https://opam.ocaml.org/packages/bitv/"
+                },
+                "task_name": "swh.loader.package.opam.tasks.LoadOpam"
+            }
+        }
+    },
+    {
+        "tags": [
+            {
+                "key": "environment",
+                "value": "production"
+            },
+            {
+                "key": "swh.loader.origin_url",
+                "value": "opam+https://opam.ocaml.org/packages/bdd/"
+            }
+        ],
+        "context": {
+            "celery-job": {
+                "args": [],
+                "kwargs": {
+                    "lister_instance_name": "opam.ocaml.org",
+                    "lister_name": "opam",
+                    "opam_instance": "opam.ocaml.org",
+                    "opam_package": "bdd",
+                    "opam_root": "/tmp/opam/",
+                    "opam_url": "https://opam.ocaml.org",
+                    "url": "opam+https://opam.ocaml.org/packages/bdd/"
+                },
+                "task_name": "swh.loader.package.opam.tasks.LoadOpam"
+            }
+        }
+    }
+]

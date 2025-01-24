@@ -40,6 +40,7 @@ testing = {file = [
 [project.entry-points."swh.cli.subcommands"]
 "swh.core.db" = "swh.core.cli.db"
 "swh.core.backend" = "swh.core.cli.backend"
+"swh.core.sentry" = "swh.core.cli.sentry"
 
 [project.entry-points.pytest11]
 "pytest_swh_core" = "swh.core.pytest_plugin"

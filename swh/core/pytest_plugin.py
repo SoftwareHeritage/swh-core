@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024  The Software Heritage developers
+# Copyright (C) 2019-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -10,7 +10,7 @@ import logging
 from os import path
 from pathlib import Path
 import re
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 from urllib.parse import unquote, urlparse
 
 import pytest
@@ -29,11 +29,12 @@ MAX_VISIT_FILES = 10
 
 
 def get_response_cb(
-    request: requests.Request,
+    request,
     context,
     datadir,
     ignore_urls: List[str] = [],
     visits: Optional[Dict] = None,
+    response_context_callback: Optional[Callable[[object, object], None]] = None,
 ):
     """Mount point callback to fetch on disk the request's content. The request
     urls provided are url decoded first to resolve the associated file on disk.
@@ -72,14 +73,16 @@ def get_response_cb(
         datadir/http_nowhere.com/path_to_resource,a=b,c=d
 
     Args:
-        request: Object requests
-        context (requests.Context): Object holding response metadata
-            information (status_code, headers, etc...)
+        request: input HTTP request
+        context: Object holding response metadata information (status_code, headers, etc...)
         datadir: Data files path
         ignore_urls: urls whose status response should be 404 even if the local
             file exists
         visits: Dict of url, number of visits. If None, disable multi visit
             support (default)
+        response_context_callback: Optional callback function taking request and
+            response context object (having headers, status_code, reason and cookies
+            as attributes) as parameters for extra processing
 
     Returns:
         Optional[FileDescriptor] on disk file to read from the test context
@@ -117,6 +120,8 @@ def get_response_cb(
         return None
     fd = open(filepath, "rb")
     context.headers["content-length"] = str(path.getsize(filepath))
+    if response_context_callback:
+        response_context_callback(request, context)
     return fd
 
 
@@ -143,7 +148,9 @@ def datadir(request: pytest.FixtureRequest) -> str:
 
 
 def requests_mock_datadir_factory(
-    ignore_urls: List[str] = [], has_multi_visit: bool = False
+    ignore_urls: List[str] = [],
+    has_multi_visit: bool = False,
+    response_context_callback: Optional[Callable[[object, object], None]] = None,
 ):
     """This factory generates fixtures which allow to look for files on the
     local filesystem based on the requested URL, using the following rules:
@@ -176,13 +183,21 @@ def requests_mock_datadir_factory(
         ignore_urls: List of urls to always returns 404 (whether file
             exists or not)
         has_multi_visit: Activate or not the multiple visits behavior
+        response_context_callback: Optional callback function taking request and
+            response context object (having headers, status_code, reason and cookies
+            as attributes) as parameters for extra processing
 
     """
 
     @pytest.fixture
     def requests_mock_datadir(requests_mock, datadir):
         if not has_multi_visit:
-            cb = partial(get_response_cb, ignore_urls=ignore_urls, datadir=datadir)
+            cb = partial(
+                get_response_cb,
+                ignore_urls=ignore_urls,
+                datadir=datadir,
+                response_context_callback=response_context_callback,
+            )
             requests_mock.get(re.compile("https?://"), body=cb)
         else:
             visits = {}
