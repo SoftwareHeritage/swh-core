@@ -1,4 +1,6 @@
+celery-types
 hypothesis >= 3.11.0
+msgpack-types
 pytest >= 8.1
 pytest-mock
 pytest-postgresql > 5
