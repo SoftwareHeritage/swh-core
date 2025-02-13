@@ -63,7 +63,7 @@ def jsonize(value):
 
 @contextmanager
 def connect_to_conninfo(
-    db_or_conninfo: Union[str, pgconnection]
+    db_or_conninfo: Union[str, pgconnection],
 ) -> Iterator[pgconnection]:
     """Connect to the database passed as argument.
 
@@ -119,7 +119,7 @@ def swh_db_version(db_or_conninfo: Union[str, pgconnection]) -> Optional[int]:
 
 
 def swh_db_versions(
-    db_or_conninfo: Union[str, pgconnection]
+    db_or_conninfo: Union[str, pgconnection],
 ) -> Optional[List[Tuple[int, datetime, str]]]:
     """Retrieve the swh version history of the database.
 
