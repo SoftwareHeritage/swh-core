@@ -255,7 +255,6 @@ def db_with_data(test_db, request):
     db.conn.close()
 
 
-@pytest.mark.db
 def test_db_connect(db_with_data):
     with db_with_data.cursor() as cur:
         cur.execute(INSERT_SQL, STATIC_ROW_IN)
