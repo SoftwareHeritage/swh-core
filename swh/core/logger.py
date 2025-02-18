@@ -55,7 +55,11 @@ def get_extra_data(record: logging.LogRecord) -> Dict[str, Any]:
         extra_data["logging_args"] = args
 
     # Retrieve Celery task info
-    if celery_available and current_task.request.kwargs:
+    if (
+        celery_available
+        and hasattr(current_task, "request")
+        and current_task.request.kwargs
+    ):
         extra_data["task"] = {
             "id": current_task.request.id,
             "name": current_task.name,
