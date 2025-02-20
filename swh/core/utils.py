@@ -25,7 +25,10 @@ def cwd(path):
         os.chdir(prev_cwd)
 
 
-def grouper(iterable, n):
+T = TypeVar("T")
+
+
+def grouper(iterable: Iterable[T], n: int) -> Iterable[Iterable[T]]:
     """
     Collect data into fixed-length size iterables. The last block might
     contain less elements as it will hold only the remaining number
@@ -51,7 +54,7 @@ def grouper(iterable, n):
     args = [iter(iterable)] * n
     stop_value = object()
     for _data in itertools.zip_longest(*args, fillvalue=stop_value):
-        yield (d for d in _data if d is not stop_value)
+        yield (d for d in _data if d is not stop_value)  # type: ignore[misc]
 
 
 TStr = TypeVar("TStr", bytes, str)
