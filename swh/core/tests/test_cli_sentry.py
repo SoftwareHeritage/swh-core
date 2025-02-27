@@ -92,3 +92,21 @@ def test_sentry_extract_scheduler_tasks_recurring_policy(
     csv_tasks_file = os.path.join(datadir, "sentry_expected_scheduler_tasks.csv")
     with open(csv_tasks_file, "r") as tasks_csv:
         assert result.output.strip() == tasks_csv.read().replace("oneshot", "recurring")
+
+
+def test_sentry_extract_scheduler_tasks_dict_and_list_task_params(
+    swhmain, requests_mock_datadir
+):
+    runner = CliRunner()
+    result = runner.invoke(
+        swhmain,
+        [
+            "sentry",
+            "extract-scheduler-tasks",
+            "-t",
+            "sentry-token",
+            "-i",
+            "1",
+        ],
+    )
+    assert_result(result)

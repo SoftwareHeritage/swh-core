@@ -74,7 +74,7 @@ def _process_sentry_events_pages(
     )
     if full_sentry_responses:
         sentry_issue_events_url += "?full=true"
-    while True:
+    while sentry_issue_events_url:
         response = requests.get(
             sentry_issue_events_url, headers={"Authorization": f"Bearer {sentry_token}"}
         )
@@ -145,7 +145,7 @@ def extract_scheduler_tasks(
             task_name = celery_job.get("task_name")
             task_param = celery_job.get("kwargs")
             if task_param:
-                key = tuple([task_name] + list(task_param.values()))
+                key = tuple([task_name] + list(str(v) for v in task_param.values()))
                 task_params[key] = (task_name, task_param)
 
     _process_sentry_events_pages(

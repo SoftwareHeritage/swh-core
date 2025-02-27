@@ -1,0 +1,31 @@
+[
+    {
+        "tags": [
+            {
+                "key": "environment",
+                "value": "production"
+            },
+            {
+                "key": "swh.loader.origin_url",
+                "value": "https://github.com/pjbgf/sha1cd"
+            }
+        ],
+        "context": {
+            "celery-job": {
+                "args": [],
+                "kwargs": {
+                    "checksum_layout": "nar",
+                    "checksums": {
+                        "sha256": "917f4174b876771b4635a0ef736e0d3913be0b4019ec9cdbad7aed79c09d07bc"
+                    },
+                    "fallback_urls": [],
+                    "lister_instance_name": "guix.gnu.org",
+                    "lister_name": "nixguix",
+                    "ref": "v0.3.0",
+                    "url": "https://github.com/pjbgf/sha1cd"
+                },
+                "task_name": "swh.loader.git.tasks.LoadGitCheckout"
+            }
+        }
+    }
+]
