@@ -115,14 +115,23 @@ def extract_origin_urls(sentry_url, sentry_token, sentry_issue_number, environme
 
 @sentry.command(name="extract-scheduler-tasks", context_settings=CONTEXT_SETTINGS)
 @common_options
-def extract_scheduler_tasks(sentry_url, sentry_token, sentry_issue_number, environment):
+@click.option(
+    "--policy",
+    "-p",
+    default="oneshot",
+    type=click.Choice(["oneshot", "recurring"]),
+    help="The scheduling policy to be used for the tasks",
+)
+def extract_scheduler_tasks(
+    sentry_url, sentry_token, sentry_issue_number, environment, policy
+):
     """Extract scheduler task parameters from events.
 
     This command allows to extract scheduler task parameters from Sentry events related to
     a Software Heritage scheduler task and dumps a CSV file to stdout that can be consumed
     by the CLI command:
 
-    $ swh scheduler task schedule --columns type --columns kwargs <csv_file>.
+    $ swh scheduler task schedule --columns type --columns kwargs --columns policy <csv_file>.
     """
     import csv
     import json
@@ -151,4 +160,4 @@ def extract_scheduler_tasks(sentry_url, sentry_token, sentry_issue_number, envir
     for task_type, task_param in sorted(
         task_params.values(), key=lambda p: p[1].get("url", "")
     ):
-        csv_writer.writerow([task_type, json.dumps(task_param)])
+        csv_writer.writerow([task_type, json.dumps(task_param), policy])
