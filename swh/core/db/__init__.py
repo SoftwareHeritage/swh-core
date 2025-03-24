@@ -198,14 +198,9 @@ class BaseDb:
             a psycopg cursor
 
         """
-        with self.conn.cursor() as cur:
-            try:
+        with self.conn.transaction():
+            with self.conn.cursor() as cur:
                 yield cur
-                self.conn.commit()
-            except Exception:
-                if not self.conn.closed:
-                    self.conn.rollback()
-                raise
 
     def copy_to(
         self,
