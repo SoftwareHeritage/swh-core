@@ -105,6 +105,19 @@ def escape_copy_column(column: str) -> str:
 BaseDbType = TypeVar("BaseDbType", bound="BaseDb")
 
 
+def _force_utc_conn(conn: psycopg.Connection[Any]) -> None:
+    """Set the connection to the UTC timezone instead of the local one
+
+    This is done to avoid psycopg returning timestamps in the local timezone
+    instead of the UTC one.
+
+    This is apparently the only way to do this, there are no arguments we could
+    pass to connect nor attributes we could set on the connection.
+    """
+    with conn.transaction():
+        conn.execute("SET TIME ZONE 'UTC'")
+
+
 class BaseDb:
     """Base class for swh.*.*Db.
 
@@ -145,6 +158,7 @@ class BaseDb:
             pool: psycopg pool of connections
 
         """
+        _force_utc_conn(conn)
         self.conn = conn
         self.pool = pool
 
