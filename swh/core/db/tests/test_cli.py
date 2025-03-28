@@ -234,14 +234,12 @@ def test_cli_swh_db_initialization_idempotent(
             assert len(origins) == 1
 
 
-@pytest.mark.parametrize("with_module_config_key", [True, False])
 def test_cli_swh_db_create_and_init_db_new_api(
     cli_runner,
     postgresql,
     mock_get_entry_points,
     mocker,
     tmp_path,
-    with_module_config_key,
 ):
     """Create a db then initializing it should be ok for a "new style" datastore"""
     module_name = "test"
@@ -255,8 +253,6 @@ def test_cli_swh_db_create_and_init_db_new_api(
     assert_result(result)
 
     cli_cmd = ["-C", cfgfile, "init", module_name]
-    if with_module_config_key:
-        cli_cmd.extend(["--module-config-key", module_name])
     result = cli_runner.invoke(swhdb, cli_cmd)
     assert_result(result)
 
@@ -475,7 +471,7 @@ test:
       - cls: stuff
         backend:
           cls: cli2
-          cli_db: {conninfo2}
+          db: {conninfo2}
     """)
     if initialize_all:
         result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", "test"])
@@ -534,7 +530,7 @@ test:
       - cls: cli
         backend:
           cls: cli2
-          cli_db: {conninfo2}
+          db: {conninfo2}
     """)
     result = cli_runner.invoke(
         swhdb, ["list"], env={"SWH_CONFIG_FILENAME": str(cfgfile)}
@@ -649,7 +645,7 @@ test:
       - cls: cli
         backend:
           cls: cli2
-          cli_db: {conninfo2}
+          db: {conninfo2}
     """)
 
     module_name = "test"

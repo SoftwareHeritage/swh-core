@@ -171,7 +171,7 @@ def db_init_admin(
           cls: pipeline
           steps:
             - cls: masking
-              masking_db: postgresql:///?service=swh-masking-proxy
+              db: postgresql:///?service=swh-masking-proxy
             - cls: buffer
             - cls: postgresql
               db: postgresql://user:passwd@pghost:5433/swh-storage
@@ -191,7 +191,7 @@ def db_init_admin(
           cls: pipeline
           steps:
             - cls: masking
-              masking_db: postgresql:///?service=swh-masking-proxy
+              db: postgresql:///?service=swh-masking-proxy
             - cls: buffer
             - cls: postgresql
               db: postgresql://user:passwd@pghost:5433/swh-storage
@@ -228,10 +228,10 @@ def db_list(ctx, module):
     from swh.core.config import list_db_config_entries
 
     cfg = ctx.obj["config"]
-    for swhmod, path, dbcfg, db in list_db_config_entries(cfg):
+    for swhmod, cls, path, dbcfg, db in list_db_config_entries(cfg):
         if module and module != swhmod:
             continue
-        print(path, dbcfg["cls"], db)
+        print(path, cls, db)
 
 
 @db.command(name="init", context_settings=CONTEXT_SETTINGS)
@@ -249,7 +249,6 @@ def db_list(ctx, module):
     help="Database flavor.",
     default=None,
 )
-@click.option("--module-config-key", help="Module config key to lookup.", default=None)
 @click.option(
     "-a",
     "--all",
@@ -267,9 +266,7 @@ def db_list(ctx, module):
     is_flag=True,
 )
 @click.pass_context
-def db_init(
-    ctx, module, dbname, flavor, module_config_key, initialize_all, module_is_path
-):
+def db_init(ctx, module, dbname, flavor, initialize_all, module_is_path):
     """Initialize a database for the Software Heritage <module>.
 
     As for the 'init-admin' command, the database connection string can come
@@ -287,7 +284,7 @@ def db_init(
           cls: pipeline
           steps:
             - cls: masking
-              masking_db: postgresql:///?service=swh-masking-proxy
+              db: postgresql:///?service=swh-masking-proxy
             - cls: buffer
             - cls: postgresql
               db: postgresql://user:passwd@pghost:5433/swh-storage
@@ -427,9 +424,8 @@ def initialize_one(package, module, backend_class, flavor, dbname, cfg):
     default=None,
     show_default=False,
 )
-@click.option("--module-config-key", help="Module config key to lookup.", default=None)
 @click.pass_context
-def db_shell(ctx, module, dbname, module_config_key):
+def db_shell(ctx, module, dbname):
     """A subcommand to ease starting a psql shell using swh module configuration file.
     This may be useful for extra troubleshooting session when the other 'swh db' clis
     are not enough.
@@ -440,9 +436,8 @@ def db_shell(ctx, module, dbname, module_config_key):
 
     if dbname is None:
         # use the db cnx from the config file; the expected config entry is either the given
-        # module_config_key or defaulting to the module name (if module_config_key is not
-        # provided)
-        cfg = ctx.obj["config"].get(module_config_key or module, {})
+        # module name
+        cfg = ctx.obj["config"].get(module, {})
         dbname, cfg = get_dburl_from_config(cfg)
 
     if not dbname:
@@ -476,7 +471,6 @@ def db_shell(ctx, module, dbname, module_config_key):
     default=False,
     is_flag=True,
 )
-@click.option("--module-config-key", help="Module config key to lookup.", default=None)
 @click.option(
     "-p",
     "--module-is-path",
@@ -486,9 +480,7 @@ def db_shell(ctx, module, dbname, module_config_key):
     is_flag=True,
 )
 @click.pass_context
-def db_version(
-    ctx, module, show_history, all_backends, module_config_key, module_is_path
-):
+def db_version(ctx, module, show_history, all_backends, module_is_path):
     """Print the database version for the Software Heritage.
 
     Example::
@@ -510,7 +502,6 @@ def db_version(
         cfg=ctx.obj["config"],
         module=module,
         do_all=all_backends,
-        config_key=module_config_key,
         is_path=module_is_path,
     )
 
@@ -583,9 +574,6 @@ def db_version(
     default=True,
 )
 @click.option(
-    "--module-config-key", help="Module configuration key to lookup.", default=None
-)
-@click.option(
     "-a",
     "--all",
     "upgrade_all",
@@ -608,7 +596,6 @@ def db_upgrade(
     dbname,
     to_version,
     interactive,
-    module_config_key,
     upgrade_all,
     module_is_path,
 ):
@@ -637,7 +624,6 @@ def db_upgrade(
         module=module,
         do_all=upgrade_all,
         dbname=dbname,
-        config_key=module_config_key,
         is_path=module_is_path,
     )
 
@@ -776,7 +762,6 @@ def handle_cmd_args(
     is_path: bool = False,
     do_all: bool = False,
     dbname: Optional[str] = None,
-    config_key: Optional[str] = None,
 ) -> List[Tuple[str, str, Optional[type], str, Dict[str, Any]]]:
     """Helper function to build the list of backends to handle in a cli command
 
@@ -833,10 +818,10 @@ def handle_cmd_args(
     backends = []
 
     if do_all:
-        for cfgmod, path, dbcfg, cnxstr in list_db_config_entries(cfg):
+        for cfgmod, cls, path, dbcfg, cnxstr in list_db_config_entries(cfg):
             if cfgmod == module:
                 fullmodule, backend_class = get_swh_backend_module(
-                    swh_package=cfgmod, cls=dbcfg["cls"]
+                    swh_package=cfgmod, cls=cls
                 )
                 backends.append((cfgmod, fullmodule, backend_class, cnxstr, dbcfg))
     else:
@@ -869,7 +854,7 @@ def handle_cmd_args(
             else:
                 # use the db cnx from the config file; the expected config entry is the
                 # given module name
-                dbname, dbcfg = get_dburl_from_config(cfg.get(config_key or module, {}))
+                dbname, dbcfg = get_dburl_from_config(cfg.get(module, {}))
                 # the actual module is retrieved from the entry_point for the cls
                 fullmodule, backend_class = get_swh_backend_module(
                     swh_package=module, cls=dbcfg["cls"]

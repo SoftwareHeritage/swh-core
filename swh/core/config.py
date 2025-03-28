@@ -353,7 +353,9 @@ def list_swh_backends(package: str) -> List[str]:
     return [ep.name for ep in entry_points]
 
 
-def list_db_config_entries(cfg) -> Generator[Tuple[str, str, dict, str], None, None]:
+def list_db_config_entries(
+    cfg,
+) -> Generator[Tuple[str, str, str, dict, str], None, None]:
     """List all the db config entries in the given config structure
 
     Generates quadruplets (module, path, cfg, cnxstr) where:
@@ -371,17 +373,19 @@ def list_db_config_entries(cfg) -> Generator[Tuple[str, str, dict, str], None, N
 
     """
 
-    def look(cfg, path):
+    def look(cfg, cls, path):
         if "cls" in cfg:
+            cls = cfg["cls"]
             for key, value in cfg.items():
-                if key == "db" or key.endswith("_db"):
-                    yield path, cfg, value
-                elif isinstance(value, list):
+                if isinstance(value, list):
                     for i, subcfg in enumerate(value):
-                        yield from look(subcfg, path=f"{path}.{key}.{i}")
+                        yield from look(subcfg, cls=cls, path=f"{path}.{key}.{i}")
                 elif isinstance(value, dict):
-                    yield from look(value, path=f"{path}.{key}")
+                    yield from look(value, cls=cls, path=f"{path}.{key}")
+        if "db" in cfg:
+            yield cls, path, cfg, cfg["db"]
 
     for rootmodule, subcfg in cfg.items():
-        for path, cfg_entry, cnxstr in look(subcfg, rootmodule):
-            yield rootmodule, path, cfg_entry, cnxstr
+        if isinstance(subcfg, dict):
+            for cls, path, cfg_entry, cnxstr in look(subcfg, None, rootmodule):
+                yield rootmodule, cls, path, cfg_entry, cnxstr

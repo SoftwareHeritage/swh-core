@@ -448,7 +448,7 @@ def _split_sql(sql):
 
 def import_swhmodule(modname: str) -> Optional[ModuleType]:
     # TODO: move import_swhmodule in swh.core.config, but swh-scrubber needs to
-    # be aware of that befaore it can happen...
+    # be aware of that before it can happen...
     if ":" in modname:
         # new style: look for the actual module in the 'swh.<package>.classes'
         # entrypoint
