@@ -5,10 +5,12 @@
 
 from copy import deepcopy
 from functools import lru_cache
+from importlib import import_module
 from importlib.metadata import entry_points as get_entry_points
 from itertools import chain
 import logging
 import os
+from types import ModuleType
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
 
 import yaml
@@ -301,6 +303,23 @@ def load_from_envvar(default_config: Optional[Dict[str, Any]] = None) -> Dict[st
     cfg = read_raw_config(cfg_path)
     cfg = merge_configs(default_config or {}, cfg)
     return cfg
+
+
+def import_swhmodule(modname: str) -> Optional[ModuleType]:
+    if ":" in modname:
+        # new style: look for the actual module in the 'swh.<package>.classes'
+        # entrypoint
+        package, cls = modname.split(":", 1)
+        modname, _ = get_swh_backend_module(swh_package=package, cls=cls)
+
+    if not modname.startswith("swh."):
+        modname = f"swh.{modname}"
+    try:
+        m = import_module(modname)
+    except ImportError as exc:
+        logger.error(f"Could not load the {modname} module: {exc}")
+        return None
+    return m
 
 
 @lru_cache()

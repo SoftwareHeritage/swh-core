@@ -506,7 +506,7 @@ else:
                 get_datastore=get_datastore,
             )
 
-        return mocker.patch("swh.core.db.db_utils.import_module", import_module_mocker)
+        return mocker.patch("swh.core.config.import_module", import_module_mocker)
 
 
 @pytest.fixture()

@@ -323,9 +323,9 @@ def db_init(ctx, module, dbname, flavor, initialize_all, module_is_path):
 
 
 def initialize_one(package, module, backend_class, flavor, dbname, cfg):
+    from swh.core.config import import_swhmodule
     from swh.core.db.db_utils import (
         get_database_info,
-        import_swhmodule,
         populate_database_for_package,
         swh_set_db_version,
     )
@@ -492,11 +492,8 @@ def db_version(ctx, module, show_history, all_backends, module_is_path):
         swh db version --all scrubber
 
     """
-    from swh.core.db.db_utils import (
-        get_database_info,
-        import_swhmodule,
-        swh_db_versions,
-    )
+    from swh.core.config import import_swhmodule
+    from swh.core.db.db_utils import get_database_info, swh_db_versions
 
     backends = handle_cmd_args(
         cfg=ctx.obj["config"],
@@ -609,9 +606,9 @@ def db_upgrade(
         swh db upgrade scrubber:scrubber_db --to-version=10
 
     """
+    from swh.core.config import import_swhmodule
     from swh.core.db.db_utils import (
         get_database_info,
-        import_swhmodule,
         swh_db_upgrade,
         swh_set_db_module,
     )

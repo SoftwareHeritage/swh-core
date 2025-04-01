@@ -6,13 +6,11 @@
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import functools
-from importlib import import_module
 import logging
 from os import path
 import pathlib
 import re
 import subprocess
-from types import ModuleType
 from typing import Any, Collection, Dict, Iterator, List, Optional, Tuple, Union, cast
 
 import psycopg
@@ -21,7 +19,7 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 import psycopg.errors
 from psycopg.types.json import Json
 
-from swh.core.config import get_swh_backend_module
+from swh.core.config import import_swhmodule
 from swh.core.utils import numfile_sortkey as sortkey
 
 logger = logging.getLogger(__name__)
@@ -444,25 +442,6 @@ def _split_sql(sql):
         raise ValueError("the query doesn't contain any '%s' placeholder")
 
     return pre, post
-
-
-def import_swhmodule(modname: str) -> Optional[ModuleType]:
-    # TODO: move import_swhmodule in swh.core.config, but swh-scrubber needs to
-    # be aware of that before it can happen...
-    if ":" in modname:
-        # new style: look for the actual module in the 'swh.<package>.classes'
-        # entrypoint
-        package, cls = modname.split(":", 1)
-        modname, _ = get_swh_backend_module(swh_package=package, cls=cls)
-
-    if not modname.startswith("swh."):
-        modname = f"swh.{modname}"
-    try:
-        m = import_module(modname)
-    except ImportError as exc:
-        logger.error(f"Could not load the {modname} module: {exc}")
-        return None
-    return m
 
 
 def get_sql_for_package(modname: str, upgrade: bool = False) -> List[pathlib.Path]:
