@@ -60,7 +60,7 @@ def jsonize(value):
 @contextmanager
 def connect_to_conninfo(
     db_or_conninfo: Union[str, Connection[Any]],
-) -> Iterator[Connection[Any]]:
+) -> Iterator[Optional[Connection[Any]]]:
     """Connect to the database passed as argument.
 
     Args:
@@ -86,6 +86,7 @@ def connect_to_conninfo(
             db = psycopg.connect(db_or_conninfo)
         except psycopg.Error:
             logger.exception("Failed to connect to `%s`", db_or_conninfo)
+            yield None
         else:
             with db:
                 yield db
@@ -546,6 +547,8 @@ def get_database_info(
 ) -> Tuple[Optional[str], Optional[int], Optional[str]]:
     """Get version, flavor and module of the db"""
     dbmodule = swh_db_module(conninfo)
+    if dbmodule is None:
+        return (None, None, None)
     dbversion = swh_db_version(conninfo)
     dbflavor = None
     if dbversion is not None:
@@ -676,6 +679,7 @@ def execute_sqlfiles(
 
     # Grant read-access to guest user on all tables of the schema (if possible)
     with connect_to_conninfo(db_or_conninfo) as db:
+        assert db is not None
         try:
             with db.cursor() as c:
                 query = "grant select on all tables in schema public to guest"

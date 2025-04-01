@@ -83,10 +83,8 @@ def craft_conninfo(test_db, dbname=None) -> str:
     "module_table",
     [
         ("test", "origin"),
-        ("test.postgresql", "origin"),
         ("test:postgresql", "origin"),
         ("test:cli2", "origin2"),
-        ("test.cli2", "origin2"),
     ],
 )
 def test_cli_swh_db_create_and_init_db(
@@ -126,14 +124,14 @@ def test_cli_swh_db_initialization_fail_without_creation_first(
 
 
 def test_cli_swh_db_initialization_fail_without_extension(
-    cli_runner, postgresql, mock_import_module
+    cli_runner, postgresql, mock_get_entry_points
 ):
     """Init command cannot work without privileged extension.
 
     In this test, the schema needs privileged extension to work.
 
     """
-    module_name = "test.postgresql"  # it's mocked here
+    module_name = "test:postgresql"  # it's mocked here
     conninfo = craft_conninfo(postgresql)
 
     result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
@@ -537,8 +535,8 @@ test:
     )
     assert_result(result)
     assert result.output == f"""\
-test.backend.steps.0 postgresql {conninfo}
-test.backend.steps.1.backend cli2 {conninfo2}
+test.backend.steps.0 test:postgresql {conninfo}
+test.backend.steps.1.backend test:cli2 {conninfo2}
 """
 
 
@@ -574,12 +572,7 @@ test:
     result = cli_runner.invoke(swhdb, ["init", "-a", "test"], env=env)
     assert_result(result)
 
-    result = cli_runner.invoke(swhdb, ["version", "test"], env=env)
-    # this one should fail, there is no "natural" config entry in this config
-    # file for the 'test' module
-    assert result.exit_code != 0
-
-    # but we can ask for each entry
+    # we can ask version for each entry
     result = cli_runner.invoke(
         swhdb, ["version", "-p", "test.backend.steps.0"], env=env
     )
@@ -717,6 +710,7 @@ test:
                 "-C",
                 cfgfile,
                 "upgrade",
+                "-p",
                 config_path,
                 "--to-version",
                 current_version + 1,

@@ -395,14 +395,15 @@ def list_db_config_entries(
     def look(cfg, cls, path):
         if "cls" in cfg:
             cls = cfg["cls"]
+        if "db" in cfg:
+            yield cls, path, cfg, cfg["db"]
+        if "cls" in cfg:
             for key, value in cfg.items():
                 if isinstance(value, list):
                     for i, subcfg in enumerate(value):
                         yield from look(subcfg, cls=cls, path=f"{path}.{key}.{i}")
                 elif isinstance(value, dict):
                     yield from look(value, cls=cls, path=f"{path}.{key}")
-        if "db" in cfg:
-            yield cls, path, cfg, cfg["db"]
 
     for rootmodule, subcfg in cfg.items():
         if isinstance(subcfg, dict):

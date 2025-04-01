@@ -482,6 +482,7 @@ else:
 
     @pytest.fixture()
     def mock_import_module(request, mocker, datadir):
+
         mock = mocker.MagicMock
 
         def import_module_mocker(name, package=None):
@@ -534,6 +535,7 @@ def mock_get_entry_points(request, mocker, datadir, mock_import_module):
                         module=f"swh.{package}.{entry.name}",
                         load=lambda: mock(
                             current_version=version,
+                            __name__="MockBackend",
                             __doc__="A mockup backend for tests",
                         ),
                     )
