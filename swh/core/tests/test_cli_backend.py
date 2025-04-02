@@ -1,4 +1,4 @@
-# Copyright (C) 2024  The Software Heritage developers
+# Copyright (C) 2024-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -36,7 +36,13 @@ def test_backend_list_cls_ok(swhmain, mock_get_entry_points):
     runner = CliRunner()
     result = runner.invoke(swhmain, ["backend", "list", "test", "backend1"])
     assert_result(result)
-    assert result.output.strip() == "test:backend1\n\nA mockup backend for tests"
+    assert result.output.strip() == """\
+test: backend1
+  class: MockBackend
+  package: swh.test.backend1
+
+A mockup backend for tests\
+"""
 
 
 def test_backend_list_cls_no_package(swhmain, mock_get_entry_points):

@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# Copyright (C) 2024  The Software Heritage developers
+# Copyright (C) 2024-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -53,13 +52,15 @@ def bk_list(ctx, package, cls):
     """
     from swh.core.config import get_swh_backend_module, list_swh_backends
 
+    G = lambda o: click.style(o, fg="green", bold=True)  # noqa: E731
+    Y = lambda o: click.style(o, fg="yellow", bold=True)  # noqa: E731
+    R = lambda o: click.style(o, fg="red", bold=True)  # noqa: E731
+
     if cls is None:
         items = []
         for backend in list_swh_backends(package):
             _, BackendCls = get_swh_backend_module(package, backend)
-            msg = BackendCls.__doc__
-            if msg is None:
-                msg = ""
+            msg: str = BackendCls.__doc__ or BackendCls.__init__.__doc__ or ""
             msg = msg.strip()
             if "\n" in msg:
                 firstline = msg.splitlines()[0]
@@ -67,12 +68,7 @@ def bk_list(ctx, package, cls):
                 firstline = msg
             items.append((backend, firstline, msg))
         if not items:
-            click.secho(
-                f"No backend found for package '{package}'",
-                fg="red",
-                bold=True,
-                err=True,
-            )
+            click.secho(R(f"No backend found for package '{package}'"), err=True)
             raise click.Abort()
 
         max_name = max(len(name) for name, _, _ in items)
@@ -81,19 +77,12 @@ def bk_list(ctx, package, cls):
         except OSError:
             width = 78
         for name, firstline, msg in items:
-            click.echo(
-                click.style(
-                    f"{name:<{max_name + 1}}",
-                    fg="green",
-                    bold=True,
-                ),
-                nl=False,
-            )
+            click.echo(G(f"{name:<{max_name + 1}}"), nl=False)
             firstline = firstline[: width - max_name - 1]
             click.echo(firstline)
     else:
         try:
-            _, BackendCls = get_swh_backend_module(package, cls)
+            BackendPkg, BackendCls = get_swh_backend_module(package, cls)
         except ValueError:
             BackendCls = None
 
@@ -105,21 +94,8 @@ def bk_list(ctx, package, cls):
                 err=True,
             )
             raise click.Abort()
-
-        click.echo(
-            click.style(
-                package,
-                fg="green",
-                bold=True,
-            )
-            + ":"
-            + click.style(
-                cls,
-                fg="yellow",
-                bold=True,
-            )
-            + "\n",
-        )
-
-        if BackendCls.__doc__:
-            click.echo(BackendCls.__doc__.strip())
+        click.echo(f"{G(package)}: {Y(cls)}")
+        click.echo(f"  {G('class')}: {Y(BackendCls.__name__)}")
+        click.echo(f"  {G('package')}: {Y(BackendPkg)}")
+        click.echo()
+        click.echo(BackendCls.__doc__.strip())
