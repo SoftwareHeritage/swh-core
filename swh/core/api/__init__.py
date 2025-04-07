@@ -52,6 +52,39 @@ logger = logging.getLogger(__name__)
 ALLOWED_SESSION_KWARGS = ("auth", "cert", "headers", "proxies", "verify")
 
 
+def get_distribution_version_for_class(cls: Type) -> str:
+    """Get the version of the module shipping the given class.
+
+    When the class is in module ``swh.a.b.c``, lookup distributions named
+    ``swh-a-b-c``, ``swh-a-b`` and ``swh-a`` in turn.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    components = cls.__module__.split(".")
+    for num in range(len(components), 1, -1):
+        # The upper bound of `range` is exclusive, this goes from len(components) to 2
+        distribution = "-".join(components[:num])
+        try:
+            distver = version(distribution)
+        except PackageNotFoundError:
+            continue
+        else:
+            return f"{distribution}/{distver}"
+    else:
+        # No distribution metadata found, assume swh-a/devel
+        return f"{distribution}/devel"
+
+
+def format_user_agent(main_version: str, *extra_parameters: str) -> str:
+    """Format a user-agent string from a main version and a list of extra parameters,
+    which are then parenthesized."""
+    if extra_parameters:
+        formatted_extra = "; ".join(extra_parameters)
+        return f"{main_version} ({formatted_extra})"
+    else:
+        return main_version
+
+
 # support for content negotiation
 
 
@@ -291,6 +324,15 @@ class RPCClient(metaclass=MetaRPCClient):
         )
         self.session.mount(self.url, adapter)
 
+        user_agent_components = [
+            *self._get_module_versions(),
+            self.session.headers["User-Agent"],  # pull the python-requests version
+            "+https://www.softwareheritage.org",  # contact information
+        ]
+        self.session.headers.update(
+            {"User-Agent": format_user_agent(*user_agent_components)}
+        )
+
         for arg, value in (session_kwargs or {}).items():
             if arg not in ALLOWED_SESSION_KWARGS:
                 raise ValueError(f"Unknown Keyword argument for session {arg}")
@@ -336,6 +378,17 @@ class RPCClient(metaclass=MetaRPCClient):
                 )
             ),
         )
+
+    @classmethod
+    def _get_module_versions(cls):
+        if not hasattr(cls, "_module_versions"):
+            versions = []
+            versions.append(get_distribution_version_for_class(cls))
+            if cls != RPCClient:
+                versions.append(get_distribution_version_for_class(RPCClient))
+            cls._module_versions = versions
+
+        return cls._module_versions
 
     def _url(self, endpoint):
         return "%s%s" % (self.url, endpoint)

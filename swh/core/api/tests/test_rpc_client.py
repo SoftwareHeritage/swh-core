@@ -273,3 +273,11 @@ def test_client_session_kwargs(rpc_client_class):
         url="mock://example.com/", session_kwargs={"auth": ["user", "password"]}
     )
     assert client.session.auth == ("user", "password")
+
+
+def test_client_session_useragent(rpc_client_class):
+    client = rpc_client_class(url="mock://example.com/")
+    user_agent = client.session.headers["User-Agent"]
+    assert user_agent.startswith("swh-core/")
+    assert "python-requests" in user_agent
+    assert user_agent.endswith("; +https://www.softwareheritage.org)")
