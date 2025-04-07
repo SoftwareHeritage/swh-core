@@ -241,3 +241,35 @@ def test_client_timeout_valueerror(rpc_client_class):
         with pytest.raises(ValueError) as exc:
             rpc_client_class(url="mock://example.com/", timeout=timeout)
         assert repr(timeout) in str(exc.value)
+
+
+def test_client_session_kwargs_valueerror(rpc_client_class):
+    # Invalid headers get rejected
+    with pytest.raises(ValueError) as exc_info:
+        rpc_client_class(url="mock://example.com/", session_kwargs={"invalid": True})
+    assert "invalid" in exc_info.value.args[0]
+
+    # Auth headers need to be a 2-item list or tuple
+    with pytest.raises(ValueError) as exc_info:
+        rpc_client_class(url="mock://example.com/", session_kwargs={"auth": "string"})
+    assert "auth parameter" in exc_info.value.args[0]
+
+
+def test_client_session_kwargs(rpc_client_class):
+    client = rpc_client_class(
+        url="mock://example.com/", session_kwargs={"verify": False}
+    )
+    assert client.session.verify is False
+
+    # Check that headers get merged
+    client = rpc_client_class(
+        url="mock://example.com/", session_kwargs={"headers": {"test": "test-value"}}
+    )
+    assert client.session.headers["test"] == "test-value"
+    assert len(client.session.headers) > 1
+
+    # Check that 2-item strings get mangled to a tuple for the auth header
+    client = rpc_client_class(
+        url="mock://example.com/", session_kwargs={"auth": ["user", "password"]}
+    )
+    assert client.session.auth == ("user", "password")

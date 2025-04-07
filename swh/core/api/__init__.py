@@ -49,6 +49,8 @@ RETRY_WAIT_INTERVAL = 10
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_SESSION_KWARGS = ("auth", "cert", "headers", "proxies", "verify")
+
 
 # support for content negotiation
 
@@ -221,7 +223,9 @@ class RPCClient(metaclass=MetaRPCClient):
         be retried when encountering specific errors. Default policy is to retry when
         connection errors or transient remote exceptions are raised. Subclasses can
         change that policy by overriding the :meth:`retry_policy` method.
-
+      session_kwargs: keyword arguments passed to the :class:`requests.Session` used to
+        make all requests. Commonly useful parameters include ``auth``, ``headers`` and
+        ``verify``.
     """
 
     backend_class: ClassVar[Optional[type]] = None
@@ -266,6 +270,7 @@ class RPCClient(metaclass=MetaRPCClient):
         api_exception: Optional[Type[Exception]] = None,
         reraise_exceptions: Optional[List[Type[Exception]]] = None,
         enable_requests_retry: Optional[bool] = None,
+        session_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
         if api_exception:
@@ -285,6 +290,20 @@ class RPCClient(metaclass=MetaRPCClient):
             **(adapter_kwargs or {}),
         )
         self.session.mount(self.url, adapter)
+
+        for arg, value in (session_kwargs or {}).items():
+            if arg not in ALLOWED_SESSION_KWARGS:
+                raise ValueError(f"Unknown Keyword argument for session {arg}")
+            if arg == "headers":
+                self.session.headers.update(value)
+            elif arg == "auth":
+                if not isinstance(value, (tuple, list)) or len(value) != 2:
+                    raise ValueError(
+                        "Session auth parameter needs to be a list with two values"
+                    )
+                self.session.auth = tuple(value)
+            else:
+                setattr(self.session, arg, value)
 
         if isinstance(timeout, list):
             if len(timeout) != 2:
