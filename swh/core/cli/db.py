@@ -216,8 +216,22 @@ def db_init_admin(
     )
 
     for package, cls, fullmodule, _, dbname, cfg in args:
-        logger.debug("db_init_admin %s:%s dbname=%s", package, cls, dbname)
-        init_admin_extensions(f"{package}:{cls}", dbname)
+        dbmodule = f"{package}:{cls}"
+        logger.debug(
+            "db_init_admin %s:%s (actually %s) dbname=%s",
+            package,
+            cls,
+            dbmodule,
+            dbname,
+        )
+        try:
+            init_admin_extensions(dbmodule, dbname)
+        except CalledProcessError as exc:
+            click.secho("Error during database setup", fg="red", bold=True)
+            click.echo(str(exc))
+            click.echo("Process output:")
+            click.echo(exc.stderr)
+            raise click.Abort()
 
 
 @db.command(name="list", context_settings=CONTEXT_SETTINGS)
