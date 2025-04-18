@@ -28,6 +28,33 @@ MIMETYPE_TO_ARCHIVE_FORMAT = {
 }
 
 
+def _tar_extraction_filter(member: tarfile.TarInfo, path: str) -> tarfile.TarInfo:
+    if member.name.endswith("/") and (not member.isdir() or member.mode != 0o755):
+        # fix type and permissions for directory
+        member.type = tarfile.DIRTYPE
+        member.mode = 0o755
+    elif member.isfile() and member.mode == 0o444:
+        member.mode = 0o644
+    return member
+
+
+def _unpack_tar_fix_permissions(tarpath: str, extract_dir: str) -> bool:
+    """Unpack tarballs containing directory or file with invalid file type or missing
+    permissions by fixing those on the fly when extracting content.
+    """
+    # check if extraction filters are available in tarfile module (available since
+    # Python 3.12 but was backported to older Python versions)
+    if hasattr(tarfile, "data_filter"):
+        shutil.rmtree(extract_dir)
+        with tarfile.open(name=tarpath) as tf:
+            try:
+                tf.extractall(path=extract_dir, filter=_tar_extraction_filter)
+            except Exception:
+                return False
+        return True
+    return False
+
+
 def _unpack_tar(tarpath: str, extract_dir: str) -> str:
     """Unpack tarballs unsupported by the standard python library. Examples
     include tar.Z, tar.lz, tar.x, etc....
@@ -166,11 +193,13 @@ def uncompress(tarpath: str, dest: str):
             _unpack_zip(tarpath, dest)
         else:
             raise
-    except NotADirectoryError:
+    except (IsADirectoryError, NotADirectoryError, PermissionError):
         if format and "tar" in format:
-            # some old tarballs might fail to be unpacked by shutil.unpack_archive,
-            # fallback using the tar command as last resort
-            _unpack_tar(tarpath, dest)
+            # try to fix directory permissions when extracting first
+            if not _unpack_tar_fix_permissions(tarpath, dest):
+                # fallback using the tar command as last resort as there is
+                # some edge cases the tarfile module cannot handle
+                _unpack_tar(tarpath, dest)
         else:
             raise
 

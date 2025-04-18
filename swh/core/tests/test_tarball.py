@@ -297,3 +297,21 @@ def test_uncompress_tar_incorrect_extension(tmp_path, datadir):
     tarball.uncompress(tarpath, extract_dir)
 
     assert len(os.listdir(extract_dir)) > 0
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "invalid-directory-file-type.tar.gz",
+        "invalid-directory-permissions.tar.gz",
+        "invalid-file-permissions.tar.gz",
+    ],
+)
+def test_uncompress_tar_invalid_permissions(tmp_path, datadir, filename):
+    """Unpack tarball containing file or directory with invalid file type or
+    missing permissions."""
+    tarpath = os.path.join(datadir, "archives", filename)
+    extract_dir = os.path.join(tmp_path, filename)
+    tarball.uncompress(tarpath, extract_dir)
+
+    assert len(os.listdir(extract_dir)) > 0
