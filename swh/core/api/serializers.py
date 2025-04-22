@@ -6,6 +6,7 @@
 import base64
 import datetime
 from enum import Enum
+from functools import partial
 import json
 import traceback
 import types
@@ -97,9 +98,14 @@ JSON_DECODERS: Dict[str, Callable] = {
 }
 
 
+# represent an "encoder" for msgpack (or json)
+EncoderT = Tuple[Type, str, Callable]
+
+
 def get_encoders(
-    extra_encoders: Optional[List[Tuple[Type, str, Callable]]], with_json: bool = False
-) -> List[Tuple[Type, str, Callable]]:
+    extra_encoders: Optional[List[EncoderT]],
+    with_json: bool = False,
+) -> List[EncoderT]:
     encoders = ENCODERS
     if with_json:
         encoders = [*encoders, *JSON_ENCODERS]
@@ -243,33 +249,38 @@ def json_loads(data: str, extra_decoders=None) -> Any:
     return json.loads(data, cls=SWHJSONDecoder, extra_decoders=extra_decoders)
 
 
+def _encode_types(obj: Any, encoders: List[EncoderT] = ENCODERS) -> Any:
+    """encode extra type for msgpack"""
+    if isinstance(obj, int):
+        # integer overflowed while packing. Handle it as an extended type
+        if obj > 0:
+            code = MsgpackExtTypeCodes.LONG_INT.value
+        else:
+            code = MsgpackExtTypeCodes.LONG_NEG_INT.value
+            obj = -obj
+        length, rem = divmod(obj.bit_length(), 8)
+        if rem:
+            length += 1
+        return msgpack.ExtType(code, int.to_bytes(obj, length, "big"))
+
+    if isinstance(obj, types.GeneratorType):
+        return list(obj)
+
+    for type_, type_name, encoder in encoders:
+        if isinstance(obj, type_):
+            return {
+                b"swhtype": type_name,
+                b"d": encoder(obj),
+            }
+    return obj
+
+
 def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
     """Write data as a msgpack stream"""
-    encoders = get_encoders(extra_encoders)
-
-    def encode_types(obj):
-        if isinstance(obj, int):
-            # integer overflowed while packing. Handle it as an extended type
-            if obj > 0:
-                code = MsgpackExtTypeCodes.LONG_INT.value
-            else:
-                code = MsgpackExtTypeCodes.LONG_NEG_INT.value
-                obj = -obj
-            length, rem = divmod(obj.bit_length(), 8)
-            if rem:
-                length += 1
-            return msgpack.ExtType(code, int.to_bytes(obj, length, "big"))
-
-        if isinstance(obj, types.GeneratorType):
-            return list(obj)
-
-        for type_, type_name, encoder in encoders:
-            if isinstance(obj, type_):
-                return {
-                    b"swhtype": type_name,
-                    b"d": encoder(obj),
-                }
-        return obj
+    encode_types = _encode_types
+    if extra_encoders:
+        encoders = get_encoders(extra_encoders)
+        encode_types = partial(_encode_types, encoders=encoders)
 
     return msgpack.packb(
         data,
