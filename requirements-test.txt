@@ -11,3 +11,5 @@ types-pytz
 types-pyyaml
 types-requests
 types-setuptools
+systemd-python
+psycopg-pool
