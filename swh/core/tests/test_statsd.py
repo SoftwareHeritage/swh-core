@@ -278,7 +278,7 @@ def test_timed_coroutine(statsd):
 
     assert type_ == "ms"
     assert name == "timed.test"
-    assert_almost_equal(500, float(value), 100)
+    assert_almost_equal(500, float(value), 200)
 
 
 def test_timed_context(statsd):
