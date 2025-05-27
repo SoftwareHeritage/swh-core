@@ -298,6 +298,21 @@ def test_timed_context(statsd):
     assert name == "timed_context.test"
     assert_almost_equal(500, float(value), 100)
     assert_almost_equal(500, timer.elapsed, 100)
+    assert timer.elapsed == timer.total_elapsed
+
+
+def test_reused_timed_context(statsd):
+    """
+    Check that we sum up the run time when reusing a context instance.
+    """
+    timer = statsd.timed("reused_timed_context.test")
+    with timer:
+        time.sleep(0.5)
+    assert_almost_equal(500, timer.total_elapsed, 100)
+
+    with timer:
+        time.sleep(0.5)
+    assert_almost_equal(1000, timer.total_elapsed, 100)
 
 
 def test_timed_context_exception(statsd):
@@ -547,6 +562,7 @@ def test_timed_elapsed(statsd):
         pass
 
     assert t.elapsed >= 0
+    assert t.elapsed == t.total_elapsed
     assert statsd.socket.recv() == "test_timer:%s|ms" % t.elapsed
 
 
