@@ -74,9 +74,9 @@ class TimedContextManagerDecorator(object):
     the context OR in a function call.
 
     Attributes:
-      elapsed (float): elapsed time during the last call or context execution.
-      total_elapsed (float): total time spent in a function, or in a context if the
-        context instance is reused.
+      elapsed (float): elapsed time (in ms) during the last call or context execution.
+      total_elapsed (float): total time (in ms) spent in a function, or in a
+        context if the scontext instance is reused.
     """
 
     def __init__(
