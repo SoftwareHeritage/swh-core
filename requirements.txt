@@ -1,5 +1,5 @@
 backports.entry_points_selectable
-click
+click != 8.2.1
 deprecated
 python-magic
 pyyaml
