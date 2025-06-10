@@ -74,7 +74,9 @@ class TimedContextManagerDecorator(object):
     the context OR in a function call.
 
     Attributes:
-      elapsed (float): the elapsed time at the point of completion
+      elapsed (float): elapsed time (in ms) during the last call or context execution.
+      total_elapsed (float): total time (in ms) spent in a function, or in a
+        context if the context instance is reused.
     """
 
     def __init__(
@@ -85,7 +87,8 @@ class TimedContextManagerDecorator(object):
         self.error_metric = error_metric
         self.tags = tags or {}
         self.sample_rate = sample_rate
-        self.elapsed = None  # this is for testing purpose
+        self.elapsed = None
+        self.total_elapsed = 0.0
 
     def __call__(self, func):
         """
@@ -145,6 +148,7 @@ class TimedContextManagerDecorator(object):
             self.metric, elapsed, tags=self.tags, sample_rate=self.sample_rate
         )
         self.elapsed = elapsed
+        self.total_elapsed += elapsed
 
     def _send_error(self, error_type=None):
         if self.error_metric is None:
