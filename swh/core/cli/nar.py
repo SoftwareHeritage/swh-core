@@ -97,3 +97,19 @@ def nar_serialize_cli(path, output, exclude_vcs, vcs_type):
     os.write(
         output.fileno(), nar_serialize(path, exclude_vcs=exclude_vcs, vcs_type=vcs_type)
     )
+
+
+@nar.command(name="unpack", context_settings=CONTEXT_SETTINGS)
+@click.argument("nar_path", type=click.Path(exists=True))
+@click.argument("extract_path", type=click.Path())
+def nar_unpack_cli(nar_path, extract_path):
+    """Unpack a NAR archive (possibly compressed with xz or bz2) into a given
+    extract path.
+
+    Please note that a nar archive can contain a single file instead of multiple
+    files and directories, in that case extract_path will target a file after
+    the unpacking.
+    """
+    from swh.core.nar import nar_unpack
+
+    nar_unpack(nar_path, extract_path)

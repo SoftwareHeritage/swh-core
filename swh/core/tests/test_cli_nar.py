@@ -3,14 +3,17 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from bz2 import compress as bz2_compress
 import hashlib
+from lzma import compress as xz_compress
 import os
 from pathlib import Path
 
 from click.testing import CliRunner
 import pytest
 
-from swh.core.cli.nar import nar_hash_cli, nar_serialize_cli
+from swh.core.cli.nar import nar_hash_cli, nar_serialize_cli, nar_unpack_cli
+from swh.core.nar import compute_nar_hashes, nar_serialize
 from swh.core.tarball import uncompress
 
 
@@ -105,3 +108,68 @@ def test_nar_serialize_content(cli_runner, tmpdir, content_with_nar_hashes):
 
     with open(output_path, "rb") as f:
         assert hashlib.sha256(f.read()).hexdigest() == nar_hashes["sha256"]
+
+
+compression_func = {
+    "none": lambda data: data,
+    "bz2": lambda data: bz2_compress(data),
+    "xz": lambda data: xz_compress(data),
+}
+
+
+@pytest.mark.parametrize(
+    "compression",
+    ["none", "bz2", "xz"],
+    ids=["no compression", "bz2 compression", "xz compression"],
+)
+def test_nar_unpack_directory(cli_runner, tmpdir, tarball_with_nar_hashes, compression):
+    tarball_path, nar_hashes = tarball_with_nar_hashes
+
+    directory_path = Path(tmpdir / "tarball")
+    directory_path.mkdir(parents=True, exist_ok=True)
+    uncompress(str(tarball_path), dest=str(directory_path))
+
+    nar_path = os.path.join(tmpdir, "archive.nar")
+    if compression != "none":
+        nar_path += f".{compression}"
+
+    with open(nar_path, "wb") as nar:
+        nar.write(compression_func[compression](nar_serialize(directory_path)))
+
+    dest_path = os.path.join(tmpdir, "nar_unpacked")
+
+    result = cli_runner.invoke(
+        nar_unpack_cli,
+        [nar_path, dest_path],
+    )
+
+    assert result.exit_code == 0
+
+    assert compute_nar_hashes(dest_path, is_tarball=False) == nar_hashes
+
+
+@pytest.mark.parametrize(
+    "compression",
+    ["none", "bz2", "xz"],
+    ids=["no compression", "bz2 compression", "xz compression"],
+)
+def test_nar_unpack_content(cli_runner, tmpdir, content_with_nar_hashes, compression):
+    content_path, nar_hashes = content_with_nar_hashes
+
+    nar_path = os.path.join(tmpdir, "archive.nar")
+    if compression != "none":
+        nar_path += f".{compression}"
+
+    with open(nar_path, "wb") as nar:
+        nar.write(compression_func[compression](nar_serialize(content_path)))
+
+    dest_path = os.path.join(tmpdir, "nar_unpacked")
+
+    result = cli_runner.invoke(
+        nar_unpack_cli,
+        [nar_path, dest_path],
+    )
+
+    assert result.exit_code == 0
+
+    assert compute_nar_hashes(dest_path, is_tarball=False) == nar_hashes

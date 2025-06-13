@@ -4,9 +4,10 @@
 # See top-level LICENSE file for more information
 
 import hashlib
+import os
 from pathlib import Path
 
-from swh.core.nar import Nar
+from swh.core.nar import Nar, compute_nar_hashes, nar_serialize, nar_unpack
 from swh.core.tarball import uncompress
 
 
@@ -112,3 +113,41 @@ def test_nar_serialize_content(content_with_nar_hashes):
     assert {
         "sha256": hashlib.sha256(nar.serialize(content_path)).hexdigest()
     } == nar.hexdigest()
+
+
+def test_nar_unpack_directory(tmpdir, tarball_with_nar_hashes):
+    tarball_path, nar_hashes = tarball_with_nar_hashes
+
+    directory_path = Path(tmpdir / "tarball")
+    directory_path.mkdir(parents=True, exist_ok=True)
+    uncompress(str(tarball_path), dest=str(directory_path))
+
+    nar_archive_path = os.path.join(tmpdir, "archive.nar")
+
+    with open(nar_archive_path, "wb") as f:
+        f.write(nar_serialize(directory_path))
+
+    nar_unpacked_path = os.path.join(tmpdir, "unpacked_nar_archive")
+
+    nar_unpack(nar_archive_path, nar_unpacked_path)
+
+    nar_unpack_hashes = compute_nar_hashes(nar_unpacked_path, is_tarball=False)
+
+    assert nar_unpack_hashes == nar_hashes
+
+
+def test_nar_unpack_content(tmpdir, content_with_nar_hashes):
+    content_path, nar_hashes = content_with_nar_hashes
+
+    nar_archive_path = os.path.join(tmpdir, "archive.nar")
+
+    with open(nar_archive_path, "wb") as f:
+        f.write(nar_serialize(content_path))
+
+    nar_unpacked_path = os.path.join(tmpdir, "unpacked_content")
+
+    nar_unpack(nar_archive_path, nar_unpacked_path)
+
+    nar_unpack_hashes = compute_nar_hashes(nar_unpacked_path, is_tarball=False)
+
+    assert nar_unpack_hashes == nar_hashes
