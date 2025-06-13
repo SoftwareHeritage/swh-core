@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import os
+from pathlib import Path
 
 import click
 
@@ -66,3 +67,33 @@ def nar_hash_cli(exclude_vcs, vcs_type, path, hash_names, format_output, debug):
         print(result[hash_names[0]])
     else:
         print(result)
+
+
+@nar.command(name="serialize", context_settings=CONTEXT_SETTINGS)
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--output",
+    "-o",
+    type=click.File(mode="wb"),
+    default="-",
+    help="The file where to output the serialization, default to stdout",
+)
+@click.option(
+    "--exclude-vcs",
+    "-x",
+    help="Exclude version control directories",
+    is_flag=True,
+)
+@click.option(
+    "--vcs-type",
+    "-t",
+    help="Type of version control system to exclude directories",
+    default="git",
+)
+def nar_serialize_cli(path, output, exclude_vcs, vcs_type):
+    """Serialize a path into a NAR archive."""
+    from swh.core.nar import nar_serialize
+
+    os.write(
+        output.fileno(), nar_serialize(path, exclude_vcs=exclude_vcs, vcs_type=vcs_type)
+    )

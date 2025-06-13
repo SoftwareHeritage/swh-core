@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import hashlib
 from pathlib import Path
 
 from swh.core.nar import Nar
@@ -89,3 +90,25 @@ def test_nar_exclude_vcs(tmpdir, mocker):
     serializeEntry.assert_any_call(Path(svn_subdir_path))
 
     assert nar.hexdigest() == {"sha1": "f1b641c46888a1002e340c9425ef8ec890605858"}
+
+
+def test_nar_serialize_directory(tmpdir, tarball_with_nar_hashes):
+    tarball_path, _ = tarball_with_nar_hashes
+
+    directory_path = Path(tmpdir)
+    directory_path.mkdir(parents=True, exist_ok=True)
+    uncompress(str(tarball_path), dest=str(directory_path))
+
+    nar = Nar(hash_names=["sha256"])
+    assert {
+        "sha256": hashlib.sha256(nar.serialize(directory_path)).hexdigest()
+    } == nar.hexdigest()
+
+
+def test_nar_serialize_content(content_with_nar_hashes):
+    content_path, _ = content_with_nar_hashes
+
+    nar = Nar(hash_names=["sha256"])
+    assert {
+        "sha256": hashlib.sha256(nar.serialize(content_path)).hexdigest()
+    } == nar.hexdigest()

@@ -125,6 +125,7 @@ class Nar:
         self.debug = debug
 
         self.indent = 0
+        self.nar_serialization = b""
 
     def str_(self, thing: Union[str, io.BufferedReader, list]) -> None:
         """Compute the nar serialization format on 'thing' and compute its hash.
@@ -175,6 +176,7 @@ class Nar:
         self.update(boffset)
 
     def update(self, chunk: bytes) -> None:
+        self.nar_serialization += chunk
         for hash_name in self.hash_names:
             self.updater[hash_name].update(chunk)
 
@@ -229,9 +231,11 @@ class Nar:
         if self.debug:
             self.indent -= 1
 
-    def serialize(self, fso: Path) -> None:
+    def serialize(self, fso: Path) -> bytes:
+        self.nar_serialization = b""
         self.str_("nix-archive-1")
         self._serialize(fso)
+        return self.nar_serialization
 
     def _compute_result(self, convert_fn) -> Dict[str, Any]:
         return {
@@ -298,3 +302,22 @@ def compute_nar_hashes(
         hashes = nar.hexdigest()
 
     return hashes
+
+
+def nar_serialize(
+    path: Path,
+    exclude_vcs: bool = False,
+    vcs_type: Optional[str] = "git",
+) -> bytes:
+    """Return the NAR serialization of a path.
+
+    Args:
+        path: The path to NAR serialize, can be a file or a directory.
+        exclude_vcs: Whether to exclude VCS related directories (.git for instance).
+        vcs_type: The type of VCS to exclude related directories, default to git.
+
+    Returns:
+        The NAR serialization of the path.
+    """
+    nar = Nar(hash_names=["sha256"], exclude_vcs=exclude_vcs, vcs_type=vcs_type)
+    return nar.serialize(path)
