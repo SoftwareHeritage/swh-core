@@ -26,7 +26,7 @@ def test_cli_swh_help(swhmain, cli_runner):
     result = cli_runner.invoke(swhmain, ["-h"])
     assert_result(result)
     assert_section_contains(
-        result.output, "Commands", "db  Software Heritage database generic tools."
+        result.output, "Commands", "Software Heritage database generic tools."
     )
 
 
