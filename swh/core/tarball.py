@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2022  The Software Heritage developers
+# Copyright (C) 2015-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -134,7 +134,7 @@ def _unpack_zst(zstpath: str, extract_dir: str) -> str:
     This expects the `extract_dir` to exist.
 
     Raises:
-        shutil.ReadError in case of issue uncompressing the archive (zstpath
+        shutil.ReadError in case of issue uncompressing the archive
     """
     try:
         run(
@@ -145,6 +145,27 @@ def _unpack_zst(zstpath: str, extract_dir: str) -> str:
     except Exception as e:
         raise shutil.ReadError(
             f"Unable to uncompress {zstpath} to {extract_dir}. Reason: {e}"
+        )
+
+
+def _unpack_nar(narpath: str, extract_path: str) -> str:
+    """Unpack nar archive, possibly compressed using xz or bz2.
+
+    Raises:
+        shutil.ReadError in case of issue uncompressing the archive
+    """
+    from swh.core.nar import nar_unpack
+
+    try:
+        if os.path.isdir(extract_path):
+            shutil.rmtree(extract_path)
+        elif os.path.isfile(extract_path):
+            os.remove(extract_path)
+        nar_unpack(narpath, extract_path)
+        return extract_path
+    except Exception as e:
+        raise shutil.ReadError(
+            f"Unable to uncompress {narpath} to {extract_path}. Reason: {e}"
         )
 
 
@@ -175,10 +196,11 @@ def uncompress(tarpath: str, dest: str):
     try:
         os.makedirs(dest, exist_ok=True)
         format = None
-        # try to get archive format from file mimetype
-        m = magic.Magic(mime=True)
-        mime = m.from_file(tarpath)
-        format = MIMETYPE_TO_ARCHIVE_FORMAT.get(mime)
+        # try to get archive format from file mimetype except for some edge cases
+        if not tarpath.endswith(".nar.bz2"):
+            m = magic.Magic(mime=True)
+            mime = m.from_file(tarpath)
+            format = MIMETYPE_TO_ARCHIVE_FORMAT.get(mime)
         if format is None:
             # try to get archive format from extension
             for format_, exts, _ in shutil.get_unpack_formats():
@@ -284,6 +306,7 @@ ADDITIONAL_ARCHIVE_FORMATS = [
     ("tar.lz", [".tar.lz"], _unpack_tar),
     ("crate", [".crate"], _unpack_tar),
     ("tar.zst", [".tar.zst", ".tar.zstd"], _unpack_zst),
+    ("nar", [".nar", ".nar.bz2", ".nar.xz"], _unpack_nar),
 ]
 
 register_new_archive_formats()

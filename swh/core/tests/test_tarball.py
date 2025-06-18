@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2022  The Software Heritage developers
+# Copyright (C) 2019-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -155,6 +155,34 @@ def test_uncompress_tarzst(tmp_path, datadir):
     assert len(os.listdir(extract_dir)) > 0
 
 
+def test_uncompress_tarball_narxz(tmp_path, datadir):
+    """Unpack supported nar.xz tarball into an existent folder should be ok"""
+    filename = "archive.nar.xz"
+    tarpath = os.path.join(datadir, "archives", "nar", filename)
+
+    assert os.path.exists(tarpath)
+
+    extract_dir = os.path.join(tmp_path, filename)
+
+    tarball.uncompress(tarpath, extract_dir)
+
+    assert len(os.listdir(extract_dir)) > 0
+
+
+def test_uncompress_file_narbz2(tmp_path, datadir):
+    """Unpack file in a nar.bz2 archive should be ok"""
+    filename = "archive.nar.bz2"
+    tarpath = os.path.join(datadir, "archives", "nar", filename)
+
+    assert os.path.exists(tarpath)
+
+    extract_path = os.path.join(tmp_path, "content")
+
+    tarball.uncompress(tarpath, extract_path)
+
+    assert os.path.exists(extract_path) and os.path.isfile(extract_path)
+
+
 def test_register_new_archive_formats(prepare_shutil_state):
     """Registering new archive formats should be fine"""
     unpack_formats_v1 = [f[0] for f in shutil.get_unpack_formats()]
@@ -173,13 +201,13 @@ def test_register_new_archive_formats(prepare_shutil_state):
 def test_uncompress_archives(tmp_path, datadir):
     """High level call uncompression on supported archives"""
     archive_dir = os.path.join(datadir, "archives")
-    archive_files = os.listdir(archive_dir)
+    archive_files = [f for f in os.listdir(archive_dir) if os.path.isfile(f)]
 
     for archive_file in archive_files:
         archive_path = os.path.join(archive_dir, archive_file)
-        extract_dir = os.path.join(tmp_path, archive_file)
-        tarball.uncompress(archive_path, dest=extract_dir)
-        assert len(os.listdir(extract_dir)) > 0
+        extract_path = os.path.join(tmp_path, archive_file)
+        tarball.uncompress(archive_path, dest=extract_path)
+        assert len(os.listdir(extract_path)) > 0
 
 
 def test_normalize_permissions(tmp_path):
