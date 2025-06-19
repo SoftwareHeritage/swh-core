@@ -32,8 +32,23 @@ def _convert_b64(hash: bytes) -> str:
     return base64.b64encode(bytes.fromhex(hash.hex())).decode()
 
 
+_chars = "0123456789abcdfghijklmnpqrsvwxyz"
+
+
+# base32 digest used in nix-hash, Python implementation found on
+# https://bombrary.github.io/blog/posts/nix-impl-digest/
 def _convert_b32(hash: bytes) -> str:
-    return base64.b32encode(bytes.fromhex(hash.hex())).decode().lower()
+    hash_bits = 8 * len(hash)
+    nix32_len = (hash_bits - 1) // 5 + 1
+    s = ""
+    for n in range(nix32_len - 1, -1, -1):
+        b = n * 5
+        i = b // 8
+        j = b % 8
+        c = (hash[i] >> j) | (hash[i + 1] << (8 - j) if i + 1 < len(hash) else 0)
+        s = s + _chars[c & 0x1F]
+
+    return s
 
 
 class Nar:

@@ -23,6 +23,23 @@ def test_nar_tarball(tmpdir, tarball_with_nar_hashes):
     assert nar.hexdigest() == nar_hashes
 
 
+def test_nar_tarball_hash_formats(tmpdir, tarball_path):
+    directory_path = Path(tmpdir)
+    directory_path.mkdir(parents=True, exist_ok=True)
+    uncompress(str(tarball_path), dest=str(directory_path))
+
+    nar = Nar(hash_names=["sha256"])
+    nar.serialize(directory_path)
+
+    assert nar.hexdigest() == {
+        "sha256": "45db8a27ccfae60b5233003c54c2d6b5ed6f0a1299dd9bbebc8f06cf649bc9c0"
+    }
+    assert nar.b32digest() == {
+        "sha256": "1h69kdjcy1lgpjz9ppcr2856zvdmsv158g006d90prpsrhkqmns5"
+    }
+    assert nar.b64digest() == {"sha256": "RduKJ8z65gtSMwA8VMLWte1vChKZ3Zu+vI8Gz2SbycA="}
+
+
 def test_nar_tarball_with_executable(tmpdir, tarball_with_executable_with_nar_hashes):
     """Compute nar on tarball with executable files inside should not mismatch"""
     tarball_path, nar_hashes = tarball_with_executable_with_nar_hashes
