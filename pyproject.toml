@@ -108,5 +108,4 @@ extend-exclude = ".git,.tox,.mypy_cache,build,dist"
 
 [tool.pytest.ini_options]
 norecursedirs = "build docs .*"
-asyncio_mode = "strict"
 consider_namespace_packages = true
