@@ -144,7 +144,7 @@ class Nar:
         self.debug = debug
 
         self.indent = 0
-        self.nar_serialization = b""
+        self.nar_serialization = bytearray()
 
     def str_(self, thing: Union[str, io.BufferedReader, list]) -> None:
         """Compute the nar serialization format on 'thing' and compute its hash.
@@ -195,7 +195,7 @@ class Nar:
         self.update(boffset)
 
     def update(self, chunk: bytes) -> None:
-        self.nar_serialization += chunk
+        self.nar_serialization.extend(chunk)
         for hash_name in self.hash_names:
             self.updater[hash_name].update(chunk)
 
@@ -251,10 +251,10 @@ class Nar:
             self.indent -= 1
 
     def serialize(self, fso: Path) -> bytes:
-        self.nar_serialization = b""
+        self.nar_serialization.clear()
         self.str_("nix-archive-1")
         self._serialize(fso)
-        return self.nar_serialization
+        return bytes(self.nar_serialization)
 
     def _compute_result(self, convert_fn) -> Dict[str, Any]:
         return {
