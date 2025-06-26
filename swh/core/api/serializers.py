@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import base64
+import dataclasses
 import datetime
 from enum import Enum
 from functools import partial
@@ -29,18 +30,12 @@ def encode_datetime(dt: datetime.datetime) -> str:
 
 def _encode_paged_result(obj: PagedResult) -> Dict[str, Any]:
     """Serialize PagedResult to a Dict."""
-    return {
-        "results": obj.results,
-        "next_page_token": obj.next_page_token,
-    }
+    return dataclasses.asdict(obj)
 
 
 def _decode_paged_result(obj: Dict[str, Any]) -> PagedResult:
     """Deserialize Dict into PagedResult"""
-    return PagedResult(
-        results=obj["results"],
-        next_page_token=obj["next_page_token"],
-    )
+    return PagedResult(**obj)
 
 
 def exception_to_dict(exception: BaseException) -> Dict[str, Any]:

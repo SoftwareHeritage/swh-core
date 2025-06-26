@@ -17,6 +17,7 @@ class PagedResult(Generic[TResult, TToken]):
 
     results: List[TResult] = field(default_factory=list)
     next_page_token: Optional[TToken] = field(default=None)
+    total_results: Optional[int] = None
 
 
 def _stream_results(f, *args, page_token, **kwargs):

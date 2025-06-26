@@ -72,11 +72,20 @@ def test_stream_results_pagination(stream_results):
 
     def page_results2(page_token=None) -> TestPagedResult:
         result_per_token = {
-            None: TestPagedResult(results=input_data, next_page_token=b"two"),
-            b"two": TestPagedResult(results=input_data2, next_page_token=b"three"),
-            b"three": TestPagedResult(results=input_data3, next_page_token=None),
+            None: TestPagedResult(
+                results=input_data, next_page_token=b"two", total_results=4
+            ),
+            b"two": TestPagedResult(
+                results=input_data2, next_page_token=b"three", total_results=4
+            ),
+            b"three": TestPagedResult(
+                results=input_data3, next_page_token=None, total_results=4
+            ),
         }
         return result_per_token[page_token]
+
+    for page_token in (None, b"two", b"three"):
+        assert page_results2(page_token).total_results == 4
 
     # multiple calls to solve the pagination calls
     actual_data = stream_results(page_results2)

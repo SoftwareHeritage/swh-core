@@ -95,6 +95,7 @@ ENCODED_DATA_PAGED_RESULT = {
             ENCODED_DATA_TIMEDELTA,
         ],
         "next_page_token": "10",
+        "total_results": None,
     },
     "swhtype": "paged_result",
 }
@@ -107,6 +108,7 @@ TestPagedResultTuple = PagedResult[
 DATA_PAGED_RESULT2 = TestPagedResultTuple(
     results=["data0", DATA_BYTES, DATA_DATETIME],
     next_page_token=["10", DATA_UUID],
+    total_results=100,
 )
 
 ENCODED_DATA_PAGED_RESULT2 = {
@@ -117,6 +119,7 @@ ENCODED_DATA_PAGED_RESULT2 = {
             ENCODED_DATA_DATETIME,
         ],
         "next_page_token": ["10", ENCODED_DATA_UUID],
+        "total_results": 100,
     },
     "swhtype": "paged_result",
 }
