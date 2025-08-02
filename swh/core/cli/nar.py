@@ -46,7 +46,9 @@ def nar():
     default="hex",
     type=click.Choice(["hex", "base32", "base64"], case_sensitive=False),
 )
-@click.option("--debug/--no-debug", default=lambda: os.environ.get("DEBUG", False))
+@click.option(
+    "--debug/--no-debug", default=lambda: os.environ.get("DEBUG", False), is_flag=True
+)
 def nar_hash_cli(exclude_vcs, vcs_type, path, hash_names, format_output, debug):
     """Compute NAR hash of a given path."""
 
