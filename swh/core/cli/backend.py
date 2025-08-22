@@ -120,4 +120,6 @@ def bk_list(ctx, package, cls):
             )
             + "\n",
         )
-        click.echo(BackendCls.__doc__.strip())
+
+        if BackendCls.__doc__:
+            click.echo(BackendCls.__doc__.strip())
