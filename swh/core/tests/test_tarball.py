@@ -284,6 +284,8 @@ def test_uncompress_upper_archive_extension(tmp_path, datadir):
         if os.path.isfile(os.path.join(archives_path, f))
     ]
     for archive_file in archive_files:
+        if archive_file.startswith("invalid"):
+            continue
         archive_file_upper = os.path.join(tmp_path, archive_file.upper())
         extract_dir = os.path.join(tmp_path, archive_file)
         shutil.copy(os.path.join(archives_path, archive_file), archive_file_upper)
@@ -302,6 +304,8 @@ def test_uncompress_archive_no_extension(tmp_path, datadir):
         if os.path.isfile(os.path.join(archives_path, f))
     ]
     for archive_file in archive_files:
+        if archive_file.startswith("invalid"):
+            continue
         archive_file_path = os.path.join(archives_path, archive_file)
         with open(archive_file_path, "rb") as f:
             md5sum = hashlib.md5(f.read()).hexdigest()
@@ -327,6 +331,10 @@ def test_uncompress_tar_incorrect_extension(tmp_path, datadir):
     assert len(os.listdir(extract_dir)) > 0
 
 
+@pytest.mark.skipif(
+    not hasattr(tarfile, "data_filter"),
+    reason="Require a version of python that supports filtering in the tarfile module",
+)
 @pytest.mark.parametrize(
     "filename",
     [
