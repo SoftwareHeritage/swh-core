@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 from bz2 import compress as bz2_compress
-import hashlib
 from lzma import compress as xz_compress
 import os
 from pathlib import Path
@@ -15,6 +14,9 @@ import pytest
 from swh.core.cli.nar import nar_hash_cli, nar_serialize_cli, nar_unpack_cli
 from swh.core.nar import compute_nar_hashes, nar_serialize
 from swh.core.tarball import uncompress
+from swh.model.hashutil import MultiHash
+
+HASH_ALGOS = ["md5", "sha1", "sha256", "sha512"]
 
 
 @pytest.fixture
@@ -50,14 +52,14 @@ def test_nar_cli_tarball(cli_runner, tmpdir, tarball_with_nar_hashes):
     directory_path.mkdir(parents=True, exist_ok=True)
     uncompress(str(tarball_path), dest=str(directory_path))
 
-    assert list(nar_hashes.keys()) == ["sha256"]
+    assert list(nar_hashes.keys()) == HASH_ALGOS
 
-    result = cli_runner.invoke(
-        nar_hash_cli, ["--hash-algo", "sha256", str(directory_path)]
-    )
-
-    assert result.exit_code == 0
-    assert_output_contains(result.output, nar_hashes["sha256"])
+    for hash_algo in HASH_ALGOS:
+        result = cli_runner.invoke(
+            nar_hash_cli, ["--hash-algo", hash_algo, str(directory_path)]
+        )
+        assert result.exit_code == 0
+        assert_output_contains(result.output, nar_hashes[hash_algo])
 
 
 def test_nar_cli_content(cli_runner, content_with_nar_hashes):
@@ -79,7 +81,7 @@ def test_nar_serialize_directory(cli_runner, tmpdir, tarball_with_nar_hashes):
     directory_path.mkdir(parents=True, exist_ok=True)
     uncompress(str(tarball_path), dest=str(directory_path))
 
-    assert list(nar_hashes.keys()) == ["sha256"]
+    assert list(nar_hashes.keys()) == HASH_ALGOS
 
     output_path = os.path.join(tmpdir, "output.nar")
     result = cli_runner.invoke(
@@ -89,14 +91,17 @@ def test_nar_serialize_directory(cli_runner, tmpdir, tarball_with_nar_hashes):
 
     assert result.exit_code == 0
 
+    hasher = MultiHash(hash_names=HASH_ALGOS)
+
     with open(output_path, "rb") as f:
-        assert hashlib.sha256(f.read()).hexdigest() == nar_hashes["sha256"]
+        hasher.update(f.read())
+        assert hasher.hexdigest() == nar_hashes
 
 
 def test_nar_serialize_content(cli_runner, tmpdir, content_with_nar_hashes):
     content_path, nar_hashes = content_with_nar_hashes
 
-    assert list(nar_hashes.keys()) == ["sha256"]
+    assert list(nar_hashes.keys()) == HASH_ALGOS
 
     output_path = os.path.join(tmpdir, "output.nar")
     result = cli_runner.invoke(
@@ -106,8 +111,11 @@ def test_nar_serialize_content(cli_runner, tmpdir, content_with_nar_hashes):
 
     assert result.exit_code == 0
 
+    hasher = MultiHash(hash_names=HASH_ALGOS)
+
     with open(output_path, "rb") as f:
-        assert hashlib.sha256(f.read()).hexdigest() == nar_hashes["sha256"]
+        hasher.update(f.read())
+        assert hasher.hexdigest() == nar_hashes
 
 
 compression_func = {
@@ -145,7 +153,10 @@ def test_nar_unpack_directory(cli_runner, tmpdir, tarball_with_nar_hashes, compr
 
     assert result.exit_code == 0
 
-    assert compute_nar_hashes(dest_path, is_tarball=False) == nar_hashes
+    assert (
+        compute_nar_hashes(dest_path, hash_names=HASH_ALGOS, is_tarball=False)
+        == nar_hashes
+    )
 
 
 @pytest.mark.parametrize(
@@ -172,4 +183,7 @@ def test_nar_unpack_content(cli_runner, tmpdir, content_with_nar_hashes, compres
 
     assert result.exit_code == 0
 
-    assert compute_nar_hashes(dest_path, is_tarball=False) == nar_hashes
+    assert (
+        compute_nar_hashes(dest_path, hash_names=HASH_ALGOS, is_tarball=False)
+        == nar_hashes
+    )

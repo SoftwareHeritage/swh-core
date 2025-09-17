@@ -38,7 +38,7 @@ def nar():
     "hash_names",
     multiple=True,
     default=["sha256"],
-    type=click.Choice(["sha256", "sha1"]),
+    type=click.Choice(["md5", "sha1", "sha256", "sha512"]),
 )
 @click.option(
     "--format-output",

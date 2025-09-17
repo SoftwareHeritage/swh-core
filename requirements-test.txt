@@ -6,6 +6,7 @@ pytest-mock
 pytest-postgresql > 5
 pytz
 requests-mock
+swh.model
 types-deprecated
 types-pytz
 types-pyyaml

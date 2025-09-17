@@ -148,7 +148,9 @@ def test_nar_unpack_directory(tmpdir, tarball_with_nar_hashes):
 
     nar_unpack(nar_archive_path, nar_unpacked_path)
 
-    nar_unpack_hashes = compute_nar_hashes(nar_unpacked_path, is_tarball=False)
+    nar_unpack_hashes = compute_nar_hashes(
+        nar_unpacked_path, hash_names=list(nar_hashes), is_tarball=False
+    )
 
     assert nar_unpack_hashes == nar_hashes
 
@@ -165,6 +167,8 @@ def test_nar_unpack_content(tmpdir, content_with_nar_hashes):
 
     nar_unpack(nar_archive_path, nar_unpacked_path)
 
-    nar_unpack_hashes = compute_nar_hashes(nar_unpacked_path, is_tarball=False)
+    nar_unpack_hashes = compute_nar_hashes(
+        nar_unpacked_path, hash_names=list(nar_hashes), is_tarball=False
+    )
 
     assert nar_unpack_hashes == nar_hashes

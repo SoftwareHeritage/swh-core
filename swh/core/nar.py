@@ -11,7 +11,17 @@ from pathlib import Path
 import stat
 import struct
 import tempfile
-from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Protocol, Union
+from typing import (
+    Any,
+    BinaryIO,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Protocol,
+    Union,
+)
 
 from typing_extensions import Buffer
 
@@ -49,6 +59,9 @@ def _convert_b32(hash: bytes) -> str:
         s = s + _chars[c & 0x1F]
 
     return s
+
+
+NarHashAlgo = Literal["md5", "sha1", "sha256", "sha512"]
 
 
 class Nar:
@@ -127,17 +140,14 @@ class Nar:
 
     def __init__(
         self,
-        hash_names: List[str],
+        hash_names: List[NarHashAlgo],
         exclude_vcs: bool = False,
         vcs_type: Optional[str] = "git",
         debug: bool = False,
     ):
         self.hash_names = hash_names
         self.updater = {
-            hash_name: (
-                hashlib.sha256() if hash_name.lower() == "sha256" else hashlib.sha1()
-            )
-            for hash_name in hash_names
+            hash_name: getattr(hashlib, hash_name)() for hash_name in hash_names
         }
         self.exclude_vcs = exclude_vcs
         self.vcs_type = vcs_type
@@ -281,7 +291,7 @@ class Nar:
 
 def compute_nar_hashes(
     filepath: Path,
-    hash_names: List[str] = ["sha256"],
+    hash_names: List[NarHashAlgo] = ["sha256"],
     is_tarball=True,
     top_level=True,
 ) -> Dict[str, str]:
