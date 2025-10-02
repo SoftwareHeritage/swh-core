@@ -377,7 +377,9 @@ def test_cli_swh_db_upgrade_new_api(
         assert swh_db_module(conninfo) is None
 
     # db migration should recreate the missing dbmodule table
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
+    result = cli_runner.invoke(
+        swhdb, ["-C", cfgfile, "upgrade", module_name], input="Y"
+    )
     assert_result(result)
     assert "Warning: the database does not have a dbmodule table." in result.output
     assert (
@@ -748,7 +750,9 @@ test:
         assert swh_db_module(cnxstr) is None
 
         # db migration should recreate the missing dbmodule table
-        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", "-p", config_path])
+        result = cli_runner.invoke(
+            swhdb, ["-C", cfgfile, "upgrade", "-p", config_path], input="Y"
+        )
         assert_result(result)
         assert "Warning: the database does not have a dbmodule table." in result.output
         assert (
