@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024  The Software Heritage developers
+# Copyright (C) 2015-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,6 +8,7 @@ import functools
 import importlib
 import inspect
 import logging
+import types
 from typing import (
     Any,
     Callable,
@@ -36,6 +37,7 @@ from .negotiation import Negotiator as NegotiatorBase
 from .negotiation import negotiate as _negotiate
 from .serializers import (
     decode_response,
+    decode_response_stream,
     encode_data_client,
     exception_to_dict,
     json_dumps,
@@ -114,7 +116,12 @@ class JSONFormatter(Formatter):
     mimetypes = ["application/json"]
 
     def render(self, obj):
-        return json_dumps(obj, extra_encoders=self.extra_encoders)
+        if isinstance(obj, types.GeneratorType):
+            return (
+                (json_dumps(o, extra_encoders=self.extra_encoders) + b"\n") for o in obj
+            )
+        else:
+            return json_dumps(obj, extra_encoders=self.extra_encoders)
 
 
 class MsgpackFormatter(Formatter):
@@ -122,7 +129,10 @@ class MsgpackFormatter(Formatter):
     mimetypes = ["application/x-msgpack"]
 
     def render(self, obj):
-        return msgpack_dumps(obj, extra_encoders=self.extra_encoders)
+        if isinstance(obj, types.GeneratorType):
+            return (msgpack_dumps(o, extra_encoders=self.extra_encoders) for o in obj)
+        else:
+            return msgpack_dumps(obj, extra_encoders=self.extra_encoders)
 
 
 # base API classes
@@ -294,7 +304,7 @@ class RPCClient(metaclass=MetaRPCClient):
         self,
         url: str,
         timeout: Union[None, Tuple[float, float], List[float], float] = None,
-        chunk_size: int = 4096,
+        chunk_size: int = 65536,
         max_retries: int = 3,
         pool_connections: int = 20,
         pool_maxsize: int = 100,
@@ -421,8 +431,7 @@ class RPCClient(metaclass=MetaRPCClient):
             **opts,
         )
         if opts.get("stream") or response.headers.get("transfer-encoding") == "chunked":
-            self.raise_for_status(response)
-            return response.iter_content(chunk_size)
+            return self._decode_stream_response(response, chunk_size)
         else:
             return self._decode_response(response)
 
@@ -437,8 +446,7 @@ class RPCClient(metaclass=MetaRPCClient):
             "get", endpoint, headers={"accept": "application/x-msgpack"}, **opts
         )
         if opts.get("stream") or response.headers.get("transfer-encoding") == "chunked":
-            self.raise_for_status(response)
-            return response.iter_content(chunk_size)
+            return self._decode_stream_response(response, chunk_size)
         else:
             return self._decode_response(response)
 
@@ -497,6 +505,13 @@ class RPCClient(metaclass=MetaRPCClient):
         if check_status:
             self.raise_for_status(response)
         return decode_response(response, extra_decoders=self.extra_type_decoders)
+
+    def _decode_stream_response(self, response, chunk_size, check_status=True):
+        if check_status:
+            self.raise_for_status(response)
+        yield from decode_response_stream(
+            response, chunk_size, extra_decoders=self.extra_type_decoders
+        )
 
     def __repr__(self):
         return "<{} url={}>".format(self.__class__.__name__, self.url)
@@ -673,7 +688,6 @@ class RPCServerApp(Flask):
 
             if pre_hook is not None:
                 pre_hook(kw)
-
             ret = obj_meth(**kw)
 
             if post_hook is not None:

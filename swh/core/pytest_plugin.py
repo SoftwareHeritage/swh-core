@@ -305,6 +305,9 @@ class RPCTestAdapter(BaseAdapter):
             headers.to_wsgi_list() if headers else []
         )
 
+        if headers.get("content-length") is None:
+            response.headers["transfer-encoding"] = "chunked"
+
         # Set encoding.
         response.encoding = get_encoding_from_headers(response.headers)
         response.raw = resp

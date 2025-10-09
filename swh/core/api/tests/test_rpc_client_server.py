@@ -1,7 +1,9 @@
-# Copyright (C) 2018-2019  The Software Heritage developers
+# Copyright (C) 2018-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
+
+import types
 
 import pytest
 
@@ -42,6 +44,11 @@ class RPCTest:
     def raise_expectedexc(self):
         raise ExpectedException("that was expected")
 
+    @remote_api_endpoint("stream_endpoint")
+    def stream_endpoint(self):
+        for i in range(1000):
+            yield i
+
 
 # this class is used on the client part. We cannot inherit from RPCTest
 # because the automagic metaclass based code that generates the RPCClient
@@ -69,6 +76,10 @@ class RPCTest2:
     @remote_api_endpoint("raises_expectedexc")
     def raise_expectedexc(self):
         return "nothing"
+
+    @remote_api_endpoint("stream_endpoint")
+    def stream_endpoint(self):
+        pass
 
 
 class RPCTestClient(RPCClient):
@@ -162,3 +173,9 @@ def test_api_expected_exception_no_sentry_capture(swh_rpc_client, mocker):
 
     assert exc_info.value.args[0]["type"] == "ExpectedException"
     assert exc_info.value.args[0]["args"] == ["that was expected"]
+
+
+def test_api_endpoint_stream_response(swh_rpc_client):
+    res = swh_rpc_client.stream_endpoint()
+    assert isinstance(res, types.GeneratorType)
+    assert list(res) == list(range(1000))
