@@ -76,7 +76,7 @@ async def test_api_async_endpoint(cli, async_app):
     )
     assert res.status == 200
     assert res.content_type == "application/json"
-    assert await res.read() == json_dumps("toto").encode()
+    assert await res.read() == json_dumps("toto")
 
 
 async def test_api_async_nego_default_msgpack(cli):

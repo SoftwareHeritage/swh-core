@@ -110,6 +110,12 @@ def swh_rpc_client_class():
     return RPCTestClient
 
 
+@pytest.fixture(params=["application/json", "application/x-msgpack"])
+def swh_rpc_client(swh_rpc_client, request):
+    swh_rpc_client.content_type = request.param
+    return swh_rpc_client
+
+
 def test_api_client_endpoint_missing(swh_rpc_client):
     with pytest.raises(AttributeError):
         swh_rpc_client.missing(data="whatever")

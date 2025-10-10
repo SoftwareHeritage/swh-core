@@ -125,11 +125,18 @@ class MsgpackExtTypeCodes(Enum):
     LONG_NEG_INT = 2
 
 
-def encode_data_client(data: Any, extra_encoders=None) -> bytes:
-    try:
-        return msgpack_dumps(data, extra_encoders=extra_encoders)
-    except OverflowError as e:
-        raise ValueError("Limits were reached. Please, check your input.\n" + str(e))
+def encode_data_client(data: Any, content_type, extra_encoders=None) -> bytes:
+    if content_type.startswith("application/x-msgpack"):
+        try:
+            return msgpack_dumps(data, extra_encoders=extra_encoders)
+        except OverflowError as e:
+            raise ValueError(
+                "Limits were reached. Please, check your input.\n" + str(e)
+            )
+    elif content_type.startswith("application/json"):
+        return json_dumps(data, extra_encoders=extra_encoders)
+    else:
+        raise ValueError(f"Wrong content type {content_type} for API response")
 
 
 def decode_response(response: Response, extra_decoders=None) -> Any:
@@ -255,8 +262,8 @@ class SWHJSONDecoder(json.JSONDecoder):
         return self.decode_data(data), index
 
 
-def json_dumps(data: Any, extra_encoders=None) -> str:
-    return json.dumps(data, cls=SWHJSONEncoder, extra_encoders=extra_encoders)
+def json_dumps(data: Any, extra_encoders=None) -> bytes:
+    return json.dumps(data, cls=SWHJSONEncoder, extra_encoders=extra_encoders).encode()
 
 
 def json_loads(data: str, extra_decoders=None) -> Any:

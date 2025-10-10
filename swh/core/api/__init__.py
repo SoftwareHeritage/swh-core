@@ -313,6 +313,7 @@ class RPCClient(metaclass=MetaRPCClient):
         reraise_exceptions: Optional[List[Type[Exception]]] = None,
         enable_requests_retry: Optional[bool] = None,
         session_kwargs: Optional[Dict[str, Any]] = None,
+        content_type: str = "application/x-msgpack",
         **kwargs,
     ):
         if api_exception:
@@ -323,6 +324,7 @@ class RPCClient(metaclass=MetaRPCClient):
             self.enable_requests_retry = enable_requests_retry
         base_url = url if url.endswith("/") else url + "/"
         self.url = base_url
+        self.content_type = content_type
 
         self.session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(
@@ -425,8 +427,8 @@ class RPCClient(metaclass=MetaRPCClient):
             endpoint,
             data=data,
             headers={
-                "content-type": "application/x-msgpack",
-                "accept": "application/x-msgpack",
+                "content-type": self.content_type,
+                "accept": self.content_type,
             },
             **opts,
         )
@@ -436,14 +438,16 @@ class RPCClient(metaclass=MetaRPCClient):
             return self._decode_response(response)
 
     def _encode_data(self, data):
-        return encode_data_client(data, extra_encoders=self.extra_type_encoders)
+        return encode_data_client(
+            data, self.content_type, extra_encoders=self.extra_type_encoders
+        )
 
     _post_stream = _post
 
     def _get(self, endpoint, **opts):
         chunk_size = opts.pop("chunk_size", self.chunk_size)
         response = self.raw_verb(
-            "get", endpoint, headers={"accept": "application/x-msgpack"}, **opts
+            "get", endpoint, headers={"accept": self.content_type}, **opts
         )
         if opts.get("stream") or response.headers.get("transfer-encoding") == "chunked":
             return self._decode_stream_response(response, chunk_size)
@@ -549,9 +553,7 @@ def decode_request(request, extra_decoders=None):
     if content_type == "application/x-msgpack":
         r = msgpack_loads(data, extra_decoders=extra_decoders)
     elif content_type == "application/json":
-        # XXX this .decode() is needed for py35.
-        # Should not be needed any more with py37
-        r = json_loads(data.decode("utf-8"), extra_decoders=extra_decoders)
+        r = json_loads(data, extra_decoders=extra_decoders)
     else:
         raise ValueError("Wrong content type `%s` for API request" % content_type)
 
