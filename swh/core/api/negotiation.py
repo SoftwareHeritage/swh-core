@@ -2,7 +2,7 @@
 #   https://github.com/nickstenning/negotiate
 #
 # Copyright 2012-2013 Nick Stenning
-# Copyright 2019  The Software Heritage developers
+#           2019-2025  The Software Heritage developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,19 @@
 from collections import defaultdict
 import functools
 from inspect import getcallargs
-from typing import Any, Callable, DefaultDict, List, NoReturn, Optional, Type
+from typing import (
+    Any,
+    Callable,
+    DefaultDict,
+    Iterable,
+    List,
+    NoReturn,
+    Optional,
+    Type,
+    Union,
+)
 
-from requests import Response
+from flask import Response
 
 
 class FormatterNotFound(Exception):
@@ -53,7 +63,7 @@ class Formatter:
     def configure(self) -> None:
         pass
 
-    def render(self, obj: Any) -> bytes:
+    def render(self, obj: Any) -> Union[bytes, Iterable[bytes]]:
         raise NotImplementedError(
             "render() should be implemented by Formatter subclasses"
         )
@@ -63,7 +73,9 @@ class Formatter:
             self.render(obj), content_type=self.response_mimetype
         )
 
-    def _make_response(self, body: bytes, content_type: str) -> Response:
+    def _make_response(
+        self, body: Union[bytes, Iterable[bytes]], content_type: str
+    ) -> Response:
         raise NotImplementedError(
             "_make_response() should be implemented by "
             "framework-specific subclasses of Formatter"

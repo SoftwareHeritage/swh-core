@@ -125,7 +125,9 @@ class MsgpackExtTypeCodes(Enum):
     LONG_NEG_INT = 2
 
 
-def encode_data_client(data: Any, content_type, extra_encoders=None) -> bytes:
+def encode_data_client(
+    data: Any, content_type, extra_encoders: Optional[List[EncoderT]] = None
+) -> bytes:
     if content_type.startswith("application/x-msgpack"):
         try:
             return msgpack_dumps(data, extra_encoders=extra_encoders)
@@ -139,13 +141,15 @@ def encode_data_client(data: Any, content_type, extra_encoders=None) -> bytes:
         raise ValueError(f"Wrong content type {content_type} for API response")
 
 
-def decode_response(response: Response, extra_decoders=None) -> Any:
+def decode_response(
+    response: Response, extra_decoders: Optional[Dict[str, Callable]] = None
+) -> Any:
     content_type = response.headers["content-type"]
 
     if content_type.startswith("application/x-msgpack"):
         r = msgpack_loads(response.content, extra_decoders=extra_decoders)
     elif content_type.startswith("application/json"):
-        r = json_loads(response.text, extra_decoders=extra_decoders)
+        r = json_loads(response.content, extra_decoders=extra_decoders)
     elif content_type.startswith("text/"):
         r = response.text
     else:
@@ -155,7 +159,7 @@ def decode_response(response: Response, extra_decoders=None) -> Any:
 
 
 def decode_response_stream(
-    response: Response, chunk_size, extra_decoders=None
+    response: Response, chunk_size, extra_decoders: Optional[Dict[str, Callable]] = None
 ) -> Iterable[Any]:
     content_type = response.headers["content-type"]
 
@@ -197,7 +201,7 @@ class SWHJSONEncoder(json.JSONEncoder):
 
     """
 
-    def __init__(self, extra_encoders=None, **kwargs):
+    def __init__(self, extra_encoders: Optional[List[EncoderT]] = None, **kwargs):
         super().__init__(**kwargs)
         self.encoders = get_encoders(extra_encoders, with_json=True)
 
@@ -239,7 +243,7 @@ class SWHJSONDecoder(json.JSONDecoder):
 
     """
 
-    def __init__(self, extra_decoders=None, **kwargs):
+    def __init__(self, extra_decoders: Optional[Dict[str, Callable]] = None, **kwargs):
         super().__init__(**kwargs)
         self.decoders = get_decoders(extra_decoders, with_json=True)
 
@@ -262,15 +266,19 @@ class SWHJSONDecoder(json.JSONDecoder):
         return self.decode_data(data), index
 
 
-def json_dumps(data: Any, extra_encoders=None) -> bytes:
+def json_dumps(data: Any, extra_encoders: Optional[List[EncoderT]] = None) -> bytes:
     return json.dumps(data, cls=SWHJSONEncoder, extra_encoders=extra_encoders).encode()
 
 
-def json_loads(data: str, extra_decoders=None) -> Any:
+def json_loads(
+    data: bytes, extra_decoders: Optional[Dict[str, Callable]] = None
+) -> Any:
     return json.loads(data, cls=SWHJSONDecoder, extra_decoders=extra_decoders)
 
 
-def json_loads_stream(data_stream: Iterable[str], extra_decoders=None) -> Iterable[Any]:
+def json_loads_stream(
+    data_stream: Iterable[str], extra_decoders: Optional[Dict[str, Callable]] = None
+) -> Iterable[Any]:
     for data in data_stream:
         yield json.loads(data, cls=SWHJSONDecoder, extra_decoders=extra_decoders)
 
@@ -301,7 +309,7 @@ def _encode_types(obj: Any, encoders: List[EncoderT] = ENCODERS) -> Any:
     return obj
 
 
-def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
+def msgpack_dumps(data: Any, extra_encoders: Optional[List[EncoderT]] = None) -> bytes:
     """Write data as a msgpack stream"""
     encode_types = _encode_types
     if extra_encoders:
@@ -316,7 +324,7 @@ def msgpack_dumps(data: Any, extra_encoders=None) -> bytes:
     )
 
 
-def ext_hook(code, data):
+def ext_hook(code: int, data: bytes) -> int:
     if code == MsgpackExtTypeCodes.LONG_INT.value:
         return int.from_bytes(data, "big")
     elif code == MsgpackExtTypeCodes.LONG_NEG_INT.value:
@@ -324,7 +332,7 @@ def ext_hook(code, data):
     raise ValueError("Unknown msgpack extended code %s" % code)
 
 
-def decode_types(obj, decoders):
+def decode_types(obj: Any, decoders: Dict[str, Callable]) -> Any:
     # Support for current encodings
     if set(obj.keys()) == {b"d", b"swhtype"}:
         decoder = decoders.get(obj[b"swhtype"])
@@ -335,7 +343,9 @@ def decode_types(obj, decoders):
     return obj
 
 
-def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
+def msgpack_loads(
+    data: bytes, extra_decoders: Optional[Dict[str, Callable]] = None
+) -> Any:
     """Read data as a msgpack stream.
 
     .. Caution::
@@ -355,7 +365,7 @@ def msgpack_loads(data: bytes, extra_decoders=None) -> Any:
 
 
 def msgpack_loads_stream(
-    data_stream: Iterable[bytes], extra_decoders=None
+    data_stream: Iterable[bytes], extra_decoders: Optional[Dict[str, Callable]] = None
 ) -> Iterable[Any]:
     """Read data as a msgpack stream.
 

@@ -14,7 +14,9 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
+    Iterable,
     List,
+    NoReturn,
     Optional,
     Tuple,
     Type,
@@ -26,6 +28,7 @@ import warnings
 from flask import Flask, Request, Response, abort, request
 import requests
 import sentry_sdk
+from tenacity import RetryCallState
 from tenacity.before_sleep import before_sleep_log
 from tenacity.wait import wait_fixed
 from werkzeug.exceptions import HTTPException
@@ -36,6 +39,7 @@ from .negotiation import Formatter as FormatterBase
 from .negotiation import Negotiator as NegotiatorBase
 from .negotiation import negotiate as _negotiate
 from .serializers import (
+    EncoderT,
     decode_response,
     decode_response_stream,
     encode_data_client,
@@ -90,24 +94,26 @@ def format_user_agent(main_version: str, *extra_parameters: str) -> str:
 
 
 class Negotiator(NegotiatorBase):
-    def best_mimetype(self):
+    def best_mimetype(self) -> str:
         return request.accept_mimetypes.best_match(
             self.accept_mimetypes, "application/json"
         )
 
-    def _abort(self, status_code, err=None):
-        return abort(status_code, err)
+    def _abort(self, status_code: int, err: Optional[str] = None) -> NoReturn:
+        abort(status_code, err)
 
 
-def negotiate(formatter_cls, *args, **kwargs):
+def negotiate(formatter_cls: Type[FormatterBase], *args, **kwargs) -> Callable:
     return _negotiate(Negotiator, formatter_cls, *args, **kwargs)
 
 
 class Formatter(FormatterBase):
-    def _make_response(self, body, content_type):
+    def _make_response(
+        self, body: Union[bytes, Iterable[bytes]], content_type: str
+    ) -> Response:
         return Response(body, content_type=content_type)
 
-    def configure(self, extra_encoders=None):
+    def configure(self, extra_encoders: Optional[List[EncoderT]] = None) -> None:
         self.extra_encoders = extra_encoders
 
 
@@ -115,7 +121,7 @@ class JSONFormatter(Formatter):
     format = "json"
     mimetypes = ["application/json"]
 
-    def render(self, obj):
+    def render(self, obj: Any) -> Union[bytes, Iterable[bytes]]:
         if isinstance(obj, types.GeneratorType):
             return (
                 (json_dumps(o, extra_encoders=self.extra_encoders) + b"\n") for o in obj
@@ -128,7 +134,7 @@ class MsgpackFormatter(Formatter):
     format = "msgpack"
     mimetypes = ["application/x-msgpack"]
 
-    def render(self, obj):
+    def render(self, obj: bytes) -> Union[bytes, Iterable[bytes]]:
         if isinstance(obj, types.GeneratorType):
             return (msgpack_dumps(o, extra_encoders=self.extra_encoders) for o in obj)
         else:
@@ -158,12 +164,13 @@ class RemoteException(Exception):
             super().__init__()
         self.response = response
 
-    def __str__(self):
+    def __str__(self) -> str:
         if (
             self.args
             and isinstance(self.args[0], dict)
             and "type" in self.args[0]
             and "args" in self.args[0]
+            and self.response is not None
         ):
             return (
                 f"<RemoteException {self.response.status_code} "
@@ -184,8 +191,8 @@ F = TypeVar("F", bound=Callable)
 
 def remote_api_endpoint(path: str, method: str = "POST") -> Callable[[F], F]:
     def dec(f: F) -> F:
-        f._endpoint_path = path  # type: ignore
-        f._method = method  # type: ignore
+        setattr(f, "_endpoint_path", path)
+        setattr(f, "_method", method)
         return f
 
     return dec
@@ -204,7 +211,7 @@ class MetaRPCClient(type):
 
     See for example :class:`swh.indexer.storage.api.client.RemoteStorage`"""
 
-    def __new__(cls, name, bases, attributes):
+    def __new__(cls, name: str, bases: tuple[type], attributes: Dict[str, Any]):
         # For each method wrapped with @remote_api_endpoint in an API backend
         # (eg. :class:`swh.indexer.storage.IndexerStorage`), add a new
         # method in RemoteStorage, with the same documentation.
@@ -223,7 +230,7 @@ class MetaRPCClient(type):
         return super().__new__(cls, name, bases, attributes)
 
     @staticmethod
-    def __add_endpoint(meth_name, meth, attributes):
+    def __add_endpoint(meth_name: str, meth: Callable, attributes: Dict[str, Any]):
         wrapped_meth = inspect.unwrap(meth)
 
         @functools.wraps(meth)  # Copy signature and doc
@@ -288,7 +295,7 @@ class RPCClient(metaclass=MetaRPCClient):
     has the same name as the error name, then the exception will
     be instantiated and raised instead of a generic RemoteException."""
 
-    extra_type_encoders: List[Tuple[type, str, Callable]] = []
+    extra_type_encoders: List[EncoderT] = []
     """Value of `extra_encoders` passed to `json_dumps` or `msgpack_dumps`
     to be able to serialize more object types."""
     extra_type_decoders: Dict[str, Callable] = {}
@@ -335,9 +342,9 @@ class RPCClient(metaclass=MetaRPCClient):
         )
         self.session.mount(self.url, adapter)
 
-        user_agent_components = [
+        user_agent_components: List[str] = [
             *self._get_module_versions(),
-            self.session.headers["User-Agent"],  # pull the python-requests version
+            str(self.session.headers["User-Agent"]),  # pull the python-requests version
             "+https://www.softwareheritage.org",  # contact information
         ]
         self.session.headers.update(
@@ -378,7 +385,7 @@ class RPCClient(metaclass=MetaRPCClient):
             setattr(self, "_get", retry(self._get))
             setattr(self, "_post", retry(self._post))
 
-    def retry_policy(self, retry_state):
+    def retry_policy(self, retry_state: RetryCallState) -> bool:
         return retry_if_exception(
             retry_state,
             lambda e: (
@@ -391,20 +398,20 @@ class RPCClient(metaclass=MetaRPCClient):
         )
 
     @classmethod
-    def _get_module_versions(cls):
+    def _get_module_versions(cls) -> List[str]:
         if not hasattr(cls, "_module_versions"):
             versions = []
             versions.append(get_distribution_version_for_class(cls))
             if cls != RPCClient:
                 versions.append(get_distribution_version_for_class(RPCClient))
-            cls._module_versions = versions
+            setattr(cls, "_module_versions", versions)
 
-        return cls._module_versions
+        return getattr(cls, "_module_versions")
 
-    def _url(self, endpoint):
+    def _url(self, endpoint: str) -> str:
         return "%s%s" % (self.url, endpoint)
 
-    def raw_verb(self, verb, endpoint, **opts):
+    def raw_verb(self, verb: str, endpoint: str, **opts) -> Any:
         if "chunk_size" in opts:
             # if the chunk_size argument has been passed, consider the user
             # also wants stream=True, otherwise, what's the point.
@@ -416,7 +423,7 @@ class RPCClient(metaclass=MetaRPCClient):
         except requests.exceptions.ConnectionError as e:
             raise self.api_exception(e)
 
-    def _post(self, endpoint, data, **opts):
+    def _post(self, endpoint: str, data: Any, **opts) -> Any:
         if isinstance(data, (abc.Iterator, abc.Generator)):
             data = (self._encode_data(x) for x in data)
         else:
@@ -437,7 +444,7 @@ class RPCClient(metaclass=MetaRPCClient):
         else:
             return self._decode_response(response)
 
-    def _encode_data(self, data):
+    def _encode_data(self, data: Any) -> bytes:
         return encode_data_client(
             data, self.content_type, extra_encoders=self.extra_type_encoders
         )
@@ -454,7 +461,7 @@ class RPCClient(metaclass=MetaRPCClient):
         else:
             return self._decode_response(response)
 
-    def _get_stream(self, endpoint, **opts):
+    def _get_stream(self, endpoint: str, **opts) -> Iterable[Any]:
         return self._get(endpoint, stream=True, **opts)
 
     def raise_for_status(self, response) -> None:
@@ -501,23 +508,27 @@ class RPCClient(metaclass=MetaRPCClient):
 
         if status_class != 2:
             raise RemoteException(
-                payload=f"API HTTP error: {status_code} {response.content}",
+                payload=f"API HTTP error: {status_code} {response.content!r}",
                 response=response,
             )
 
-    def _decode_response(self, response, check_status=True):
+    def _decode_response(
+        self, response: requests.Response, check_status: bool = True
+    ) -> Any:
         if check_status:
             self.raise_for_status(response)
         return decode_response(response, extra_decoders=self.extra_type_decoders)
 
-    def _decode_stream_response(self, response, chunk_size, check_status=True):
+    def _decode_stream_response(
+        self, response: requests.Response, chunk_size: int, check_status=True
+    ) -> Iterable[Any]:
         if check_status:
             self.raise_for_status(response)
         yield from decode_response_stream(
             response, chunk_size, extra_decoders=self.extra_type_decoders
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<{} url={}>".format(self.__class__.__name__, self.url)
 
 
@@ -528,23 +539,27 @@ class BytesRequest(Request):
     encoding_errors = "surrogateescape"
 
 
-ENCODERS: Dict[str, Callable[[Any], Union[bytes, str]]] = {
+ENCODERS: Dict[str, Callable[[Any, Optional[List[EncoderT]]], bytes]] = {
     "application/x-msgpack": msgpack_dumps,
     "application/json": json_dumps,
 }
 
 
 def encode_data_server(
-    data, content_type="application/x-msgpack", extra_type_encoders=None
-):
-    encoded_data = ENCODERS[content_type](data, extra_encoders=extra_type_encoders)
+    data: Any,
+    content_type: str = "application/x-msgpack",
+    extra_type_encoders: Optional[List[EncoderT]] = None,
+) -> Response:
+    encoded_data = ENCODERS[content_type](data, extra_type_encoders)
     return Response(
         encoded_data,
         mimetype=content_type,
     )
 
 
-def decode_request(request, extra_decoders=None):
+def decode_request(
+    request: Request, extra_decoders: Optional[Dict[str, Callable]] = None
+) -> Any:
     content_type = request.mimetype
     data = request.get_data()
     if not data:
@@ -562,7 +577,7 @@ def decode_request(request, extra_decoders=None):
 
 def error_handler(
     exception: BaseException, encoder=encode_data_server, status_code: int = 500
-):
+) -> Response:
     """Error handler to be registered using flask's error-handling decorator
     ``app.errorhandler``.
 
@@ -595,10 +610,10 @@ class RPCServerApp(Flask):
     a function that decodes the request and sends it to the backend object
     provided by the factory.
 
-    :param Any backend_class:
+    :param backend_class:
         The class of the backend, which will be analyzed to look
         for API endpoints.
-    :param Optional[Callable[[], backend_class]] backend_factory:
+    :param backend_factory:
         A function with no argument that returns an instance of
         `backend_class`. If unset, defaults to calling `backend_class`
         constructor directly.
@@ -643,7 +658,13 @@ class RPCServerApp(Flask):
     If a raised exception is an instance of a subclass of two classes defined here,
     the most specific class wins, according Flask's MRO-based resolution."""
 
-    def __init__(self, *args, backend_class=None, backend_factory=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        backend_class: Optional[Any] = None,
+        backend_factory: Optional[Callable[[], Any]] = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.add_backend_class(backend_class, backend_factory)
         self._register_error_handlers()
@@ -663,7 +684,11 @@ class RPCServerApp(Flask):
                 exception, functools.partial(error_handler, status_code=status_code)
             )
 
-    def add_backend_class(self, backend_class=None, backend_factory=None):
+    def add_backend_class(
+        self,
+        backend_class: Optional[Any],
+        backend_factory: Optional[Callable[[], Any]] = None,
+    ) -> None:
         if backend_class is None and backend_factory is not None:
             raise ValueError(
                 "backend_factory should only be provided if backend_class is"
@@ -675,13 +700,15 @@ class RPCServerApp(Flask):
                 if hasattr(meth, "_endpoint_path"):
                     self.__add_endpoint(meth_name, meth, backend_factory)
 
-    def __add_endpoint(self, meth_name, meth, backend_factory):
+    def __add_endpoint(
+        self, meth_name: str, meth: Callable, backend_factory: Callable[[], Any]
+    ) -> None:
         from flask import request
 
         @negotiate(MsgpackFormatter, extra_encoders=self.extra_type_encoders)
         @negotiate(JSONFormatter, extra_encoders=self.extra_type_encoders)
         @functools.wraps(meth)  # Copy signature and doc
-        def f():
+        def f() -> Any:
             # Call the actual code
             pre_hook = getattr(self, f"pre_{meth_name}", None)
             post_hook = getattr(self, f"post_{meth_name}", None)
@@ -700,7 +727,7 @@ class RPCServerApp(Flask):
         for decorator in self.method_decorators:
             f = decorator(f)
 
-        self.route("/" + meth._endpoint_path, methods=["POST"])(f)
+        self.route("/" + getattr(meth, "_endpoint_path"), methods=["POST"])(f)
 
     def setup_psycopg_errorhandlers(self) -> None:
         """Deprecated method; error handlers are now setup in the constructor."""
