@@ -29,12 +29,14 @@ testing_core = {file = "requirements-test.txt"}
 logging = {file = ["requirements-logging.txt"]}
 db = {file = ["requirements-db.txt"]}
 http = {file = "requirements-http.txt"}
+s3 = {file = "requirements-s3.txt"}
 # kitchen sink, please do not use
 testing = {file = [
         "requirements-test.txt",
         "requirements-logging.txt",
         "requirements-http.txt",
-        "requirements-db.txt"]}
+        "requirements-db.txt",
+        "requirements-s3.txt"]}
 
 [project.entry-points.console_scripts]
 "swh" = "swh.core.cli:main"

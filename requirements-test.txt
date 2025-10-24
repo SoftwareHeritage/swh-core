@@ -1,16 +1,21 @@
+boto3-stubs
+botocore-stubs
 celery-types
 hypothesis >= 3.11.0
+moto[server, s3]
 msgpack-types
+psycopg-pool
 pytest >= 8.1
 pytest-mock
 pytest-postgresql > 5
 pytz
 requests-mock
 swh.model
+systemd-python
+types-boto3[s3]
 types-deprecated
 types-pytz
 types-pyyaml
 types-requests
 types-setuptools
-systemd-python
-psycopg-pool
+types-tqdm
