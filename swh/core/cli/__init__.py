@@ -136,12 +136,13 @@ def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
 
     from swh.core.logging import logging_configure
 
-    from ..sentry import init_sentry
-
     signal.signal(signal.SIGTERM, clean_exit_on_signal)
     signal.signal(signal.SIGINT, clean_exit_on_signal)
 
-    init_sentry(sentry_dsn=sentry_dsn, debug=sentry_debug)
+    if sentry_dsn is not None:
+        from ..sentry import init_sentry
+
+        init_sentry(sentry_dsn=sentry_dsn, debug=sentry_debug)
 
     set_default_loglevel = logging_configure(log_levels, log_config)
 

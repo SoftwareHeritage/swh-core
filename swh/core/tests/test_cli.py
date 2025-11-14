@@ -117,12 +117,12 @@ def test_command(swhmain, mocker):
 
     runner = CliRunner()
     sentry_sdk_init = mocker.patch("sentry_sdk.init")
-    result = runner.invoke(swhmain, ["test"])
+    result = runner.invoke(swhmain, ["--sentry-dsn", "foo", "test"])
     sentry_sdk_init.assert_called_once_with(
-        dsn=None,
+        dsn="foo",
         debug=False,
         integrations=[],
-        release="0.0.0",
+        release=None,
         environment=None,
         traces_sample_rate=None,
     )
