@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2025 zimoun and the Software Heritage developers
+# Copyright (C) 2022-2025  The Software Heritage developers and zimoun
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
