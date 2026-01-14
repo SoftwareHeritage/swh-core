@@ -52,3 +52,18 @@ repos:
         stages: [pre-push]
         language: python
         additional_dependencies: [twine, build]
+
+  - repo: https://github.com/nanoufo/copyright-hook
+    rev: v1.1.0
+    hooks:
+      - id: update-copyright
+        args: [--required]
+        files: ^.*\.py$
+        exclude: >
+          (?x)^(
+            .*__init__.py|
+            docs/conf.py|
+            swh/__main__.py|
+            conftest.py|
+            swh/core/api_async.py
+          )$
