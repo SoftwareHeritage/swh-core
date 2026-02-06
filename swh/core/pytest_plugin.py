@@ -50,6 +50,8 @@ def get_response_cb(
     - the local file name is the path part of the URL with path hierarchy
       markers (aka '/') replaced by '_'; leading/trailing ones are stripped
 
+    - the local file name for a single path hierarchy marker (aka '/') is '_'
+
     Eg. if you use the requests_mock fixture in your test file as:
 
         requests_mock.get('https?://example.org', body=get_response_cb)
@@ -71,6 +73,14 @@ def get_response_cb(
     will look for the content of the response in:
 
         datadir/http_example.org/path_to_resource,a=b,c=d
+
+    or a call requests.get like:
+
+        requests.get('http://example.org/')
+
+    will look for the content of the response in:
+
+        datadir/http_example.org/_
 
     Args:
         request: input HTTP request
@@ -106,6 +116,8 @@ def get_response_cb(
     filename = filename.replace("/", "_")
     if url.query:
         filename += "," + url.query.replace("&", ",")
+    if not filename:
+        filename = "_"
 
     filepath = path.join(datadir, dirname, filename)
     if visits is not None:

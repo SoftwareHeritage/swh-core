@@ -1,4 +1,4 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -64,6 +64,12 @@ def test_get_response_cb_with_visits(requests_mock_datadir_visits):
     response = requests.get("https://example.com/file.json")
     assert not response.ok
     assert response.status_code == 404
+
+
+def test_get_response_cb_root_url(requests_mock_datadir):
+    response = requests.get("https://example.com/")
+    assert response.ok
+    assert response.text.strip() == "something"
 
 
 def test_get_response_cb_no_visit(requests_mock_datadir):
