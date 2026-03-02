@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2025  The Software Heritage developers
+# Copyright (C) 2018-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -44,7 +44,7 @@ class RPCTest:
     def raise_expectedexc(self):
         raise ExpectedException("that was expected")
 
-    @remote_api_endpoint("stream_endpoint")
+    @remote_api_endpoint("stream_endpoint", stream=True)
     def stream_endpoint(self):
         for i in range(1000):
             yield i
@@ -77,7 +77,7 @@ class RPCTest2:
     def raise_expectedexc(self):
         return "nothing"
 
-    @remote_api_endpoint("stream_endpoint")
+    @remote_api_endpoint("stream_endpoint", stream=True)
     def stream_endpoint(self):
         pass
 

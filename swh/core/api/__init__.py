@@ -189,10 +189,13 @@ class TransientRemoteException(RemoteException):
 F = TypeVar("F", bound=Callable)
 
 
-def remote_api_endpoint(path: str, method: str = "POST") -> Callable[[F], F]:
+def remote_api_endpoint(
+    path: str, method: str = "POST", **requests_opts
+) -> Callable[[F], F]:
     def dec(f: F) -> F:
         setattr(f, "_endpoint_path", path)
         setattr(f, "_method", method)
+        setattr(f, "_requests_options", requests_opts)
         return f
 
     return dec
@@ -230,7 +233,11 @@ class MetaRPCClient(type):
         return super().__new__(cls, name, bases, attributes)
 
     @staticmethod
-    def __add_endpoint(meth_name: str, meth: Callable, attributes: Dict[str, Any]):
+    def __add_endpoint(
+        meth_name: str,
+        meth: Callable,
+        attributes: Dict[str, Any],
+    ):
         wrapped_meth = inspect.unwrap(meth)
 
         @functools.wraps(meth)  # Copy signature and doc
@@ -244,7 +251,7 @@ class MetaRPCClient(type):
             post_data.pop("db", None)
 
             # Send the request.
-            return self._post(meth._endpoint_path, post_data)
+            return self._post(meth._endpoint_path, post_data, **meth._requests_options)
 
         if meth_name not in attributes:
             attributes[meth_name] = meth_
@@ -428,7 +435,6 @@ class RPCClient(metaclass=MetaRPCClient):
             data = (self._encode_data(x) for x in data)
         else:
             data = self._encode_data(data)
-        chunk_size = opts.pop("chunk_size", self.chunk_size)
         response = self.raw_verb(
             "post",
             endpoint,
@@ -440,6 +446,7 @@ class RPCClient(metaclass=MetaRPCClient):
             **opts,
         )
         if opts.get("stream") or response.headers.get("transfer-encoding") == "chunked":
+            chunk_size = opts.pop("chunk_size", self.chunk_size)
             return self._decode_stream_response(response, chunk_size)
         else:
             return self._decode_response(response)
@@ -457,6 +464,7 @@ class RPCClient(metaclass=MetaRPCClient):
             "get", endpoint, headers={"accept": self.content_type}, **opts
         )
         if opts.get("stream") or response.headers.get("transfer-encoding") == "chunked":
+            chunk_size = opts.pop("chunk_size", self.chunk_size)
             return self._decode_stream_response(response, chunk_size)
         else:
             return self._decode_response(response)
