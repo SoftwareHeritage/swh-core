@@ -111,7 +111,11 @@ class Formatter(FormatterBase):
     def _make_response(
         self, body: Union[bytes, Iterable[bytes]], content_type: str
     ) -> Response:
-        return Response(body, content_type=content_type)
+        headers = None
+        if isinstance(body, types.GeneratorType):
+            # prevent nginx to buffer streamed response
+            headers = {"X-Accel-Buffering": "no"}
+        return Response(body, content_type=content_type, headers=headers)
 
     def configure(self, extra_encoders: Optional[List[EncoderT]] = None) -> None:
         self.extra_encoders = extra_encoders
