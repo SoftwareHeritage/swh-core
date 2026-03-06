@@ -310,8 +310,19 @@ class RPCTestAdapter(BaseAdapter):
 
         # Set encoding.
         response.encoding = get_encoding_from_headers(response.headers)
-        response.raw = resp
-        response.reason = response.raw.status
+
+        class ResponseStream:
+            def __init__(self, response):
+                self.response = response
+
+            def read(self, size):
+                try:
+                    return next(self.response)
+                except StopIteration:
+                    return b""
+
+        response.raw = ResponseStream(resp.response)
+        response.reason = resp.status
 
         if isinstance(req.url, bytes):
             response.url = req.url.decode("utf-8")
@@ -321,7 +332,6 @@ class RPCTestAdapter(BaseAdapter):
         # Give the Response some context.
         response.request = req
         response.connection = self
-        response._content = resp.data
 
         return response
 
