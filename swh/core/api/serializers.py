@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2025  The Software Heritage developers
+# Copyright (C) 2015-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -381,6 +381,7 @@ def msgpack_loads_stream(
         ext_hook=ext_hook,
         strict_map_key=False,
         timestamp=3,  # convert Timestamp in datetime objects (tz UTC)
+        max_buffer_size=200 * 1024 * 1024,
     )
 
     for data in data_stream:
