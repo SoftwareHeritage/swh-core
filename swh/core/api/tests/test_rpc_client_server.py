@@ -49,6 +49,13 @@ class RPCTest:
         for i in range(1000):
             yield i
 
+    @remote_api_endpoint("stream_endpoint_exception", stream=True)
+    def stream_endpoint_exception(self):
+        for i in range(1000):
+            if i == 500:
+                raise ValueError("error")
+            yield i
+
 
 # this class is used on the client part. We cannot inherit from RPCTest
 # because the automagic metaclass based code that generates the RPCClient
@@ -79,6 +86,10 @@ class RPCTest2:
 
     @remote_api_endpoint("stream_endpoint", stream=True)
     def stream_endpoint(self):
+        pass
+
+    @remote_api_endpoint("stream_endpoint_exception", stream=True)
+    def stream_endpoint_exception(self):
         pass
 
 
@@ -185,3 +196,20 @@ def test_api_endpoint_stream_response(swh_rpc_client):
     res = swh_rpc_client.stream_endpoint()
     assert isinstance(res, types.GeneratorType)
     assert list(res) == list(range(1000))
+
+
+def test_api_endpoint_stream_response_exception(swh_rpc_client):
+    res = swh_rpc_client.stream_endpoint_exception()
+    assert isinstance(res, types.GeneratorType)
+    partial_res = []
+
+    with pytest.raises(RemoteException) as exc_info:
+        for i in res:
+            partial_res.append(i)
+
+    assert partial_res == list(range(500))
+
+    passed_exc = exc_info.value.args[0]
+
+    assert isinstance(passed_exc, ValueError)
+    assert passed_exc.args[0] == "error"

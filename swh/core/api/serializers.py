@@ -280,7 +280,12 @@ def json_loads_stream(
     data_stream: Iterable[str], extra_decoders: Optional[Dict[str, Callable]] = None
 ) -> Iterable[Any]:
     for data in data_stream:
-        yield json.loads(data, cls=SWHJSONDecoder, extra_decoders=extra_decoders)
+        obj = json.loads(data, cls=SWHJSONDecoder, extra_decoders=extra_decoders)
+        if isinstance(obj, BaseException):
+            from swh.core.api import RemoteException
+
+            raise RemoteException(payload=obj)
+        yield obj
 
 
 def _encode_types(obj: Any, encoders: List[EncoderT] = ENCODERS) -> Any:
@@ -387,4 +392,8 @@ def msgpack_loads_stream(
     for data in data_stream:
         unpacker.feed(data)
         for obj in unpacker:
+            if isinstance(obj, BaseException):
+                from swh.core.api import RemoteException
+
+                raise RemoteException(payload=obj)
             yield obj

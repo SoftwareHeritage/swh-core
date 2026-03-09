@@ -127,9 +127,17 @@ class JSONFormatter(Formatter):
 
     def render(self, obj: Any) -> Union[bytes, Iterable[bytes]]:
         if isinstance(obj, types.GeneratorType):
-            return (
-                (json_dumps(o, extra_encoders=self.extra_encoders) + b"\n") for o in obj
-            )
+
+            def json_stream():
+                try:
+                    yield from (
+                        (json_dumps(o, extra_encoders=self.extra_encoders) + b"\n")
+                        for o in obj
+                    )
+                except Exception as exc:
+                    yield (json_dumps(exc, extra_encoders=self.extra_encoders) + b"\n")
+
+            return json_stream()
         else:
             return json_dumps(obj, extra_encoders=self.extra_encoders)
 
@@ -140,7 +148,17 @@ class MsgpackFormatter(Formatter):
 
     def render(self, obj: bytes) -> Union[bytes, Iterable[bytes]]:
         if isinstance(obj, types.GeneratorType):
-            return (msgpack_dumps(o, extra_encoders=self.extra_encoders) for o in obj)
+
+            def msgpack_stream():
+                try:
+                    yield from (
+                        msgpack_dumps(o, extra_encoders=self.extra_encoders)
+                        for o in obj
+                    )
+                except Exception as exc:
+                    yield msgpack_dumps(exc, extra_encoders=self.extra_encoders)
+
+            return msgpack_stream()
         else:
             return msgpack_dumps(obj, extra_encoders=self.extra_encoders)
 
@@ -532,10 +550,8 @@ class RPCClient(metaclass=MetaRPCClient):
         return decode_response(response, extra_decoders=self.extra_type_decoders)
 
     def _decode_stream_response(
-        self, response: requests.Response, chunk_size: int, check_status=True
+        self, response: requests.Response, chunk_size: int
     ) -> Iterable[Any]:
-        if check_status:
-            self.raise_for_status(response)
         yield from decode_response_stream(
             response, chunk_size, extra_decoders=self.extra_type_decoders
         )
