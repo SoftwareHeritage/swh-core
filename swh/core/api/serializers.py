@@ -9,6 +9,7 @@ import datetime
 from enum import Enum
 from functools import partial
 import json
+import time
 import traceback
 import types
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
@@ -159,17 +160,24 @@ def decode_response(
 
 
 def decode_response_stream(
-    response: Response, chunk_size, extra_decoders: Optional[Dict[str, Callable]] = None
+    response: Response,
+    chunk_size,
+    extra_decoders: Optional[Dict[str, Callable]] = None,
+    stream_timeout: Optional[float] = None,
 ) -> Iterable[Any]:
     content_type = response.headers["content-type"]
 
     if content_type.startswith("application/x-msgpack"):
         yield from msgpack_loads_stream(
-            response.iter_content(chunk_size), extra_decoders=extra_decoders
+            response.iter_content(chunk_size),
+            extra_decoders=extra_decoders,
+            stream_timeout=stream_timeout,
         )
     elif content_type.startswith("application/json"):
         yield from json_loads_stream(
-            response.iter_lines(decode_unicode=True), extra_decoders=extra_decoders
+            response.iter_lines(decode_unicode=True),
+            extra_decoders=extra_decoders,
+            stream_timeout=stream_timeout,
         )
     elif content_type.startswith("text/"):
         yield response.text
@@ -277,8 +285,11 @@ def json_loads(
 
 
 def json_loads_stream(
-    data_stream: Iterable[str], extra_decoders: Optional[Dict[str, Callable]] = None
+    data_stream: Iterable[str],
+    extra_decoders: Optional[Dict[str, Callable]] = None,
+    stream_timeout: Optional[float] = None,
 ) -> Iterable[Any]:
+    start_time = time.monotonic()
     for data in data_stream:
         obj = json.loads(data, cls=SWHJSONDecoder, extra_decoders=extra_decoders)
         if isinstance(obj, BaseException):
@@ -286,6 +297,14 @@ def json_loads_stream(
 
             raise RemoteException(payload=obj)
         yield obj
+        if stream_timeout is not None:
+            elapsed_time = time.monotonic() - start_time
+            if elapsed_time > stream_timeout:
+                from swh.core.api import StreamTimeout
+
+                raise StreamTimeout(
+                    f"Processing of stream response was aborted after {elapsed_time} seconds"
+                )
 
 
 def _encode_types(obj: Any, encoders: List[EncoderT] = ENCODERS) -> Any:
@@ -370,7 +389,9 @@ def msgpack_loads(
 
 
 def msgpack_loads_stream(
-    data_stream: Iterable[bytes], extra_decoders: Optional[Dict[str, Callable]] = None
+    data_stream: Iterable[bytes],
+    extra_decoders: Optional[Dict[str, Callable]] = None,
+    stream_timeout: Optional[float] = None,
 ) -> Iterable[Any]:
     """Read data as a msgpack stream.
 
@@ -389,6 +410,7 @@ def msgpack_loads_stream(
         max_buffer_size=200 * 1024 * 1024,
     )
 
+    start_time = time.monotonic()
     for data in data_stream:
         unpacker.feed(data)
         for obj in unpacker:
@@ -397,3 +419,11 @@ def msgpack_loads_stream(
 
                 raise RemoteException(payload=obj)
             yield obj
+        if stream_timeout is not None:
+            elapsed_time = time.monotonic() - start_time
+            if elapsed_time > stream_timeout:
+                from swh.core.api import StreamTimeout
+
+                raise StreamTimeout(
+                    f"Processing of stream response was aborted after {elapsed_time} seconds"
+                )

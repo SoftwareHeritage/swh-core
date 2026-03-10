@@ -11,6 +11,7 @@ from swh.core.api import (
     RemoteException,
     RPCClient,
     RPCServerApp,
+    StreamTimeout,
     encode_data_server,
     error_handler,
     remote_api_endpoint,
@@ -56,6 +57,15 @@ class RPCTest:
                 raise ValueError("error")
             yield i
 
+    @remote_api_endpoint(
+        "stream_endpoint_infinite_loop", stream=True, stream_timeout=0.5
+    )
+    def stream_endpoint_infinite_loop(self):
+        i = 0
+        while True:
+            yield i
+            i += 1
+
 
 # this class is used on the client part. We cannot inherit from RPCTest
 # because the automagic metaclass based code that generates the RPCClient
@@ -90,6 +100,12 @@ class RPCTest2:
 
     @remote_api_endpoint("stream_endpoint_exception", stream=True)
     def stream_endpoint_exception(self):
+        pass
+
+    @remote_api_endpoint(
+        "stream_endpoint_infinite_loop", stream=True, stream_timeout=0.5
+    )
+    def stream_endpoint_infinite_loop(self):
         pass
 
 
@@ -213,3 +229,15 @@ def test_api_endpoint_stream_response_exception(swh_rpc_client):
 
     assert isinstance(passed_exc, ValueError)
     assert passed_exc.args[0] == "error"
+
+
+def test_api_endpoint_stream_response_with_timeout(swh_rpc_client):
+    res = swh_rpc_client.stream_endpoint_infinite_loop()
+    assert isinstance(res, types.GeneratorType)
+
+    partial_res = []
+    with pytest.raises(StreamTimeout):
+        for i in res:
+            partial_res.append(i)
+
+    assert partial_res

@@ -208,15 +208,27 @@ class TransientRemoteException(RemoteException):
     """
 
 
+class StreamTimeout(Exception):
+    """Exception raised when the processing time for a client reading a
+    stream response exceeds a given timeout value.
+    """
+
+    pass
+
+
 F = TypeVar("F", bound=Callable)
 
 
 def remote_api_endpoint(
-    path: str, method: str = "POST", **requests_opts
+    path: str,
+    method: str = "POST",
+    stream_timeout: Optional[float] = None,
+    **requests_opts,
 ) -> Callable[[F], F]:
     def dec(f: F) -> F:
         setattr(f, "_endpoint_path", path)
         setattr(f, "_method", method)
+        setattr(f, "_stream_timeout", stream_timeout)
         setattr(f, "_requests_options", requests_opts)
         return f
 
@@ -273,7 +285,12 @@ class MetaRPCClient(type):
             post_data.pop("db", None)
 
             # Send the request.
-            return self._post(meth._endpoint_path, post_data, **meth._requests_options)
+            return self._post(
+                meth._endpoint_path,
+                post_data,
+                meth._stream_timeout,
+                **meth._requests_options,
+            )
 
         if meth_name not in attributes:
             attributes[meth_name] = meth_
@@ -440,19 +457,25 @@ class RPCClient(metaclass=MetaRPCClient):
     def _url(self, endpoint: str) -> str:
         return "%s%s" % (self.url, endpoint)
 
-    def raw_verb(self, verb: str, endpoint: str, **opts) -> Any:
-        if "chunk_size" in opts:
+    def raw_verb(self, verb: str, endpoint: str, **requests_opts) -> Any:
+        if "chunk_size" in requests_opts:
             # if the chunk_size argument has been passed, consider the user
             # also wants stream=True, otherwise, what's the point.
-            opts["stream"] = True
-        if self.timeout and "timeout" not in opts:
-            opts["timeout"] = self.timeout
+            requests_opts["stream"] = True
+        if self.timeout and "timeout" not in requests_opts:
+            requests_opts["timeout"] = self.timeout
         try:
-            return getattr(self.session, verb)(self._url(endpoint), **opts)
+            return getattr(self.session, verb)(self._url(endpoint), **requests_opts)
         except requests.exceptions.ConnectionError as e:
             raise self.api_exception(e)
 
-    def _post(self, endpoint: str, data: Any, **opts) -> Any:
+    def _post(
+        self,
+        endpoint: str,
+        data: Any,
+        stream_timeout: Optional[float] = None,
+        **requests_opts,
+    ) -> Any:
         if isinstance(data, (abc.Iterator, abc.Generator)):
             data = (self._encode_data(x) for x in data)
         else:
@@ -465,11 +488,16 @@ class RPCClient(metaclass=MetaRPCClient):
                 "content-type": self.content_type,
                 "accept": self.content_type,
             },
-            **opts,
+            **requests_opts,
         )
-        if opts.get("stream") or response.headers.get("transfer-encoding") == "chunked":
-            chunk_size = opts.pop("chunk_size", self.chunk_size)
-            return self._decode_stream_response(response, chunk_size)
+        if (
+            requests_opts.get("stream")
+            or response.headers.get("transfer-encoding") == "chunked"
+        ):
+            chunk_size = requests_opts.pop("chunk_size", self.chunk_size)
+            return self._decode_stream_response(
+                response, chunk_size, stream_timeout=stream_timeout
+            )
         else:
             return self._decode_response(response)
 
@@ -480,14 +508,20 @@ class RPCClient(metaclass=MetaRPCClient):
 
     _post_stream = _post
 
-    def _get(self, endpoint, **opts):
-        chunk_size = opts.pop("chunk_size", self.chunk_size)
+    def _get(
+        self, endpoint: str, stream_timeout: Optional[float] = None, **requests_opts
+    ) -> Any:
         response = self.raw_verb(
-            "get", endpoint, headers={"accept": self.content_type}, **opts
+            "get", endpoint, headers={"accept": self.content_type}, **requests_opts
         )
-        if opts.get("stream") or response.headers.get("transfer-encoding") == "chunked":
-            chunk_size = opts.pop("chunk_size", self.chunk_size)
-            return self._decode_stream_response(response, chunk_size)
+        if (
+            requests_opts.get("stream")
+            or response.headers.get("transfer-encoding") == "chunked"
+        ):
+            chunk_size = requests_opts.pop("chunk_size", self.chunk_size)
+            return self._decode_stream_response(
+                response, chunk_size, stream_timeout=stream_timeout
+            )
         else:
             return self._decode_response(response)
 
@@ -550,10 +584,16 @@ class RPCClient(metaclass=MetaRPCClient):
         return decode_response(response, extra_decoders=self.extra_type_decoders)
 
     def _decode_stream_response(
-        self, response: requests.Response, chunk_size: int
+        self,
+        response: requests.Response,
+        chunk_size: int,
+        stream_timeout: Optional[float] = None,
     ) -> Iterable[Any]:
         yield from decode_response_stream(
-            response, chunk_size, extra_decoders=self.extra_type_decoders
+            response,
+            chunk_size,
+            extra_decoders=self.extra_type_decoders,
+            stream_timeout=stream_timeout,
         )
 
     def __repr__(self) -> str:
