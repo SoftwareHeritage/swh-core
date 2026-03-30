@@ -235,8 +235,9 @@ class S3Downloader:
                         relative_path.name[:-5],
                         relative_path,
                     )
-            if isinstance(e, KeyboardInterrupt):
-                raise
+            if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                # ensure to terminate with error on keyboard interrupt
+                raise SystemExit(1)
             return False
         return True
 
