@@ -1,4 +1,4 @@
-# Copyright (C) 2025  The Software Heritage developers
+# Copyright (C) 2025-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -221,7 +221,7 @@ class S3Downloader:
 
             self.post_downloads()
 
-        except BaseException:
+        except BaseException as e:
             logger.exception("Error occurred while downloading")
             # notify download threads to immediately terminate
             shutdown_event.set()
@@ -235,6 +235,8 @@ class S3Downloader:
                         relative_path.name[:-5],
                         relative_path,
                     )
+            if isinstance(e, KeyboardInterrupt):
+                raise
             return False
         return True
 
