@@ -178,6 +178,11 @@ class S3Downloader:
 
         return relative_path
 
+    def _local_path_size(self) -> int:
+        return sum(
+            f.stat().st_size for f in Path(self.local_path).glob("**/*") if f.is_file()
+        )
+
     def download(
         self,
         progress_percent_cb: Callable[[int], None] = lambda _: None,
@@ -205,13 +210,22 @@ class S3Downloader:
         try:
             # recursively copy local files to S3
             objects = list(self.bucket.objects.filter(Prefix=self.prefix))
-            with tqdm.tqdm(total=len(objects), desc="Downloading") as progress:
+            objects_total_size = sum(o.size for o in objects)
+            with tqdm.tqdm(
+                total=objects_total_size,
+                desc="Downloading",
+                unit="iB",
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as progress:
                 not_done = futures = {
                     executor.submit(
                         self._download_file, obj.key, shutdown_event, obj=obj
                     )
                     for obj in self.filter_objects(objects)
                 }
+                last_local_path_size = self._local_path_size()
+                progress.update(last_local_path_size)
                 while not_done:
                     # poll future states every second in order to abort downloads
                     # on first detected error
@@ -220,8 +234,10 @@ class S3Downloader:
                         timeout=1,
                         return_when=concurrent.futures.FIRST_COMPLETED,
                     )
+                    local_path_size = self._local_path_size()
+                    progress.update(local_path_size - last_local_path_size)
+                    last_local_path_size = local_path_size
                     for future in done:
-                        progress.update()
                         progress_percent_cb(int(progress.n * 100 / progress.total))
                         progress_status_cb(f"Downloaded {future.result()}")
 
