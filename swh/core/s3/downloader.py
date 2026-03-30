@@ -91,6 +91,7 @@ class S3Downloader:
         shutdown_event: Optional[threading.Event] = None,
         local_file_path: Optional[Path] = None,
         prefix: Optional[str] = None,
+        obj: Optional[ObjectSummary] = None,
     ) -> str:
 
         prefix = prefix or self.prefix
@@ -102,9 +103,14 @@ class S3Downloader:
 
         local_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # fetch size of object to download
-        object_metadata = self.client.head_object(Bucket=self.bucket_name, Key=obj_key)
-        file_size = object_metadata["ContentLength"]
+        if obj is not None:
+            file_size = obj.size
+        else:
+            # fetch size of object to download
+            object_metadata = self.client.head_object(
+                Bucket=self.bucket_name, Key=obj_key
+            )
+            file_size = object_metadata["ContentLength"]
 
         file_part_path = Path(str(local_file_path) + ".part")
 
@@ -119,7 +125,7 @@ class S3Downloader:
                 )
                 local_file_path.unlink()
                 return self._download_file(
-                    obj_key, shutdown_event, local_file_path, prefix
+                    obj_key, shutdown_event, local_file_path, prefix, obj=obj
                 )
 
             logger.debug("File %s already downloaded, nothing to do", obj_key)
@@ -201,7 +207,9 @@ class S3Downloader:
             objects = list(self.bucket.objects.filter(Prefix=self.prefix))
             with tqdm.tqdm(total=len(objects), desc="Downloading") as progress:
                 not_done = futures = {
-                    executor.submit(self._download_file, obj.key, shutdown_event)
+                    executor.submit(
+                        self._download_file, obj.key, shutdown_event, obj=obj
+                    )
                     for obj in self.filter_objects(objects)
                 }
                 while not_done:
