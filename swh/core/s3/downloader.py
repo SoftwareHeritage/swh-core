@@ -7,14 +7,18 @@ from __future__ import annotations
 
 import concurrent
 import logging
+import math
+from operator import attrgetter
 from pathlib import Path
+import shutil
 import threading
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+import time
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Set
 
 if TYPE_CHECKING:
     from types_boto3_s3.service_resource import ObjectSummary
 
-CHUNK_SIZE = 102400
+STREAM_CHUNK_SIZE = 256 * 1024  # 256 Kib
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +33,9 @@ class S3Downloader:
         local_path: path of directory where files will be downloaded
         s3_url: URL of directory in a S3 bucket (``s3://<bucket_name>/<path>/``)
         parallelism: maximum number of threads for downloading files
+        multipart_download_chunk_size: if a file to download has its size greater than
+            that value (default to 1Gib), it will be downloaded concurrently by chunks
+            of that size and re-assembled afterwards as it improves download time
 
     Example of use::
 
@@ -51,6 +58,7 @@ class S3Downloader:
         local_path: Path,
         s3_url: str,
         parallelism: int = 5,
+        multipart_download_chunk_size: int = 1024 * 1024 * 1024,  # 1Gib
     ) -> None:
 
         if not s3_url.startswith("s3://"):
@@ -81,6 +89,10 @@ class S3Downloader:
         self.s3_url = s3_url
         self.bucket_name, self.prefix = self.s3_url[len("s3://") :].split("/", 1)
         self.parallelism = parallelism
+        self.multipart_download_chunk_size = multipart_download_chunk_size
+        self.next_chunk_to_write: Dict[str, int] = {}
+        self.file_size: Dict[str, int] = {}
+        self.chunks_write_lock = threading.Lock()
 
         self.bucket = self.s3.Bucket(self.bucket_name)
 
@@ -92,6 +104,7 @@ class S3Downloader:
         local_file_path: Optional[Path] = None,
         prefix: Optional[str] = None,
         obj: Optional[ObjectSummary] = None,
+        chunk_id: Optional[int] = None,
     ) -> str:
 
         prefix = prefix or self.prefix
@@ -112,8 +125,6 @@ class S3Downloader:
             )
             file_size = object_metadata["ContentLength"]
 
-        file_part_path = Path(str(local_file_path) + ".part")
-
         if local_file_path.exists():
             # file already downloaded, we check if it has the correct size and
             # trigger a new download if it is not
@@ -128,34 +139,76 @@ class S3Downloader:
                     obj_key, shutdown_event, local_file_path, prefix, obj=obj
                 )
 
-            logger.debug("File %s already downloaded, nothing to do", obj_key)
+            if chunk_id is None:
+                logger.debug("File %s already downloaded, nothing to do", obj_key)
+            else:
+                logger.debug(
+                    "File %s already downloaded, no need to download chunk %s",
+                    obj_key,
+                    chunk_id,
+                )
+            return relative_path
 
         # download or resume download of a file
         elif self.can_download_file(relative_path, local_file_path):
-            get_object_kwargs: Dict[str, Any] = {
-                "Bucket": self.bucket_name,
-                "Key": obj_key,
-            }
-            if file_part_path.exists():
+            local_chunk_file = None
+            if chunk_id is not None:
+                range_start = chunk_id * self.multipart_download_chunk_size
+                range_end = min(
+                    (chunk_id + 1) * self.multipart_download_chunk_size, file_size
+                )
+                local_chunk_file = self._chunk_file_path(local_file_path, chunk_id)
+                file_part_path = Path(str(local_chunk_file) + ".part")
+            else:
+                range_start = 0
+                range_end = file_size
+                file_part_path = Path(str(local_file_path) + ".part")
+            download_size = range_end - range_start
+
+            if local_chunk_file and local_chunk_file.exists():
+                # chunk file already downloaded, we check if it has the correct size and
+                # trigger a new download if it is not
+                if local_chunk_file.stat().st_size != download_size:
+                    local_chunk_file.unlink()
+                    return self._download_file(
+                        obj_key,
+                        shutdown_event,
+                        local_file_path,
+                        prefix,
+                        obj=obj,
+                        chunk_id=chunk_id,
+                    )
+                logger.debug(
+                    "Chunk file %s already downloaded, nothing to do",
+                    local_chunk_file.name,
+                )
+                return local_chunk_file.name
+            elif file_part_path.exists():
                 # resume previous download that failed by fetching only the missing bytes
-                logger.debug("File %s was partially downloaded", obj_key)
+                filename = file_part_path.name[: -len(".part")]
+                logger.debug("File %s was partially downloaded", filename)
                 file_part_size = file_part_path.stat().st_size
                 logger.debug(
                     "Resuming download of %s from byte %s",
-                    obj_key,
+                    filename,
                     file_part_size,
                 )
-                range_ = f"bytes={file_part_size}-{file_size}"
-                assert file_part_size <= file_size, f"range {range_} is invalid"
-                get_object_kwargs["Range"] = range_
+                range_start += file_part_size
             else:
                 file_part_size = 0
-                logger.debug("Downloading file %s", obj_key)
+                logger.debug("Downloading file %s", file_part_path.name)
 
-            if file_part_size < file_size:
+            if file_part_size < download_size:
                 with file_part_path.open("ab") as file_part:
-                    object_ = self.client.get_object(**get_object_kwargs)
-                    for chunk in object_["Body"].iter_chunks(CHUNK_SIZE):
+                    assert (
+                        range_start <= range_end
+                    ), f"range [{range_start}-{range_end}] is invalid"
+                    object_ = self.client.get_object(
+                        Bucket=self.bucket_name,
+                        Key=obj_key,
+                        Range=f"bytes={range_start}-{range_end - 1}",
+                    )
+                    for chunk in object_["Body"].iter_chunks(STREAM_CHUNK_SIZE):
                         file_part.write(chunk)
                         if shutdown_event and shutdown_event.is_set():
                             # some files failed to be downloaded so abort current download to
@@ -164,11 +217,16 @@ class S3Downloader:
                             file_part.flush()
                             break
 
-            if file_part_path.stat().st_size == file_size:
+            if file_part_path.stat().st_size == download_size:
                 # file fully downloaded, rename it
-                file_part_path.rename(local_file_path)
-                logger.debug("Downloaded file %s", obj_key)
-                self.post_download_file(relative_path, local_file_path)
+                file_path = Path(str(file_part_path)[: -len(".part")])
+                file_part_path.rename(file_path)
+                logger.debug("Downloaded file %s", file_path.name)
+                if chunk_id is None:
+                    self.post_download_file(relative_path, local_file_path)
+            elif chunk_id is not None:
+                # remove partial download of chunk file
+                file_part_path.unlink()
 
         else:
             logger.debug(
@@ -178,12 +236,50 @@ class S3Downloader:
 
         return relative_path
 
+    def _chunks_append_worker(self, shutdown_event: threading.Event):
+        # this method is executed in a thread and takes care of re-assembling
+        # files downloaded by chunks
+        while self.next_chunk_to_write:
+            if shutdown_event.is_set():
+                return
+            for obj_key, next_chunk in list(self.next_chunk_to_write.items()):
+                relative_path = obj_key.removeprefix(self.prefix).lstrip("/")
+                local_file_path = self.local_path / relative_path
+                file_part_path = Path(str(local_file_path) + ".part")
+                next_chunk_file_path = self._chunk_file_path(
+                    local_file_path, next_chunk
+                )
+                with open(file_part_path, "ab") as part_file:
+                    while next_chunk_file_path.exists():
+                        # while consecutive chunk files are fully downloaded, append
+                        # their bytes to final file
+                        with open(next_chunk_file_path, "rb") as next_chunk_file:
+                            shutil.copyfileobj(next_chunk_file, part_file)
+                        next_chunk_file_path.unlink()
+                        next_chunk += 1
+                        next_chunk_file_path = self._chunk_file_path(
+                            local_file_path, next_chunk
+                        )
+                        # keep track of next chunk to append
+                        self.next_chunk_to_write[obj_key] = next_chunk
+                    if file_part_path.stat().st_size == self.file_size[obj_key]:
+                        # final file fully downloaded and assembled, rename it
+                        file_path = Path(str(file_part_path)[: -len(".part")])
+                        file_part_path.rename(file_path)
+                        self.next_chunk_to_write.pop(obj_key)
+                        logger.debug("Assembled file %s", file_path.name)
+                        self.post_download_file(relative_path, local_file_path)
+            time.sleep(1)
+
+    def _chunk_file_path(self, file_path: Path, chunk_id: int) -> Path:
+        return Path(str(file_path) + f".chunk{chunk_id}")
+
     def _local_path_size(self) -> int:
         while True:
             try:
                 return sum(
                     f.stat().st_size
-                    for f in Path(self.local_path).glob("**/*")
+                    for f in self.local_path.glob("**/*")
                     if f.exists() and f.is_file()
                 )
             except FileNotFoundError:
@@ -217,8 +313,14 @@ class S3Downloader:
 
         try:
             # recursively copy local files to S3
-            objects = list(self.bucket.objects.filter(Prefix=self.prefix))
-            objects_total_size = sum(o.size for o in objects)
+            objects = self.filter_objects(
+                list(self.bucket.objects.filter(Prefix=self.prefix))
+            )
+            objects_total_size = 0
+            for obj in objects:
+                objects_total_size += obj.size
+                self.file_size[obj.key] = obj.size
+            chunks_append_future = None
             with tqdm.tqdm(
                 total=objects_total_size,
                 desc="Downloading",
@@ -226,12 +328,49 @@ class S3Downloader:
                 unit_scale=True,
                 unit_divisor=1024,
             ) as progress:
-                not_done = futures = {
-                    executor.submit(
-                        self._download_file, obj.key, shutdown_event, obj=obj
-                    )
-                    for obj in self.filter_objects(objects)
-                }
+                futures: Set[concurrent.futures.Future] = set()
+                for obj in sorted(objects, key=attrgetter("size")):
+                    nb_chunks = math.ceil(obj.size / self.multipart_download_chunk_size)
+                    if nb_chunks > 1:
+                        # file is large so it will be downloaded concurrently by chunks
+                        # and re-assembled afterwards as it improves download time
+                        rpath = obj.key.removeprefix(self.prefix).lstrip("/")
+                        local_file_part_path = self.local_path / (rpath + ".part")
+                        if not local_file_part_path.exists():
+                            self.next_chunk_to_write[obj.key] = 0
+                        else:
+                            # file partially assembled in a previous run that failed,
+                            # compute first chunk number to continue assembling it
+                            part_file_size = local_file_part_path.stat().st_size
+                            self.next_chunk_to_write[obj.key] = (
+                                part_file_size // self.multipart_download_chunk_size
+                            )
+                        if chunks_append_future is None:
+                            # start thread whose goal is to re-assemble files downloaded
+                            # by chunks prior download threads
+                            chunks_append_future = executor.submit(
+                                self._chunks_append_worker, shutdown_event
+                            )
+                            futures.add(chunks_append_future)
+                        futures.update(
+                            executor.submit(
+                                self._download_file,
+                                obj.key,
+                                shutdown_event,
+                                obj=obj,
+                                chunk_id=chunk_id,
+                            )
+                            for chunk_id in range(
+                                self.next_chunk_to_write[obj.key], nb_chunks
+                            )
+                        )
+                    else:
+                        futures.add(
+                            executor.submit(
+                                self._download_file, obj.key, shutdown_event, obj=obj
+                            )
+                        )
+                not_done = futures
                 last_local_path_size = self._local_path_size()
                 progress.update(last_local_path_size)
                 while not_done:
@@ -242,7 +381,7 @@ class S3Downloader:
                         timeout=1,
                         return_when=concurrent.futures.FIRST_COMPLETED,
                     )
-                    local_path_size = self._local_path_size()
+                    local_path_size = min(self._local_path_size(), objects_total_size)
                     progress.update(local_path_size - last_local_path_size)
                     last_local_path_size = local_path_size
                     for future in done:

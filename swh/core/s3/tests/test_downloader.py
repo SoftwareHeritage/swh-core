@@ -3,10 +3,16 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import math
 
 import pytest
 
 from swh.core.s3.downloader import S3Downloader
+
+
+@pytest.fixture(autouse=True)
+def mocked_aws(mocked_aws):
+    return mocked_aws
 
 
 def check_files_download(files_path, downloaded_files_path):
@@ -18,7 +24,7 @@ def check_files_download(files_path, downloaded_files_path):
             assert downloaded_file_path.stat().st_size == file_path.stat().st_size
 
 
-def test_s3_downloader_ok(test_archives_path, s3_archives_url, tmp_path, mocked_aws):
+def test_s3_downloader_ok(test_archives_path, s3_archives_url, tmp_path):
     """Check files can be successfully downloaded"""
     s3_downloader = S3Downloader(
         local_path=tmp_path,
@@ -29,8 +35,46 @@ def test_s3_downloader_ok(test_archives_path, s3_archives_url, tmp_path, mocked_
     check_files_download(test_archives_path, tmp_path)
 
 
+def test_s3_downloader_with_chunked_files_ok(
+    test_archives_path, s3_archives_url, tmp_path, mocker
+):
+    """Check files can be successfully downloaded by chunks"""
+    chunk_size = 10 * 1024  # 10 Kib
+    s3_downloader = S3Downloader(
+        local_path=tmp_path,
+        s3_url=s3_archives_url,
+        multipart_download_chunk_size=chunk_size,
+    )
+
+    download_file = mocker.spy(s3_downloader, "_download_file")
+
+    assert s3_downloader.download()
+
+    download_file_calls_kwargs = [call.kwargs for call in download_file.call_args_list]
+
+    check_files_download(test_archives_path, tmp_path)
+
+    for file_path in test_archives_path.rglob("**/*"):
+        if file_path.is_file():
+            relative_path = "archives/" + str(file_path.relative_to(test_archives_path))
+            if file_path.stat().st_size > chunk_size:
+                nb_chunks = math.ceil(file_path.stat().st_size / chunk_size)
+                assert nb_chunks > 0
+                assert (
+                    len(
+                        [
+                            kwargs
+                            for kwargs in download_file_calls_kwargs
+                            if kwargs["obj"].key == relative_path
+                            and kwargs.get("chunk_id", -1) >= 0
+                        ]
+                    )
+                    == nb_chunks
+                )
+
+
 def test_dataset_downloader_resume_download(
-    test_archives_path, s3_archives_url, tmp_path, mocked_aws
+    test_archives_path, s3_archives_url, tmp_path
 ):
     """Check download of files can be successfully resumed when
     a download error happened"""
@@ -110,9 +154,7 @@ def test_dataset_downloader_resume_download(
     check_files_download(test_archives_path, tmp_path)
 
 
-def test_dataset_downloader_keyboard_interrupt(
-    test_archives_path, s3_archives_url, tmp_path, mocked_aws
-):
+def test_dataset_downloader_keyboard_interrupt(s3_archives_url, tmp_path):
     """Check download of files can be successfully resumed when
     a download error happened"""
 
