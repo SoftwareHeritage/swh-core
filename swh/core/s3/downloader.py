@@ -179,9 +179,17 @@ class S3Downloader:
         return relative_path
 
     def _local_path_size(self) -> int:
-        return sum(
-            f.stat().st_size for f in Path(self.local_path).glob("**/*") if f.is_file()
-        )
+        while True:
+            try:
+                return sum(
+                    f.stat().st_size
+                    for f in Path(self.local_path).glob("**/*")
+                    if f.exists() and f.is_file()
+                )
+            except FileNotFoundError:
+                # files can be removed or renamed by threads while
+                # globbing them
+                pass
 
     def download(
         self,
