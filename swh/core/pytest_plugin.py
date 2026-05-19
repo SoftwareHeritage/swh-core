@@ -391,7 +391,15 @@ def statsd():
 
 
 @pytest.fixture
-def monkeypatch_sentry_transport():
+def sentry_send_default_pii():
+    """If sentry was init with the send_default_pii option set to const:`True`,
+    you can override that fixture to return :const:`True` so that sentry events
+    captured by tests will also contain sensitive information."""
+    return False
+
+
+@pytest.fixture
+def monkeypatch_sentry_transport(sentry_send_default_pii):
     # Inspired by
     # https://github.com/getsentry/sentry-python/blob/2.0.0/tests/conftest.py#L175-L219
 
@@ -401,7 +409,12 @@ def monkeypatch_sentry_transport():
         nonlocal initialized
         assert not initialized, "already initialized"
         initialized = True
-        client = sentry_sdk.Client(*a, transport=TestTransport(), **kw)
+        client = sentry_sdk.Client(
+            *a,
+            transport=TestTransport(),
+            send_default_pii=sentry_send_default_pii,
+            **kw,
+        )
         sentry_sdk.get_global_scope().set_client(client)
 
     from sentry_sdk.transport import Transport
