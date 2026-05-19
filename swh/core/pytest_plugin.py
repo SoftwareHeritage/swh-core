@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2025  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -401,10 +401,8 @@ def monkeypatch_sentry_transport():
         nonlocal initialized
         assert not initialized, "already initialized"
         initialized = True
-        hub = sentry_sdk.Hub.current
-        client = sentry_sdk.Client(*a, **kw)
-        hub.bind_client(client)
-        client.transport = TestTransport()
+        client = sentry_sdk.Client(*a, transport=TestTransport(), **kw)
+        sentry_sdk.get_global_scope().set_client(client)
 
     from sentry_sdk.transport import Transport
 
@@ -420,14 +418,13 @@ def monkeypatch_sentry_transport():
                     self.events.append(item.payload.json)
             self.envelopes.append(envelope)
 
-    with sentry_sdk.Hub(None):
-        yield setup_sentry_transport_monkeypatch
+    yield setup_sentry_transport_monkeypatch
 
 
 @pytest.fixture
 def sentry_events(monkeypatch_sentry_transport):
     monkeypatch_sentry_transport()
-    return sentry_sdk.Hub.current.client.transport.events
+    return sentry_sdk.Scope.get_global_scope().get_client().transport.events
 
 
 @pytest.fixture(autouse=True)
