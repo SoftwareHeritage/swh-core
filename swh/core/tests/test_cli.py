@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -125,6 +125,7 @@ def test_command(swhmain, mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
     assert_result(result)
     assert result.output.strip() == "Hello SWH!"
@@ -187,6 +188,7 @@ def test_sentry(swhmain, mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -210,6 +212,7 @@ def test_sentry_debug(swhmain, mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -235,6 +238,7 @@ def test_sentry_env(swhmain, mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -264,6 +268,7 @@ def test_sentry_env_main_package(swhmain, mocker):
         release="swh.core@" + version,
         environment="tests",
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 

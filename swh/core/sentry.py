@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -88,6 +88,7 @@ def init_sentry(
     traces_sample_rate: Optional[float] = None,
     extra_kwargs: Optional[Dict] = None,
     deferred_init: bool = False,
+    send_default_pii: bool = False,
 ) -> None:
     """Configure the sentry integration.
 
@@ -108,6 +109,9 @@ def init_sentry(
       extra_kwargs: dict of additional parameters passed to :func:`sentry_sdk.init`
       deferred_init: indicates that sentry will be properly initialized in subsequent
         calls and that no warnings about missing DSN should be logged
+      send_default_pii: Send what sentry considers "PII" by default. Overridden by
+        :envvar:`SWH_SENTRY_SEND_DEFAULT_PII`.
+
     """
     if integrations is None:
         integrations = []
@@ -141,6 +145,10 @@ def init_sentry(
         "SWH_SENTRY_TRACES_SAMPLE_RATE", traces_sample_rate
     )
 
+    send_default_pii = override_with_bool_envvar(
+        "SWH_SENTRY_SEND_DEFAULT_PII", send_default_pii
+    )
+
     sentry_sdk.init(
         release=get_sentry_release(main_package, sentry_dsn),
         environment=environment,
@@ -148,5 +156,6 @@ def init_sentry(
         traces_sample_rate=traces_sample_rate,
         integrations=integrations,
         debug=debug,
+        send_default_pii=send_default_pii,
         **extra_kwargs,
     )
