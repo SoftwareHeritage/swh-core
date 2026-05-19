@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -30,6 +30,7 @@ def test_post_fork_default(mocker):
         release="0.0.0",
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -55,6 +56,7 @@ def test_post_fork_with_dsn_env(mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -90,6 +92,7 @@ def test_post_fork_with_package_env(mocker):
         release="swh.core@" + version,
         environment="tests",
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -118,6 +121,7 @@ def test_post_fork_debug(mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -139,6 +143,7 @@ def test_post_fork_no_flask(mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -158,6 +163,7 @@ def test_post_fork_override_logging_events_envvar(mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -185,6 +191,7 @@ def test_post_fork_extras(mocker):
         release=None,
         environment=None,
         traces_sample_rate=None,
+        send_default_pii=False,
     )
 
 
@@ -210,6 +217,7 @@ def test_post_fork_traces_sample_rate(mocker):
         release=None,
         environment=None,
         traces_sample_rate=1.0,
+        send_default_pii=False,
     )
 
 
@@ -238,4 +246,5 @@ def test_post_fork_override_traces_sample_rate_envvar(mocker):
         release=None,
         environment=None,
         traces_sample_rate=0.999,
+        send_default_pii=False,
     )
