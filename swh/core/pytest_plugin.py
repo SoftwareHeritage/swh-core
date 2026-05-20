@@ -48,7 +48,7 @@ def get_response_cb(
     - files are searched in the datadir/<hostname> directory
 
     - the local file name is the path part of the URL with path hierarchy
-      markers (aka '/') replaced by '_'
+      markers (aka '/') replaced by '_'; leading/trailing ones are stripped
 
     Eg. if you use the requests_mock fixture in your test file as:
 
