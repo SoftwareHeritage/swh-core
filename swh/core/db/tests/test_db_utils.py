@@ -256,6 +256,6 @@ WHERE grantee = 'guest'
             gcur.execute(
                 """
 INSERT INTO origin(url, hash)
-VALUES ('https://example.org', hash_sha1('https://nowhere.com'))
+VALUES ('https://example.org', hash_sha1('https://example.org'))
             """
             )
