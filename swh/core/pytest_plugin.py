@@ -60,7 +60,7 @@ def get_response_cb(
 
         requests.get('https://example.org/path/to/resource?a=b&c=d')
 
-    will look the content of the response in:
+    will look for the content of the response in:
 
         datadir/https_example.org/path_to_resource,a=b,c=d
 
@@ -68,7 +68,7 @@ def get_response_cb(
 
         requests.get('http://example.org/path/to/resource?a=b&c=d')
 
-    will look the content of the response in:
+    will look for the content of the response in:
 
         datadir/http_example.org/path_to_resource,a=b,c=d
 
