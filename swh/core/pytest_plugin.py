@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2025  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -52,25 +52,25 @@ def get_response_cb(
 
     Eg. if you use the requests_mock fixture in your test file as:
 
-        requests_mock.get('https?://nowhere.com', body=get_response_cb)
+        requests_mock.get('https?://example.org', body=get_response_cb)
         # or even
         requests_mock.get(re.compile('https?://'), body=get_response_cb)
 
     then a call requests.get like:
 
-        requests.get('https://nowhere.com/path/to/resource?a=b&c=d')
+        requests.get('https://example.org/path/to/resource?a=b&c=d')
 
     will look the content of the response in:
 
-        datadir/https_nowhere.com/path_to_resource,a=b,c=d
+        datadir/https_example.org/path_to_resource,a=b,c=d
 
     or a call requests.get like:
 
-        requests.get('http://nowhere.com/path/to/resource?a=b&c=d')
+        requests.get('http://example.org/path/to/resource?a=b&c=d')
 
     will look the content of the response in:
 
-        datadir/http_nowhere.com/path_to_resource,a=b,c=d
+        datadir/http_example.org/path_to_resource,a=b,c=d
 
     Args:
         request: input HTTP request
