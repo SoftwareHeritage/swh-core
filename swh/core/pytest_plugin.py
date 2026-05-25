@@ -404,9 +404,14 @@ def statsd():
 
 @pytest.fixture
 def sentry_send_default_pii():
-    """If sentry was init with the send_default_pii option set to const:`True`,
-    you can override that fixture to return :const:`True` so that sentry events
-    captured by tests will also contain sensitive information."""
+    """Matches the value of ``send_default_pii`` passed to the :class:`sentry_sdk.Client`
+    constructor.
+
+    This applies automatically when :class:`sentry_sdk.client` is initialized by
+    :func:`monkeypatch_sentry_transport`.
+
+    Packages that initialize :class:`sentry_sdk.Client` in a different way should override
+    this fixture to match their configuration."""
     return False
 
 
