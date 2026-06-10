@@ -274,8 +274,7 @@ def test_sentry_env_main_package(swhmain, mocker):
 
 @pytest.fixture
 def log_config_path(tmp_path):
-    log_config = textwrap.dedent(
-        """\
+    log_config = textwrap.dedent("""\
     ---
     version: 1
     formatters:
@@ -294,8 +293,7 @@ def log_config_path(tmp_path):
     loggers:
       dontshowdebug:
         level: INFO
-    """
-    )
+    """)
 
     (tmp_path / "log_config.yml").write_text(log_config)
 
@@ -444,8 +442,7 @@ def test_documentation(caplog, swhmain):
     runner = CliRunner()
     result = runner.invoke(swhmain, ["test", "--help"])
     assert_result(result)
-    assert result.output == textwrap.dedent(
-        """\
+    assert result.output == textwrap.dedent("""\
         Usage: swh test [OPTIONS]
 
           Does a thing
@@ -460,5 +457,4 @@ def test_documentation(caplog, swhmain):
 
         Options:
           -h, --help  Show this message and exit.
-        """  # noqa
-    )
+        """)  # noqa

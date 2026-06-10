@@ -651,7 +651,7 @@ class RPCServerApp(Flask):
     def _register_error_handlers(self):
         for exception, status_code in self.exception_status_codes:
             if isinstance(exception, str):
-                (module_path, class_name) = exception.rsplit(".", 1)
+                module_path, class_name = exception.rsplit(".", 1)
                 try:
                     module = importlib.import_module(module_path, package=__package__)
                 except ImportError as e:

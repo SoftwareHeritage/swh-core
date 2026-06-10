@@ -253,9 +253,7 @@ WHERE grantee = 'guest'
     with gcnx.transaction() as gcur:
         # check guest user CANNOT insert data in a table
         with pytest.raises(InsufficientPrivilege):
-            gcur.execute(
-                """
+            gcur.execute("""
 INSERT INTO origin(url, hash)
 VALUES ('https://example.org', hash_sha1('https://example.org'))
-            """
-            )
+            """)

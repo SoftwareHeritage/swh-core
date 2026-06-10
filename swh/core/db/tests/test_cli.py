@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -464,8 +464,7 @@ def test_cli_swh_db_initadmin_and_init_db_from_config_path(
 
     # This initializes the schema and data
     cfgfile = tmp_path / "config.yml"
-    cfgfile.write_text(
-        f"""
+    cfgfile.write_text(f"""
 test:
   cls: something
   backend:
@@ -477,8 +476,7 @@ test:
         backend:
           cls: cli2
           cli_db: {conninfo2}
-    """
-    )
+    """)
     if initialize_all:
         result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", "test"])
         assert_result(result)
@@ -525,8 +523,7 @@ def test_cli_swh_db_list_config_path(
     conninfo2 = craft_conninfo(postgresql2)
 
     cfgfile = tmp_path / "config.yml"
-    cfgfile.write_text(
-        f"""
+    cfgfile.write_text(f"""
 test:
   cls: something
   backend:
@@ -538,17 +535,13 @@ test:
         backend:
           cls: cli2
           cli_db: {conninfo2}
-    """
-    )
+    """)
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "list"])
     assert_result(result)
-    assert (
-        result.output
-        == f"""\
+    assert result.output == f"""\
 test.backend.steps.0 postgresql {conninfo}
 test.backend.steps.1.backend cli2 {conninfo2}
 """
-    )
 
 
 def test_cli_swh_db_version_from_config(
@@ -564,8 +557,7 @@ def test_cli_swh_db_version_from_config(
     conninfo2 = craft_conninfo(postgresql2)
 
     cfgfile = tmp_path / "config.yml"
-    cfgfile.write_text(
-        f"""
+    cfgfile.write_text(f"""
 test:
   cls: something
   backend:
@@ -577,8 +569,7 @@ test:
         backend:
           cls: cli2
           db: {conninfo2}
-    """
-    )
+    """)
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", "test"])
     assert_result(result)
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", "-a", "test"])
@@ -594,35 +585,27 @@ test:
         swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.0"]
     )
     assert_result(result)
-    assert (
-        result.output
-        == """
+    assert result.output == """
 module: test:postgresql
 flavor: default
 current code version: 3
 version: 3
 """
-    )
 
     result = cli_runner.invoke(
         swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.1.backend"]
     )
     assert_result(result)
-    assert (
-        result.output
-        == """
+    assert result.output == """
 module: test:cli2
 current code version: 3
 version: 3
 """
-    )
 
     # or all at once
     result = cli_runner.invoke(swhdb, ["-C", cfgfile, "version", "--all", "test"])
     assert_result(result)
-    assert (
-        result.output
-        == """
+    assert result.output == """
 module: test:postgresql
 flavor: default
 current code version: 3
@@ -632,7 +615,6 @@ module: test:cli2
 current code version: 3
 version: 3
 """
-    )
 
 
 @pytest.mark.init_version(version=1)
@@ -651,8 +633,7 @@ def test_cli_swh_db_upgrade_from_config(
     conninfo2 = craft_conninfo(postgresql2)
 
     cfgfile = tmp_path / "config.yml"
-    cfgfile.write_text(
-        f"""
+    cfgfile.write_text(f"""
 test:
   cls: something
   backend:
@@ -664,8 +645,7 @@ test:
         backend:
           cls: cli2
           cli_db: {conninfo2}
-    """
-    )
+    """)
 
     module_name = "test"
 
@@ -778,8 +758,7 @@ def test_cli_swh_db_upgrade_all(
     conninfo2 = craft_conninfo(postgresql2)
 
     cfgfile = tmp_path / "config.yml"
-    cfgfile.write_text(
-        f"""
+    cfgfile.write_text(f"""
 test:
   cls: something
   backend:
@@ -791,8 +770,7 @@ test:
         backend:
           cls: cli2
           db: {conninfo2}
-    """
-    )
+    """)
 
     module_name = "test"
 

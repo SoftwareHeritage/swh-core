@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2025  The Software Heritage developers
+# Copyright (C) 2019-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -71,7 +71,7 @@ def test_compress_uncompress_zip_modes(tmp_path):
     destdir = tmp_path / "destdir"
     tarball.uncompress(str(zipfile), str(destdir))
 
-    (executable_path, text_path) = sorted(destdir.iterdir())
+    executable_path, text_path = sorted(destdir.iterdir())
     assert text_path.stat().st_mode == 0o100644  # succeeds, it's the default
     assert executable_path.stat().st_mode == 0o100755  # fails
 
@@ -112,7 +112,7 @@ def test_compress_uncompress_tar_modes(tmp_path):
     destdir = tmp_path / "destdir"
     tarball.uncompress(str(tarfile), str(destdir))
 
-    (executable_path, text_path) = sorted(destdir.iterdir())
+    executable_path, text_path = sorted(destdir.iterdir())
     assert text_path.stat().st_mode == 0o100644
     assert executable_path.stat().st_mode == 0o100755
 
