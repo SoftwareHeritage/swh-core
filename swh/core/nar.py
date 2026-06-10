@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2025  The Software Heritage developers and zimoun
+# Copyright (C) 2022-2026  The Software Heritage developers and zimoun
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
@@ -201,8 +201,7 @@ class Nar:
             offset = 0
         else:
             offset = 8 - m
-        boffset = bytearray(offset)
-        self.update(boffset)
+        self.update(bytes(offset))
 
     def update(self, chunk: bytes) -> None:
         self.nar_serialization.extend(chunk)
