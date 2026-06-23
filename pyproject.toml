@@ -1,11 +1,11 @@
 [project]
 name = "swh.core"
 authors = [
-    {name="Software Heritage developers", email="swh-devel@inria.fr"},
+    { name = "Software Heritage developers", email = "swh-devel@inria.fr" },
 ]
 
 description = "Software Heritage core utilities"
-readme = {file = "README.rst", content-type = "text/x-rst"}
+readme = { file = "README.rst", content-type = "text/x-rst" }
 requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -18,27 +18,7 @@ classifiers = [
 ]
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
-[tool.setuptools.packages.find]
-include = ["swh.*"]
-
-[tool.setuptools.dynamic]
-dependencies = {file = "requirements.txt"}
-
-[tool.setuptools.dynamic.optional-dependencies]
-testing_core = {file = "requirements-test.txt"}
-logging = {file = ["requirements-logging.txt"]}
-db = {file = ["requirements-db.txt"]}
-http = {file = "requirements-http.txt"}
-s3 = {file = "requirements-s3.txt"}
-# kitchen sink, please do not use
-testing = {file = [
-        "requirements-test.txt",
-        "requirements-logging.txt",
-        "requirements-http.txt",
-        "requirements-db.txt",
-        "requirements-s3.txt"]}
-
-[project.entry-points.console_scripts]
+[project.scripts]
 "swh" = "swh.core.cli:main"
 
 [project.entry-points."swh.cli.subcommands"]
@@ -58,11 +38,33 @@ testing = {file = [
 "Source" = "https://gitlab.softwareheritage.org/swh/devel/swh-core.git"
 
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-requirements-txt", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
-fallback_version = "0.0.1"
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt", "requirements-swh.txt"]
+
+[tool.hatch.metadata.hooks.requirements_txt.optional-dependencies]
+testing_core = ["requirements-test.txt"]
+logging = ["requirements-logging.txt"]
+db = ["requirements-db.txt"]
+http = ["requirements-http.txt"]
+s3 = ["requirements-s3.txt"]
+# kitchen sink, please do not use
+testing = [
+    "requirements-test.txt",
+    "requirements-logging.txt",
+    "requirements-http.txt",
+    "requirements-db.txt",
+    "requirements-s3.txt",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["swh"]
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.1"
 
 [tool.black]
 target-version = ['py311', 'py312', 'py313']
