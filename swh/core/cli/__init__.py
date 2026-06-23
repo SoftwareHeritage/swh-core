@@ -111,6 +111,22 @@ def validate_loglevel_params(ctx, param, values):
     return module_log_levels
 
 
+def setup_config(ctx, config_file):
+    from os import environ
+
+    from swh.core.config import read as config_read
+
+    ctx.ensure_object(dict)
+    if "config" not in ctx.obj:
+        if config_file and ctx.info_name != "swh":
+            logger.warn(
+                f"Using --config-file on the {ctx.info_name} command group is deprecated"
+            )
+        if config_file is None:
+            config_file = environ.get("SWH_CONFIG_FILENAME")
+        ctx.obj["config"] = config_read(config_file)
+
+
 def show_versions(
     ctx: click.core.Context, param: click.core.Parameter, value: bool
 ) -> None:
@@ -175,6 +191,13 @@ documented at https://docs.python.org/3/library/logging.config.html.
     help="Enable debugging of sentry",
 )
 @click.option(
+    "--config-file",
+    "-C",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Configuration file.",
+)
+@click.option(
     "--versions",
     is_flag=True,
     expose_value=False,
@@ -183,7 +206,7 @@ documented at https://docs.python.org/3/library/logging.config.html.
     help="Show versions of all loaded swh packages",
 )
 @click.pass_context
-def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
+def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug, config_file):
     """Command line interface for Software Heritage."""
     import signal
 
@@ -202,6 +225,9 @@ def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
     ctx.ensure_object(dict)
     ctx.obj["log_level"] = set_default_loglevel
     ctx.__class__.formatter_class = SWHHelpFormatter
+
+    setup_config(ctx, config_file)
+    logger.debug(f"Configuration:\n{yaml.safe_dump(ctx.obj['config'])}")
 
 
 def main():

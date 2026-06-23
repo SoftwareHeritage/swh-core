@@ -536,7 +536,9 @@ test:
           cls: cli2
           cli_db: {conninfo2}
     """)
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "list"])
+    result = cli_runner.invoke(
+        swhdb, ["list"], env={"SWH_CONFIG_FILENAME": str(cfgfile)}
+    )
     assert_result(result)
     assert result.output == f"""\
 test.backend.steps.0 postgresql {conninfo}
@@ -570,19 +572,20 @@ test:
           cls: cli2
           db: {conninfo2}
     """)
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", "test"])
+    env = {"SWH_CONFIG_FILENAME": str(cfgfile)}
+    result = cli_runner.invoke(swhdb, ["init-admin", "-a", "test"], env=env)
     assert_result(result)
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", "-a", "test"])
+    result = cli_runner.invoke(swhdb, ["init", "-a", "test"], env=env)
     assert_result(result)
 
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "version", "test"])
+    result = cli_runner.invoke(swhdb, ["version", "test"], env=env)
     # this one should fail, there is no "natural" config entry in this config
     # file for the 'test' module
     assert result.exit_code != 0
 
     # but we can ask for each entry
     result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.0"]
+        swhdb, ["version", "-p", "test.backend.steps.0"], env=env
     )
     assert_result(result)
     assert result.output == """
@@ -593,7 +596,9 @@ version: 3
 """
 
     result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "version", "-p", "test.backend.steps.1.backend"]
+        swhdb,
+        ["version", "-p", "test.backend.steps.1.backend"],
+        env=env,
     )
     assert_result(result)
     assert result.output == """
@@ -603,7 +608,7 @@ version: 3
 """
 
     # or all at once
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "version", "--all", "test"])
+    result = cli_runner.invoke(swhdb, ["version", "--all", "test"], env=env)
     assert_result(result)
     assert result.output == """
 module: test:postgresql

@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-# Copyright (C) 2018-2024  The Software Heritage developers
+# Copyright (C) 2018-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import logging
-from os import environ
 from subprocess import CalledProcessError
 from typing import Any, Dict, List, Optional, Tuple
 import warnings
 
 import click
 
-from swh.core.cli import CONTEXT_SETTINGS
+from swh.core.cli import CONTEXT_SETTINGS, setup_config
 from swh.core.cli import swh as swh_cli_group
 
 warnings.filterwarnings("ignore")  # noqa prevent psycopg from side-tracking us
@@ -28,17 +27,12 @@ logger = logging.getLogger(__name__)
     default=None,
     type=click.Path(exists=True, dir_okay=False),
     help="Configuration file.",
+    deprecated=True,
 )
 @click.pass_context
 def db(ctx, config_file):
     """Software Heritage database generic tools."""
-    from swh.core.config import read as config_read
-
-    ctx.ensure_object(dict)
-    if config_file is None:
-        config_file = environ.get("SWH_CONFIG_FILENAME")
-    cfg = config_read(config_file)
-    ctx.obj["config"] = cfg
+    setup_config(ctx, config_file)
 
 
 @db.command(name="create", context_settings=CONTEXT_SETTINGS)
