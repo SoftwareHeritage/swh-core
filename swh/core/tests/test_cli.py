@@ -3,8 +3,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from contextlib import contextmanager
+import copy
 from importlib.metadata import distribution
 import logging
+import tempfile
 import textwrap
 import traceback
 from typing import List
@@ -28,10 +31,23 @@ help_msg_snippets = (
             "-l, --log-level",
             "--log-config",
             "--sentry-dsn",
+            "-C, --config-file",
+            "-o, --option",
             "-h, --help",
         ),
     ),
 )
+
+
+@contextmanager
+def config_file(config={}, **kwargs):
+    config = copy.deepcopy(config)
+    config.update(**kwargs)
+
+    with tempfile.NamedTemporaryFile("a", suffix=".yml") as config_fd:
+        yaml.dump(config, config_fd)
+        config_fd.seek(0)
+        yield config_fd.name
 
 
 def assert_result(result):
@@ -458,3 +474,101 @@ def test_documentation(caplog, swhmain):
         Options:
           -h, --help  Show this message and exit.
         """)  # noqa
+
+
+def test_config_file(swhmain):
+    @swhmain.command(name="no-conf")
+    @click.pass_context
+    def swh_noconf(ctx):
+        """Check config file"""
+        assert "config" in ctx.obj
+        assert ctx.obj["config"] == {}
+
+    runner = CliRunner()
+    result = runner.invoke(swhmain, ["no-conf"])
+    assert_result(result)
+
+    config = {"cls": "test", "value": 42}
+
+    @swhmain.command(name="conf")
+    @click.pass_context
+    def swh_conf(ctx):
+        """Check config file"""
+        assert "config" in ctx.obj
+        assert ctx.obj["config"] == config
+
+    with config_file(config) as cfg_file:
+        result = runner.invoke(swhmain, ["conf"], env={"SWH_CONFIG_FILENAME": cfg_file})
+        assert_result(result)
+
+        result = runner.invoke(swhmain, ["-C", cfg_file, "conf"])
+        assert_result(result)
+
+        # cli option takes precedence on env var
+        result = runner.invoke(
+            swhmain, ["-C", cfg_file, "conf"], env={"SWH_CONFIG_FILENAME": "nope"}
+        )
+        assert_result(result)
+
+
+def test_config_overload(swhmain):
+
+    runner = CliRunner()
+
+    config = {
+        "backend": {
+            "cls": "test",
+            "value": 42,
+            "sub-config": {
+                "subitem": "one",
+                "sublist": ["1", "2", "3"],
+            },
+        },
+    }
+
+    @swhmain.command(name="test-conf")
+    @click.pass_context
+    def swh_conf(ctx):
+        """Check config file"""
+        assert "config" in ctx.obj
+        click.echo(yaml.dump(ctx.obj["config"]))
+
+    with config_file(config) as cfg_file:
+        # no --option, config file is given
+        result = runner.invoke(swhmain, ["-C", cfg_file, "test-conf"])
+        assert_result(result)
+        cfg = yaml.safe_load(result.stdout)
+        assert cfg == config
+
+        # no config file but some --option
+        result = runner.invoke(swhmain, ["--option", "backend.cls=memory", "test-conf"])
+        assert_result(result)
+        cfg = yaml.safe_load(result.stdout)
+        assert cfg == {"backend": {"cls": "memory"}}
+
+        # config file with several --option (new value and overload)
+        result = runner.invoke(
+            swhmain,
+            [
+                "-C",
+                cfg_file,
+                "--option",
+                "backend.vbool=true",
+                "--option",
+                "backend.vstr='toto'",
+                "--option",
+                "backend.value=1.23",
+                "--option",
+                "backend.sub-config.subone=1",
+                "--option",
+                "backend.sub-config.sublist=[11,12,13]",
+                "test-conf",
+            ],
+        )
+        assert_result(result)
+        cfg = yaml.safe_load(result.stdout)
+        assert cfg["backend"].get("vbool") is True
+        assert cfg["backend"].get("vstr") == "toto"
+        assert cfg["backend"].get("value") == 1.23
+        assert cfg["backend"]["sub-config"].get("subone") == 1
+        assert cfg["backend"]["sub-config"]["sublist"] == [11, 12, 13]

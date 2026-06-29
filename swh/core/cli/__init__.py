@@ -8,6 +8,7 @@ import sys
 import warnings
 
 import click
+import yaml
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -111,20 +112,40 @@ def validate_loglevel_params(ctx, param, values):
     return module_log_levels
 
 
-def setup_config(ctx, config_file):
+def validate_options(ctx, param, values):
+    if values is None:
+        return values
+    options = []
+    for option in values:
+        kv = option.split("=", 1)
+        if len(kv) != 2:
+            raise ValueError("Invalid option")
+        k, v = kv
+        options.append((k.strip(), yaml.safe_load(v)))
+    return options
+
+
+def setup_config(ctx, config_file, options=None):
     from os import environ
 
     from swh.core.config import read as config_read
 
     ctx.ensure_object(dict)
+    if config_file and ctx.info_name != "swh":
+        logger.warn(
+            f"Using --config-file on the {ctx.info_name} command group is deprecated"
+        )
     if "config" not in ctx.obj:
-        if config_file and ctx.info_name != "swh":
-            logger.warn(
-                f"Using --config-file on the {ctx.info_name} command group is deprecated"
-            )
         if config_file is None:
             config_file = environ.get("SWH_CONFIG_FILENAME")
         ctx.obj["config"] = config_read(config_file)
+    if options is not None:
+        for k, v in options:
+            kpath = k.split(".")
+            cfg = ctx.obj["config"]
+            for elt in kpath[:-1]:
+                cfg = cfg.setdefault(elt, {})
+            cfg[kpath[-1]] = v
 
 
 def show_versions(
@@ -198,6 +219,17 @@ documented at https://docs.python.org/3/library/logging.config.html.
     help="Configuration file.",
 )
 @click.option(
+    "--option",
+    "-o",
+    "options",
+    multiple=True,
+    callback=validate_options,
+    help=(
+        "Configuration option; set or override a configuration "
+        "entry from the configuration file"
+    ),
+)
+@click.option(
     "--versions",
     is_flag=True,
     expose_value=False,
@@ -206,7 +238,7 @@ documented at https://docs.python.org/3/library/logging.config.html.
     help="Show versions of all loaded swh packages",
 )
 @click.pass_context
-def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug, config_file):
+def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug, config_file, options):
     """Command line interface for Software Heritage."""
     import signal
 
@@ -226,8 +258,9 @@ def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug, config_file):
     ctx.obj["log_level"] = set_default_loglevel
     ctx.__class__.formatter_class = SWHHelpFormatter
 
-    setup_config(ctx, config_file)
-    logger.debug(f"Configuration:\n{yaml.safe_dump(ctx.obj['config'])}")
+    setup_config(ctx, config_file, options)
+    # XXX find a decent way to dump the actual configuration in the logs
+    # hiding credentials (including in connection string...)
 
 
 def main():
