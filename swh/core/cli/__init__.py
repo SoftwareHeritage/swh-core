@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 import logging
+import sys
 import warnings
 
 import click
@@ -110,6 +111,28 @@ def validate_loglevel_params(ctx, param, values):
     return module_log_levels
 
 
+def show_versions(
+    ctx: click.core.Context, param: click.core.Parameter, value: bool
+) -> None:
+    if not value or ctx.resilient_parsing:
+        return
+
+    from importlib import metadata as MD
+
+    version = MD.version("swh.core")
+    click.echo(f"swh.core, version {version}")
+    click.echo("Installed swh components:")
+    for pdist in sorted(
+        (x for x in MD.distributions() if x.name.startswith("swh.")),
+        key=lambda x: x.name,
+    ):
+        try:
+            click.echo(f"  {pdist.name}, version {pdist.version}")
+        except MD.PackageNotFoundError:
+            pass
+    ctx.exit()
+
+
 @click.group(
     context_settings=CONTEXT_SETTINGS,
     cls=AliasedGroup,
@@ -151,6 +174,14 @@ documented at https://docs.python.org/3/library/logging.config.html.
     hidden=True,
     help="Enable debugging of sentry",
 )
+@click.option(
+    "--versions",
+    is_flag=True,
+    expose_value=False,
+    is_eager=True,
+    callback=show_versions,
+    help="Show versions of all loaded swh packages",
+)
 @click.pass_context
 def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
     """Command line interface for Software Heritage."""
@@ -174,7 +205,6 @@ def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
 
 
 def main():
-    import sys
 
     # Even though swh() sets up logging, we need an earlier basic logging setup
     # for the next few logging statements
