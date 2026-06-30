@@ -45,7 +45,13 @@ class AliasedGroup(click.Group):
     * command aliases
     * notes related to options
 
+    It will also ensure the --help option can always be handled by disabling
+    the callback of the group when the tool is called with --help or -h
     """
+
+    # make this class the default Group, see
+    # https://click.palletsprojects.com/en/stable/api/#click.Group.group_class
+    group_class = type
 
     def __init__(self, name=None, commands=None, **attrs):
         self.option_notes = attrs.pop("option_notes", None)
@@ -66,6 +72,15 @@ class AliasedGroup(click.Group):
             with formatter.section("Notes"):
                 formatter.write_text(self.option_notes)
         self.format_commands(ctx, formatter)
+
+    def invoke(self, ctx):
+        # do NOT execute groups callback if this command is called for help;
+        # group callbacks may try to do stuff (esp. loading and partially checking
+        # configuration) that we do not want to fail when asking for help...
+        if set(ctx.help_option_names) & set(ctx.args):
+            ctx.command.callback = None
+
+        return super().invoke(ctx)
 
 
 def clean_exit_on_signal(signal, frame):
