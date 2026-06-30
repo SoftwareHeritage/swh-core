@@ -6,7 +6,6 @@
 import logging
 import warnings
 
-from backports.entry_points_selectable import entry_points
 import click
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
@@ -167,9 +166,17 @@ def swh(ctx, log_levels, log_config, sentry_dsn, sentry_debug):
 
 
 def main():
+    import sys
+
     # Even though swh() sets up logging, we need an earlier basic logging setup
     # for the next few logging statements
     logging.basicConfig()
+
+    if sys.version_info < (3, 10):
+        from backports.entry_points_selectable import entry_points
+    else:
+        from importlib.metadata import entry_points
+
     # load plugins that define cli sub commands
     for entry_point in entry_points(group="swh.cli.subcommands"):
         try:

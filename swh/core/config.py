@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024  The Software Heritage developers
+# Copyright (C) 2015-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -8,9 +8,14 @@ from functools import lru_cache
 from itertools import chain
 import logging
 import os
+import sys
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
 
-from backports.entry_points_selectable import entry_points as get_entry_points
+if sys.version_info < (3, 10):
+    from backports.entry_points_selectable import entry_points as get_entry_points
+else:
+    from importlib.metadata import entry_points as get_entry_points
+
 from deprecated import deprecated
 import yaml
 
