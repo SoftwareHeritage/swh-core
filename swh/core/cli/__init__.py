@@ -76,10 +76,18 @@ class AliasedGroup(click.Group):
         # do NOT execute groups callback if this command is called for help;
         # group callbacks may try to do stuff (esp. loading and partially checking
         # configuration) that we do not want to fail when asking for help...
+
+        # We need to restore the actual callback after execution for tests of
+        # other sw packages not to break; they may test the behavior of their
+        # cli's '--help' output, which would then prevent any further cli call
+        # to fail...
+        orig_cb = ctx.command.callback
         if set(ctx.help_option_names) & set(ctx.args):
             ctx.command.callback = None
-
-        return super().invoke(ctx)
+        try:
+            return super().invoke(ctx)
+        finally:
+            ctx.command.callback = orig_cb
 
 
 def clean_exit_on_signal(signal, frame):
