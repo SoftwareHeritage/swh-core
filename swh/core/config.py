@@ -16,7 +16,6 @@ if sys.version_info < (3, 10):
 else:
     from importlib.metadata import entry_points as get_entry_points
 
-from deprecated import deprecated
 import yaml
 
 from .constants import (
@@ -81,25 +80,6 @@ def read_raw_config(base_config_path: str) -> Dict[str, Any]:
         logger.debug("Loading config file %s", yml_file)
         with open(yml_file) as f:
             return yaml.safe_load(f)
-
-
-@deprecated(
-    version="2.23.0",
-    reason="pass config paths as-is to read_raw_config/read, and rely on click.Path",
-)
-def config_exists(path):
-    """Check whether the given config exists"""
-    path = config_path(path)
-    return path is not None and exists_accessible(path)
-
-
-@deprecated(version="2.23.0", reason="pass config paths as-is to read_raw_config/read")
-def config_basepath(config_path: str) -> str:
-    """Return the base path of a configuration file"""
-    if config_path.endswith(".yml"):
-        return config_path[:-4]
-
-    return config_path
 
 
 def config_path(config_path):

@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2020  The Software Heritage developers
+# Copyright (C) 2017-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -10,7 +10,6 @@ from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 import aiohttp.web
 from aiohttp_utils import Response, negotiation
-from deprecated import deprecated
 import multidict
 
 from .serializers import (
@@ -178,8 +177,3 @@ class RPCServerApp(aiohttp.web.Application):
             return encode_data_server(result)
 
         return decorated_meth
-
-
-@deprecated(version="0.0.64", reason="Use the RPCServerApp instead")
-class SWHRemoteAPI(RPCServerApp):
-    pass

@@ -22,7 +22,6 @@ from typing import (
 )
 import warnings
 
-from deprecated import deprecated
 from flask import Flask, Request, Response, abort, request
 import requests
 import sentry_sdk
@@ -432,14 +431,6 @@ class RPCClient(metaclass=MetaRPCClient):
 
     _post_stream = _post
 
-    @deprecated(version="2.1.0", reason="Use _post instead")
-    def post(self, *args, **kwargs):
-        return self._post(*args, **kwargs)
-
-    @deprecated(version="2.1.0", reason="Use _post_stream instead")
-    def post_stream(self, *args, **kwargs):
-        return self._post_stream(*args, **kwargs)
-
     def _get(self, endpoint, **opts):
         chunk_size = opts.pop("chunk_size", self.chunk_size)
         response = self.raw_verb(
@@ -453,14 +444,6 @@ class RPCClient(metaclass=MetaRPCClient):
 
     def _get_stream(self, endpoint, **opts):
         return self._get(endpoint, stream=True, **opts)
-
-    @deprecated(version="2.1.0", reason="Use _get instead")
-    def get(self, *args, **kwargs):
-        return self._get(*args, **kwargs)
-
-    @deprecated(version="2.1.0", reason="Use _get_stream instead")
-    def get_stream(self, *args, **kwargs):
-        return self._get_stream(*args, **kwargs)
 
     def raise_for_status(self, response) -> None:
         """check response HTTP status code and raise an exception if it denotes an
