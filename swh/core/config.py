@@ -19,24 +19,14 @@ else:
 from deprecated import deprecated
 import yaml
 
+from .constants import (
+    SWH_CONFIG_DIRECTORIES,
+    SWH_CONFIG_EXTENSIONS,
+    SWH_DEFAULT_GLOBAL_CONFIG,
+    SWH_GLOBAL_CONFIG,
+)
+
 logger = logging.getLogger(__name__)
-
-
-SWH_CONFIG_DIRECTORIES = [
-    "~/.config/swh",
-    "~/.swh",
-    "/etc/softwareheritage",
-]
-
-SWH_GLOBAL_CONFIG = "global.yml"
-
-SWH_DEFAULT_GLOBAL_CONFIG = {
-    "max_content_size": ("int", 100 * 1024 * 1024),
-}
-
-SWH_CONFIG_EXTENSIONS = [
-    ".yml",
-]
 
 # conversion per type
 _map_convert_fn: Dict[str, Callable] = {
