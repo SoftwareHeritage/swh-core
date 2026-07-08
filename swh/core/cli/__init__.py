@@ -4,7 +4,6 @@
 # See top-level LICENSE file for more information
 
 import logging
-import sys
 import warnings
 
 import click
@@ -269,10 +268,7 @@ def main():
     # for the next few logging statements
     logging.basicConfig()
 
-    if sys.version_info < (3, 10):
-        from backports.entry_points_selectable import entry_points
-    else:
-        from importlib.metadata import entry_points
+    from importlib.metadata import entry_points
 
     # load plugins that define cli sub commands
     for entry_point in entry_points(group="swh.cli.subcommands"):

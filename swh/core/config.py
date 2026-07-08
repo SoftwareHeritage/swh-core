@@ -5,16 +5,11 @@
 
 from copy import deepcopy
 from functools import lru_cache
+from importlib.metadata import entry_points as get_entry_points
 from itertools import chain
 import logging
 import os
-import sys
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
-
-if sys.version_info < (3, 10):
-    from backports.entry_points_selectable import entry_points as get_entry_points
-else:
-    from importlib.metadata import entry_points as get_entry_points
 
 import yaml
 

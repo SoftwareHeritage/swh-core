@@ -90,7 +90,6 @@ plugins = []
 [[tool.mypy.overrides]]
 module = [
     "aiohttp_utils.*",
-    "backports.entry_points_selectable.*",
     "systemd.*",
 ]
 ignore_missing_imports = true
