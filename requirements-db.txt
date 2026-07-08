@@ -1,4 +1,3 @@
 # requirements for swh.core.db
 psycopg
 psycopg_pool
-typing-extensions

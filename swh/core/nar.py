@@ -23,8 +23,6 @@ from typing import (
     Union,
 )
 
-from typing_extensions import Buffer
-
 from swh.core.tarball import uncompress
 
 CHUNK_SIZE = 65536
@@ -508,7 +506,7 @@ decompress_empty = b""
 
 
 class _Decompressor(Protocol):
-    def decompress(self, data: Buffer, max_length: int = -1) -> bytes: ...
+    def decompress(self, data: bytes, max_length: int = -1) -> bytes: ...
     @property
     def eof(self) -> bool: ...
     @property
