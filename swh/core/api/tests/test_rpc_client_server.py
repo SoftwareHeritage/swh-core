@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2019  The Software Heritage developers
+# Copyright (C) 2018-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -107,8 +107,11 @@ def test_api_client_endpoint_missing(swh_rpc_client):
 def test_api_server_endpoint_missing(swh_rpc_client):
     # A 'missing' endpoint (server-side) should raise an exception
     # due to a 404, since at the end, we do a GET/POST an inexistent URL
-    with pytest.raises(Exception, match="404 not found"):
+    with pytest.raises(Exception, match="404 not found") as exc_info:
         swh_rpc_client.not_on_server()
+    assert exc_info.value.__notes__ == [
+        "Request: POST mock://example.com/not_on_server"
+    ]
 
 
 def test_api_endpoint_kwargs(swh_rpc_client):
@@ -130,6 +133,9 @@ def test_api_typeerror(swh_rpc_client, mocker):
 
     with pytest.raises(RemoteException) as exc_info:
         swh_rpc_client.raise_typeerror()
+    assert exc_info.value.__notes__ == [
+        "Request: POST mock://example.com/raises_typeerror"
+    ]
 
     passed_exc = mocked_capture_exception.call_args[0][0]
     assert isinstance(passed_exc, TypeError)
@@ -150,6 +156,9 @@ def test_api_raise_exception_exc_arg(swh_rpc_client):
     assert exc_info.value.args[0]["type"] == "Exception"
     assert type(exc_info.value.args[0]["args"][0]) is Exception
     assert str(exc_info.value.args[0]["args"][0]) == "error"
+    assert exc_info.value.__notes__ == [
+        "Request: POST mock://example.com/raise_exception_exc_arg"
+    ]
 
 
 def test_api_expected_exception_no_sentry_capture(swh_rpc_client, mocker):
@@ -162,3 +171,6 @@ def test_api_expected_exception_no_sentry_capture(swh_rpc_client, mocker):
 
     assert exc_info.value.args[0]["type"] == "ExpectedException"
     assert exc_info.value.args[0]["args"] == ["that was expected"]
+    assert exc_info.value.__notes__ == [
+        "Request: POST mock://example.com/raises_expectedexc"
+    ]
