@@ -501,14 +501,17 @@ class RPCClient(metaclass=MetaRPCClient):
             exc_data = self._decode_response(response, check_status=False)
             exception = cls(payload=exc_data, response=response)
 
-        if exception:
-            raise exception from None
-
-        if status_class != 2:
-            raise RemoteException(
+        if exception is None and status_class != 2:
+            exception = RemoteException(
                 payload=f"API HTTP error: {status_code} {response.content}",
                 response=response,
             )
+
+        if exception:
+            exception.add_note(f"Request: {response.request.method} {response.url}")
+            if response.request.url != response.url:
+                exception.add_note(f"Redirected from: {response.request.url}")
+            raise exception from None
 
     def _decode_response(self, response, check_status=True):
         if check_status:
