@@ -508,7 +508,6 @@ class RPCClient(metaclass=MetaRPCClient):
             )
 
         if exception:
-            print("adding note to", exception)
             exception.add_note(f"Request: {response.request.method} {response.url}")
             if response.request.url != response.url:
                 exception.add_note(f"Redirected from: {response.request.url}")
