@@ -470,12 +470,12 @@ class RPCClient(metaclass=MetaRPCClient):
         status_code = response.status_code
         status_class = response.status_code // 100
 
+        exception: Optional[Exception] = None
+
         if status_code == 404:
-            raise RemoteException(payload="404 not found", response=response)
+            exception = RemoteException(payload="404 not found", response=response)
 
-        exception = None
-
-        if status_class == 4:
+        elif status_class == 4:
             exc_data = self._decode_response(response, check_status=False)
             if isinstance(exc_data, dict):
                 for exc_type in self.reraise_exceptions:
@@ -508,6 +508,7 @@ class RPCClient(metaclass=MetaRPCClient):
             )
 
         if exception:
+            print("adding note to", exception)
             exception.add_note(f"Request: {response.request.method} {response.url}")
             if response.request.url != response.url:
                 exception.add_note(f"Redirected from: {response.request.url}")
