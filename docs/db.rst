@@ -10,7 +10,7 @@ interface which can use a postgresql database as backend. Examples are
 :mod:`swh.storage` or :mod:`swh.scheduler`.
 
 Most of the time, this database-based data storage facility will depend on a data
-schema (may be based in :mod:`swh.model` or not) and provide a unified interface
+schema (may be based on :mod:`swh.model` or not) and provide a unified interface
 based on an Python class to abstract access to this datastore.
 
 Some packages may implement only a postgresql backend, some may provide more
@@ -24,7 +24,12 @@ It comes with a few command line tools to manage the specific :mod:`swh`
 package database.
 
 As such, most of the database management cli commands require a configuration
-file holding the database connection information.
+file holding the database connection information, but database creation and
+superuser-level initialization steps can be executed without this configuration
+file, giving db connection parameters as command line arguments (this is
+helpful because you generally don't want to use superuser-level credentials in
+you configuration file for regular db access; these should only be used for the
+database creation -- if any -- and parts of its initialization).
 
 For example, for the :mod:`swh.storage` package, one will be able to create,
 initialize and upgrade the postgresql database using simple commands.
@@ -35,8 +40,7 @@ To create the database and perform superuser initialization steps (see below):
 
    $ swh db create storage --dbname=postgresql://superuser:passwd@localhost:5433/test-storage
 
-If the database already exists but lacks superuser level initialization steps,
-you may use:
+Then, superuser level initialization steps may be needed:
 
 .. code-block:: bash
 
@@ -57,17 +61,17 @@ then you can run:
 
 .. code-block:: bash
 
-   $ swh db --config-file=config.yml init storage
+   $ swh --config-file=config.yml db init storage
    DONE database for storage initialized (flavor default) at version 182
 
 Note: you can define the ``SWH_CONFIG_FILENAME`` environment variable instead
-of using the ``--config-name`` command line option.
+of using the ``--config-name`` command line option shown above.
 
-or check the actual data model version of this database:
+You can check the actual data model version of this database:
 
 .. code-block:: bash
 
-   $ swh db --config-file=config.yml version storage
+   $ swh --config-file=config.yml db version storage
    module: storage
    flavor: default
    version: 182
@@ -76,7 +80,7 @@ as well as the migration history for the database:
 
 .. code-block:: bash
 
-   $ swh db --config-file=config.yml version --all storage
+   $ swh --config-file=config.yml db version --all storage
    module: storage
    flavor: default
    182 [2022-02-11 15:08:31.806070+01:00] Work In Progress
