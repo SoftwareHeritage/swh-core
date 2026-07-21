@@ -138,6 +138,7 @@ def setup_config(ctx, config_file, options=None):
         if config_file is None:
             config_file = environ.get("SWH_CONFIG_FILENAME")
         ctx.obj["config"] = config_read(config_file)
+        ctx.obj["config_file"] = config_file
     if options is not None:
         for k, v in options:
             kpath = k.split(".")
@@ -145,6 +146,7 @@ def setup_config(ctx, config_file, options=None):
             for elt in kpath[:-1]:
                 cfg = cfg.setdefault(elt, {})
             cfg[kpath[-1]] = v
+        ctx.obj["options"] = options
 
 
 def show_versions(
