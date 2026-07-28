@@ -240,6 +240,7 @@ def db_init_admin(
         )
         try:
             init_admin_extensions(dbmodule, dbname)
+            click.echo(f"{package}:{cls} Database {dbname} initialized (admin)")
         except CalledProcessError as exc:
             click.secho("Error during database setup", fg="red", bold=True)
             click.echo(str(exc))
@@ -400,15 +401,9 @@ def initialize_one(package, cls, module, backend_class, flavor, dbname, cfg):
         click.echo(exc.stderr)
         raise click.Abort()
 
-    if dbversion is not None:
-        click.secho(
-            "ERROR: the database version has been populated by sql init scripts. "
-            "This is now deprecated and should not happen any more"
-        )
-    else:
-        # db version has not been populated by sql init scripts (new style),
-        # let's do it; instantiate the data source to retrieve the current
-        # (expected) db version
+    if dbversion is None:
+        # db version needs to be populated; instantiate the data source to
+        # retrieve the current (expected) db version
         swh_set_db_version(dbname, code_version, desc="DB initialization")
 
     dbversion = get_database_info(dbname)[1]
@@ -423,16 +418,23 @@ def initialize_one(package, cls, module, backend_class, flavor, dbname, cfg):
             bold=True,
         )
     else:
+        fl = f"(flavor {dbflavor}) " if dbflavor is not None else ""
+        if dbversion < code_version:
+            fg = "yellow"
+        else:
+            fg = "green"
         click.secho(
-            "DONE database for {} {}{} at version {}".format(
-                module,
-                "initialized" if initialized else "exists",
-                f" (flavor {dbflavor})" if dbflavor is not None else "",
-                dbversion,
-            ),
-            fg="green",
+            f"{package}:{cls} Database {'initialized' if initialized else 'exists'} "
+            f"{fl}"
+            f"at version {dbversion}",
+            fg=fg,
             bold=True,
         )
+        if dbversion < code_version:
+            click.secho(
+                f"{package}:{cls} Current version is {code_version}; migration required",
+                fg="red",
+            )
 
     if flavor is not None and dbflavor != flavor:
         click.secho(
