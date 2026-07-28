@@ -571,16 +571,24 @@ def db_version(ctx, module, show_history, all_backends, module_is_path):
         if db_flavor is not None:
             click.secho(f"flavor: {db_flavor}", fg="green", bold=True)
 
-        # instantiate the data source to retrieve the current (expected) db version
-        datastore_factory = getattr(import_swhmodule(db_module), "get_datastore", None)
-        if not datastore_factory and backend_class is not None:
+        code_version: int | None = None
+        if hasattr(backend_class, "current_version"):
+            code_version = backend_class.current_version
+        else:
+            # instantiate the data source to retrieve the current (expected) db version
+            datastore_factory = getattr(
+                import_swhmodule(db_module), "get_datastore", None
+            )
+            if not datastore_factory and backend_class is not None:
 
-            def datastore_factory(cls, **cfg):
-                return backend_class(**cfg)
+                def datastore_factory(cls, **cfg):
+                    return backend_class(**cfg)
 
-        if datastore_factory:
-            datastore = datastore_factory(**cfg)
-            code_version = datastore.current_version
+            if datastore_factory:
+                datastore = datastore_factory(**cfg)
+                code_version = datastore.current_version
+
+        if code_version is not None:
             click.secho(
                 f"current code version: {code_version}",
                 fg="green" if code_version == db_version else "red",
@@ -702,20 +710,29 @@ def db_upgrade(
                 f"stored in the database ({db_module})."
             )
 
-        # instantiate the data source to retrieve the current (expected) db version
-        datastore_factory = getattr(import_swhmodule(fullmodule), "get_datastore", None)
-
-        if datastore_factory is None and backend_class is not None:
-
-            def datastore_factory(cls, **cfg):
-                return backend_class(**cfg)
-
-        if not datastore_factory:
-            raise click.UsageError(
-                "You cannot use this command on old-style datastore backend {db_module}"
+        ds_version: int | None = None
+        if hasattr(backend_class, "current_version"):
+            ds_version = backend_class.current_version
+        else:
+            # instantiate the data source to retrieve the current (expected) db version
+            datastore_factory = getattr(
+                import_swhmodule(fullmodule), "get_datastore", None
             )
-        datastore = datastore_factory(**cfg)
-        ds_version = datastore.current_version
+
+            if datastore_factory is None and backend_class is not None:
+
+                def datastore_factory(cls, **cfg):
+                    return backend_class(**cfg)
+
+            if not datastore_factory:
+                raise click.UsageError(
+                    "You cannot use this command on old-style datastore backend {db_module}"
+                )
+            datastore = datastore_factory(**cfg)
+            ds_version = datastore.current_version
+
+        assert ds_version is not None
+
         if go_to_version is None:
             go_to_version = ds_version
         if go_to_version > ds_version:
