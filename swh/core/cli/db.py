@@ -334,6 +334,7 @@ def db_init(ctx, module, dbname, flavor, initialize_all, module_is_path):
     module/config entry.
 
     """
+    import gc
 
     # TODO: sanity check all the incompatible options...
     # XXX it probably does not make much sense to have a non-None flavor when
@@ -349,6 +350,10 @@ def db_init(ctx, module, dbname, flavor, initialize_all, module_is_path):
 
     for package, cls, fullmodule, backend_class, dbname, cfg in args:
         initialize_one(package, cls, fullmodule, backend_class, flavor, dbname, cfg)
+
+    # It seems to be required in some cases to prevent psycopg from complaining
+    # that it cannot terminate pool worker in a timely manner...
+    gc.collect()
 
 
 def initialize_one(package, cls, module, backend_class, flavor, dbname, cfg):
