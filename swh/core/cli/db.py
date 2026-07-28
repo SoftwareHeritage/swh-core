@@ -45,6 +45,14 @@ def db(ctx, config_file):
     default=None,
 )
 @click.option(
+    "-a",
+    "--all",
+    "create_all",
+    help="create all db found in the config file for the swh 'module'",
+    default=False,
+    is_flag=True,
+)
+@click.option(
     "--template",
     "-T",
     help="Template database from which to build this database.",
@@ -52,7 +60,7 @@ def db(ctx, config_file):
     show_default=True,
 )
 @click.pass_context
-def db_create(ctx, module, dbname, template):
+def db_create(ctx, module, dbname, create_all, template):
     """Create a database for the Software Heritage <module>.
 
     and potentially execute superuser-level initialization steps.
@@ -75,18 +83,24 @@ def db_create(ctx, module, dbname, template):
         swh db create -d postgresql://superuser:passwd@pghost:5433/swh-storage storage
 
     """
+    from subprocess import SubprocessError
+
     from swh.core.db.db_utils import create_database_for_package
 
     args = handle_cmd_args(
         cfg=ctx.obj["config"],
         module=module,
-        do_all=False,
+        do_all=create_all,
         dbname=dbname,
         is_path=False,
     )
 
     for package, cls, fullmodule, backend_class, dbname, cfg in args:
-        create_database_for_package(fullmodule, dbname, template)
+        try:
+            create_database_for_package(fullmodule, dbname, template)
+            click.echo(f"{package}:{cls} Created database {dbname}")
+        except SubprocessError:
+            click.echo(f"{package}:{cls} Database creation {dbname} failed", err=True)
 
 
 @db.command(name="init-admin", context_settings=CONTEXT_SETTINGS)
