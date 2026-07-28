@@ -825,6 +825,7 @@ def handle_cmd_args(
             "Cannot use both 'all' with a qualified package name "
             f"<module>:<cls> (here: {module})"
         )
+    cls: str | None = None
     if dbname:
         if ":" in module:
             module, cls = module.split(":", 1)
@@ -840,8 +841,14 @@ def handle_cmd_args(
             entry for entry in list_db_config_entries(cfg) if entry[2] == module
         ]
     else:
+        if ":" in module:
+            module, cls = module.split(":", 1)
+        else:
+            cls = None
         config_entries = [
-            entry for entry in list_db_config_entries(cfg) if entry[0] == module
+            entry
+            for entry in list_db_config_entries(cfg)
+            if entry[0] == module and (cls is None or entry[1] == cls)
         ]
 
     if not do_all:
