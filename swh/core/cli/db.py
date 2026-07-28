@@ -382,7 +382,7 @@ def initialize_one(package, cls, module, backend_class, flavor, dbname, cfg):
         datastore = datastore_factory(**cfg)
         if hasattr(datastore, "current_version"):
             code_version = datastore.current_version
-            logger.info(
+            logger.debug(
                 "Initializing database version to %s from the %s datastore",
                 code_version,
                 module,

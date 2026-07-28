@@ -281,7 +281,7 @@ def swh_set_db_module(
     current_module = swh_db_module(db_or_conninfo)
     if current_module is not None:
         if current_module == module:
-            logger.info("The database module is already set to %s", module)
+            logger.debug("The database module is already set to %s", module)
             return
 
         if ":" not in current_module and ":" in module:
