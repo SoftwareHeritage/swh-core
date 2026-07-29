@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2023  The Software Heritage developers
+# Copyright (C) 2015-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -671,9 +671,13 @@ def execute_sqlfiles(
     flavor_set = False
     for sqlfile in sqlfiles:
         logger.debug(f"execute SQL file {sqlfile} dbname={conninfo}")
-        subprocess.run(
-            psql_command + ["-f", str(sqlfile)], check=True, capture_output=True
-        )
+        try:
+            subprocess.run(
+                psql_command + ["-f", str(sqlfile)], check=True, capture_output=True
+            )
+        except subprocess.CalledProcessError as cpe:
+            logger.error(cpe.stderr)
+            raise
 
         if (
             flavor is not None
@@ -686,7 +690,7 @@ def execute_sqlfiles(
             flavor_set = True
 
     if flavor is not None and not flavor_set:
-        logger.warn(
+        logger.warning(
             "Asked for flavor %s, but module does not support database flavors",
             flavor,
         )

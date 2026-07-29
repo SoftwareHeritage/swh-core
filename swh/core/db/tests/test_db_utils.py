@@ -5,6 +5,7 @@
 
 from datetime import timedelta
 from os import path
+from subprocess import CalledProcessError
 
 from psycopg.errors import InsufficientPrivilege
 import pytest
@@ -12,13 +13,18 @@ import pytest
 from swh.core.cli.db import db as swhdb
 from swh.core.db import BaseDb
 from swh.core.db.db_utils import (
+    execute_sqlfiles,
+    get_database_info,
+    get_sql_for_package,
+    now,
+)
+from swh.core.db.db_utils import (
     swh_db_module,
     swh_db_upgrade,
     swh_db_version,
     swh_db_versions,
     swh_set_db_module,
 )
-from swh.core.db.db_utils import get_database_info, get_sql_for_package, now
 from swh.core.db.db_utils import parse_dsn_or_dbname as parse_dsn
 from swh.core.tests.test_cli import assert_result
 
@@ -257,3 +263,15 @@ WHERE grantee = 'guest'
 INSERT INTO origin(url, hash)
 VALUES ('https://example.org', hash_sha1('https://example.org'))
             """)
+
+
+def test_execute_sql_files_error_log(postgresql, caplog, tmp_path):
+    conninfo = craft_conninfo(postgresql)
+    sql_file = tmp_path / "test.sql"
+    sql_file.write_text("foo")
+
+    with pytest.raises(CalledProcessError):
+        execute_sqlfiles([sql_file], conninfo)
+
+    assert caplog.records[0].levelname == "ERROR"
+    assert 'ERROR:  syntax error at or near "foo"' in caplog.records[0].message
