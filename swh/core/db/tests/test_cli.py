@@ -290,11 +290,9 @@ def test_cli_swh_db_init_report_sqlsh_error(
 @pytest.mark.init_version(version=2)
 def test_cli_swh_db_upgrade_new_api(
     request,
-    cli_runner,
     mock_get_entry_points,
     postgresql,
     datadir,
-    mocker,
     tmp_path,
 ):
     """Upgrade scenario for a "new style" datastore"""
@@ -308,9 +306,12 @@ def test_cli_swh_db_upgrade_new_api(
     cfgfile = tmp_path / "config.yml"
     with open(cfgfile, "w") as f:
         f.write(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
-    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
+    from click.testing import CliRunner
+
+    cli_runner = CliRunner(env={"SWH_CONFIG_FILENAME": str(cfgfile)})
+    result = cli_runner.invoke(swhdb, ["init-admin", module_name])
     assert_result(result)
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", module_name])
+    result = cli_runner.invoke(swhdb, ["init", module_name])
     assert_result(result)
 
     assert swh_db_version(conninfo) == 2
@@ -319,7 +320,7 @@ def test_cli_swh_db_upgrade_new_api(
     # version 1
     current_version = 1
     request.node.get_closest_marker("init_version").kwargs["version"] = current_version
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
+    result = cli_runner.invoke(swhdb, ["upgrade", module_name])
     assert_result(result)
     assert swh_db_version(conninfo) == 2
 
@@ -327,20 +328,16 @@ def test_cli_swh_db_upgrade_new_api(
     # no further
     current_version = 3
     request.node.get_closest_marker("init_version").kwargs["version"] = current_version
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", module_name])
+    result = cli_runner.invoke(swhdb, ["upgrade", module_name])
     assert_result(result)
     assert swh_db_version(conninfo) == 3
 
     # an attempt to go further should generate an error
-    result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "upgrade", module_name, "--to-version", 5]
-    )
+    result = cli_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 5])
     assert result.exit_code != 0
     assert swh_db_version(conninfo) == 3
     # an attempt to go lower should not do anything
-    result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "upgrade", module_name, "--to-version", 2]
-    )
+    result = cli_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 2])
     assert_result(result)
     assert swh_db_version(conninfo) == 3
 
@@ -348,9 +345,7 @@ def test_cli_swh_db_upgrade_new_api(
     # stick to the given version 4 and no further
     current_version = 6
     request.node.get_closest_marker("init_version").kwargs["version"] = current_version
-    result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "upgrade", module_name, "--to-version", 4]
-    )
+    result = cli_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 4])
     assert_result(result)
     assert swh_db_version(conninfo) == 4
     assert "migration was not complete" in result.output
@@ -358,7 +353,7 @@ def test_cli_swh_db_upgrade_new_api(
     # attempt to upgrade to a newer version than current code version fails
     result = cli_runner.invoke(
         swhdb,
-        ["-C", cfgfile, "upgrade", module_name, "--to-version", current_version + 1],
+        ["upgrade", module_name, "--to-version", current_version + 1],
     )
     assert result.exit_code != 0
     assert swh_db_version(conninfo) == 4
@@ -371,9 +366,7 @@ def test_cli_swh_db_upgrade_new_api(
         assert swh_db_module(conninfo) is None
 
     # db migration should recreate the missing dbmodule table
-    result = cli_runner.invoke(
-        swhdb, ["-C", cfgfile, "upgrade", module_name], input="Y"
-    )
+    result = cli_runner.invoke(swhdb, ["upgrade", module_name], input="Y")
     assert_result(result)
     assert "Warning: the database does not have a dbmodule table." in result.output
     assert (
