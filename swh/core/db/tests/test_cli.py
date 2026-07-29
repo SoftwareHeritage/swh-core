@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from click.testing import CliRunner
 import pytest
 from pytest_postgresql import factories
 import yaml
@@ -19,6 +20,9 @@ def assert_no_pending_transaction(cursor):
     sql = """SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction'"""
     idle = cursor.execute(sql).fetchall()
     assert idle == []
+
+
+# tests --help
 
 
 def test_cli_swh_help(swhmain, cli_runner):
@@ -58,25 +62,24 @@ def test_cli_swh_db_help(swhmain, cli_runner):
             assert_section_contains(result.output, section, snippet)
 
 
-@pytest.fixture
-def swh_db_cli(cli_runner, monkeypatch, postgresql):
-    """This initializes a cli_runner and sets the correct environment variable expected by
-    the cli to run appropriately (when not specifying the --dbname flag)
-
-    """
-    monkeypatch.setenv("PGHOST", postgresql.info.host)
-    monkeypatch.setenv("PGUSER", postgresql.info.user)
-    monkeypatch.setenv("PGPORT", str(postgresql.info.port))
-
-    return cli_runner, postgresql.info
-
-
 def craft_conninfo(test_db, dbname=None) -> str:
     """Craft conninfo string out of the test_db object. This also allows to override the
     dbname."""
     db_params = test_db.info
     dbname = dbname if dbname else db_params.dbname
     return f"postgresql://{db_params.user}@{db_params.host}:{db_params.port}/{dbname}"
+
+
+@pytest.fixture
+def cli_db_runner(postgresql, tmp_path):
+    """This initializes a cli_runner and sets the SWH_CONFIG_FILENAME environment variable"""
+    conninfo = craft_conninfo(postgresql)
+    cfgfile = tmp_path / "config.yml"
+    cfgfile.write_text(yaml.dump({"test": {"cls": "postgresql", "db": conninfo}}))
+    return CliRunner(env={"SWH_CONFIG_FILENAME": str(cfgfile)})
+
+
+# tests for create, init and init-admin commands
 
 
 @pytest.mark.parametrize(
@@ -87,10 +90,14 @@ def craft_conninfo(test_db, dbname=None) -> str:
         ("test:cli2", "origin2"),
     ],
 )
-def test_cli_swh_db_create_and_init_db(
+def test_cli_swh_db_create_and_init_db_using_dbname_option(
     cli_runner, postgresql, mock_get_entry_points, module_table
 ):
-    """Create a db then initializing it should be ok"""
+    """Create and initializing a db without config file using --dbname option
+
+    Note: the sql setup scripts are found in the tests/data/<pkg>/<cls>
+    directory, so test:cli2 will look in ./data/test/cli2/sql for example.
+    """
     module_name, table = module_table
     conninfo = craft_conninfo(postgresql, f"db-{module_name}")
     # This creates the db and installs the necessary admin extensions
@@ -113,7 +120,7 @@ def test_cli_swh_db_create_and_init_db(
 def test_cli_swh_db_initialization_fail_without_creation_first(
     cli_runner, postgresql, mock_import_module
 ):
-    """Init command on an inexisting db cannot work"""
+    """Init command on an missing db cannot work"""
     module_name = "test"  # it's mocked here
     conninfo = craft_conninfo(postgresql, "inexisting-db")
 
@@ -143,46 +150,18 @@ def test_cli_swh_db_initialization_fail_without_extension(
     )
 
 
-def test_cli_swh_db_initialization_works_with_flags(
-    cli_runner,
-    postgresql,
-    mock_get_entry_points,
+def test_cli_swh_db_initialization_from_config(
+    cli_db_runner, mock_get_entry_points, postgresql
 ):
-    """Init commands with carefully crafted libpq conninfo works"""
+    """Init commands using cnx params from a simple config file"""
     module_name = "test"  # it's mocked here
-    conninfo = craft_conninfo(postgresql)
-
-    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
+    result = cli_db_runner.invoke(swhdb, ["init-admin", module_name])
     assert_result(result)
-
-    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
-    assert_result(result)
-    # the origin values in the scripts uses a hash function (which implementation wise
-    # uses a function from the pgcrypt extension, init-admin calls installs it)
-    with BaseDb.connect(postgresql.info.dsn) as conn:
-        with conn.cursor() as cur:
-            cur.execute("select * from origin")
-            origins = cur.fetchall()
-            assert len(origins) == 1
-
-
-def test_cli_swh_db_initialization_with_env(
-    swh_db_cli, mock_get_entry_points, postgresql
-):
-    """Init commands with standard environment variables works"""
-    module_name = "test"  # it's mocked here
-    cli_runner, db_params = swh_db_cli
-    result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
-    )
-    assert_result(result)
-    result = cli_runner.invoke(
+    result = cli_db_runner.invoke(
         swhdb,
         [
             "init",
             module_name,
-            "--dbname",
-            db_params.dbname,
         ],
     )
     assert_result(result)
@@ -197,66 +176,26 @@ def test_cli_swh_db_initialization_with_env(
 
 
 def test_cli_swh_db_initialization_idempotent(
-    swh_db_cli, mock_get_entry_points, postgresql
+    cli_db_runner, mock_get_entry_points, postgresql
 ):
     """Multiple runs of the init commands are idempotent"""
     module_name = "test"  # mocked
-    cli_runner, db_params = swh_db_cli
 
-    result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
-    )
+    result = cli_db_runner.invoke(swhdb, ["init-admin", module_name])
     assert_result(result)
 
-    result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--dbname", db_params.dbname]
-    )
+    result = cli_db_runner.invoke(swhdb, ["init", module_name])
     assert_result(result)
 
-    result = cli_runner.invoke(
-        swhdb, ["init-admin", module_name, "--dbname", db_params.dbname]
-    )
+    result = cli_db_runner.invoke(swhdb, ["init-admin", module_name])
     assert_result(result)
 
-    result = cli_runner.invoke(
-        swhdb, ["init", module_name, "--dbname", db_params.dbname]
-    )
+    result = cli_db_runner.invoke(swhdb, ["init", module_name])
     assert_result(result)
 
     # the origin values in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, init-admin calls installs it)
     with BaseDb.connect(postgresql.info.dsn) as conn:
-        with conn.cursor() as cur:
-            cur.execute("select * from origin")
-            origins = cur.fetchall()
-            assert len(origins) == 1
-
-
-def test_cli_swh_db_create_and_init_db_new_api(
-    cli_runner,
-    postgresql,
-    mock_get_entry_points,
-    mocker,
-    tmp_path,
-):
-    """Create a db then initializing it should be ok for a "new style" datastore"""
-    module_name = "test"
-
-    conninfo = craft_conninfo(postgresql)
-
-    # This initializes the schema and data
-    cfgfile = tmp_path / "config.yml"
-    cfgfile.write_text(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
-    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
-    assert_result(result)
-
-    cli_cmd = ["-C", cfgfile, "init", module_name]
-    result = cli_runner.invoke(swhdb, cli_cmd)
-    assert_result(result)
-
-    # the origin value in the scripts uses a hash function (which implementation wise
-    # uses a function from the pgcrypt extension, installed during db creation step)
-    with BaseDb.connect(conninfo) as conn:
         with conn.cursor() as cur:
             cur.execute("select * from origin")
             origins = cur.fetchall()
@@ -287,163 +226,20 @@ def test_cli_swh_db_init_report_sqlsh_error(
     ) in result.output
 
 
-@pytest.mark.init_version(version=2)
-def test_cli_swh_db_upgrade_new_api(
-    request,
-    mock_get_entry_points,
-    postgresql,
-    datadir,
-    tmp_path,
-):
-    """Upgrade scenario for a "new style" datastore"""
-    module_name = "test"
-
-    current_version = request.node.get_closest_marker("init_version").kwargs["version"]
-
-    conninfo = craft_conninfo(postgresql)
-
-    # This initializes the schema and data
-    cfgfile = tmp_path / "config.yml"
-    with open(cfgfile, "w") as f:
-        f.write(yaml.dump({module_name: {"cls": "postgresql", "db": conninfo}}))
-    from click.testing import CliRunner
-
-    cli_runner = CliRunner(env={"SWH_CONFIG_FILENAME": str(cfgfile)})
-    result = cli_runner.invoke(swhdb, ["init-admin", module_name])
-    assert_result(result)
-    result = cli_runner.invoke(swhdb, ["init", module_name])
-    assert_result(result)
-
-    assert swh_db_version(conninfo) == 2
-
-    # the upgrade should not do anything because the datastore does advertise
-    # version 1
-    current_version = 1
-    request.node.get_closest_marker("init_version").kwargs["version"] = current_version
-    result = cli_runner.invoke(swhdb, ["upgrade", module_name])
-    assert_result(result)
-    assert swh_db_version(conninfo) == 2
-
-    # advertise current version as 3, a simple upgrade should get us there, but
-    # no further
-    current_version = 3
-    request.node.get_closest_marker("init_version").kwargs["version"] = current_version
-    result = cli_runner.invoke(swhdb, ["upgrade", module_name])
-    assert_result(result)
-    assert swh_db_version(conninfo) == 3
-
-    # an attempt to go further should generate an error
-    result = cli_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 5])
-    assert result.exit_code != 0
-    assert swh_db_version(conninfo) == 3
-    # an attempt to go lower should not do anything
-    result = cli_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 2])
-    assert_result(result)
-    assert swh_db_version(conninfo) == 3
-
-    # advertise current version as 6, an upgrade with --to-version 4 should
-    # stick to the given version 4 and no further
-    current_version = 6
-    request.node.get_closest_marker("init_version").kwargs["version"] = current_version
-    result = cli_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 4])
-    assert_result(result)
-    assert swh_db_version(conninfo) == 4
-    assert "migration was not complete" in result.output
-
-    # attempt to upgrade to a newer version than current code version fails
-    result = cli_runner.invoke(
-        swhdb,
-        ["upgrade", module_name, "--to-version", current_version + 1],
-    )
-    assert result.exit_code != 0
-    assert swh_db_version(conninfo) == 4
-
-    cnx = BaseDb.connect(conninfo)
-    with cnx:
-        with cnx.transaction() as cur:
-            assert_no_pending_transaction(cur)
-            cur.execute("drop table dbmodule")
-        assert swh_db_module(conninfo) is None
-
-    # db migration should recreate the missing dbmodule table
-    result = cli_runner.invoke(swhdb, ["upgrade", module_name], input="Y")
-    assert_result(result)
-    assert "Warning: the database does not have a dbmodule table." in result.output
-    assert (
-        "Write the module information (test:postgresql) in the database? [Y/n]"
-        in result.output
-    )
-    assert swh_db_module(conninfo) == "test:postgresql"
-
-
-@pytest.mark.init_version(version=5)
-def test_cli_swh_db_init_version_ok(
-    request,
-    cli_runner,
-    mock_get_entry_points,
-    postgresql,
-    datadir,
-    mocker,
-    tmp_path,
-):
-    """Upgrade scenario for a "new style" datastore"""
-    module_name = "test"
-
-    # the `current_version` variable is the version that will be returned by
-    # any call to `get_current_version()` in this test session, thanks to the
-    # local mocked version of import_swhmodule() below.
-    current_version = request.node.get_closest_marker("init_version").kwargs["version"]
-    conninfo = craft_conninfo(postgresql)
-
-    # call the db init stuff WITHOUT a config file
-    result = cli_runner.invoke(swhdb, ["init-admin", module_name, "--dbname", conninfo])
-    assert_result(result)
-    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
-    assert_result(result)
-
-    assert swh_db_version(conninfo) == current_version
-
-
-def test_cli_swh_db_version(swh_db_cli, mock_get_entry_points, postgresql):
-    module_name = "test"
-    cli_runner, db_params = swh_db_cli
-
-    conninfo = craft_conninfo(postgresql, "test-db-version")
-    # This creates the db and installs the necessary admin extensions
-    result = cli_runner.invoke(swhdb, ["create", module_name, "--dbname", conninfo])
-    assert_result(result)
-    # This initializes the schema and data
-    result = cli_runner.invoke(swhdb, ["init", module_name, "--dbname", conninfo])
-    assert_result(result)
-
-    actual_db_version = swh_db_version(conninfo)
-
-    with BaseDb.connect(conninfo) as conn:
-        with conn.cursor() as cur:
-            cur.execute("select version from dbversion order by version desc limit 1")
-            expected_version = cur.fetchone()[0]
-            assert actual_db_version == expected_version
-
-    assert_result(result)
-    assert (
-        f"initialized (flavor default) at version {expected_version}" in result.output
-    )
-
-
-@pytest.mark.parametrize("initialize_all", [True, False])
-def test_cli_swh_db_initadmin_and_init_db_from_config_path(
-    cli_runner,
+@pytest.mark.parametrize("argtype", ["all", "config_path", "pkg:cls"])
+def test_cli_swh_db_initialization_from_config_multiple(
     postgresql,
     postgresql2,
     mock_get_entry_points,
     mocker,
     tmp_path,
-    initialize_all,
+    argtype,
 ):
-    """Test init-admin and init commands with db cnx string coming from the config file
+    """Test init-admin and init commands from a complex config file
 
     It will test both the case where db cnx location in the config file are
-    given and the automated mode (aka with --initialize-all).
+    given -- either by config path or via the pkg:cls syntax -- and the
+    automated mode (aka with --all).
 
     """
     conninfo = craft_conninfo(postgresql)
@@ -464,24 +260,31 @@ test:
           cls: cli2
           db: {conninfo2}
     """)
-    if initialize_all:
-        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", "test"])
-        assert_result(result)
-        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", "-a", "test"])
-        assert_result(result)
+    cli_runner = CliRunner(env={"SWH_CONFIG_FILENAME": str(cfgfile)})
+
+    if argtype == "all":
+        # the 'init(-admin) --all test' scenario
+        args = [
+            ["--all", "test"],
+        ]
+    elif argtype == "config_path":
+        # the 'init(-admin) -p pkg.path.to' scenarios
+        args = [
+            ["-p", cpath]
+            for cpath in (
+                "test.backend.steps.0",
+                "test.backend.steps.1.backend",
+            )
+        ]
     else:
-        for config_path in (
-            "test.backend.steps.0",
-            "test.backend.steps.1.backend",
-        ):
-            result = cli_runner.invoke(
-                swhdb, ["-C", cfgfile, "init-admin", "-p", config_path]
-            )
-            assert_result(result)
-            result = cli_runner.invoke(
-                swhdb, ["-C", cfgfile, "init", "-p", config_path]
-            )
-            assert_result(result)
+        # the 'init(-admin) pkg:cls' scenarios
+        args = [["test:postgresql"], ["test:cli2"]]
+
+    for arg in args:
+        result = cli_runner.invoke(swhdb, ["init-admin"] + arg)
+        assert_result(result)
+        result = cli_runner.invoke(swhdb, ["init"] + arg)
+        assert_result(result)
 
     # the origin value in the scripts uses a hash function (which implementation wise
     # uses a function from the pgcrypt extension, installed during db creation step)
@@ -497,6 +300,63 @@ test:
         assert len(origins) == 1
 
 
+# tests for version management
+
+
+@pytest.mark.init_version(version=5)
+def test_cli_swh_db_init_version_ok(
+    request,
+    cli_db_runner,
+    mock_get_entry_points,
+    postgresql,
+    datadir,
+    mocker,
+    tmp_path,
+):
+    module_name = "test"
+
+    # the `current_version` variable is the version that will be returned by
+    # any call to `get_current_version()` in this test session, thanks to the
+    # local mocked version of import_swhmodule() below.
+    current_version = 5
+    conninfo = craft_conninfo(postgresql)
+
+    # call the db init stuff WITHOUT a config file
+    result = cli_db_runner.invoke(swhdb, ["init-admin", module_name])
+    assert_result(result)
+    result = cli_db_runner.invoke(swhdb, ["init", module_name])
+    assert_result(result)
+
+    assert swh_db_version(conninfo) == current_version
+
+
+def test_cli_swh_db_version(cli_db_runner, mock_get_entry_points, postgresql):
+    module_name = "test"
+
+    conninfo = craft_conninfo(postgresql)
+    # This creates the db and installs the necessary admin extensions
+    result = cli_db_runner.invoke(swhdb, ["create", module_name])
+    assert_result(result)
+    # This initializes the schema and data
+    result = cli_db_runner.invoke(swhdb, ["init-admin", module_name])
+    assert_result(result)
+    result = cli_db_runner.invoke(swhdb, ["init", module_name])
+    assert_result(result)
+
+    actual_db_version = swh_db_version(conninfo)
+
+    with BaseDb.connect(conninfo) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select version from dbversion order by version desc limit 1")
+            expected_version = cur.fetchone()[0]
+            assert actual_db_version == expected_version
+
+    assert_result(result)
+    assert (
+        f"initialized (flavor default) at version {expected_version}" in result.output
+    )
+
+
 def test_cli_swh_db_list_config_path(
     cli_runner,
     postgresql,
@@ -505,7 +365,7 @@ def test_cli_swh_db_list_config_path(
     mocker,
     tmp_path,
 ):
-    """Test the swh db list command"""
+    """Test the 'swh db list' command"""
     conninfo = craft_conninfo(postgresql)
     conninfo2 = craft_conninfo(postgresql2)
 
@@ -541,7 +401,7 @@ def test_cli_swh_db_version_from_config(
     mocker,
     tmp_path,
 ):
-    """Test the swh db list command"""
+    """Test the 'swh db version' command"""
     conninfo = craft_conninfo(postgresql)
     conninfo2 = craft_conninfo(postgresql2)
 
@@ -604,18 +464,119 @@ version: 3
 """
 
 
-@pytest.mark.init_version(version=1)
-def test_cli_swh_db_upgrade_from_config(
+# tests for upgrade management
+
+
+@pytest.mark.init_version(version=2)
+def test_cli_swh_db_upgrade(
     request,
-    cli_runner,
+    cli_db_runner,
+    mock_get_entry_points,
+    postgresql,
+    datadir,
+    tmp_path,
+):
+    """Simple upgrade scenario
+
+    Only one backend entry. Upgrade in several steps (aka test the
+    '--to-version' option).
+
+    """
+    module_name = "test"
+
+    current_version = request.node.get_closest_marker("init_version").kwargs["version"]
+    assert current_version == 2
+
+    conninfo = craft_conninfo(postgresql)
+
+    result = cli_db_runner.invoke(swhdb, ["init-admin", module_name])
+    assert_result(result)
+    result = cli_db_runner.invoke(swhdb, ["init", module_name])
+    assert_result(result)
+
+    assert swh_db_version(conninfo) == 2
+
+    # the upgrade should not do anything because the datastore does advertise
+    # version 1
+    current_version = 1
+    request.node.get_closest_marker("init_version").kwargs["version"] = current_version
+    result = cli_db_runner.invoke(swhdb, ["upgrade", module_name])
+    assert_result(result)
+    assert swh_db_version(conninfo) == 2
+
+    # advertise current version as 3, a simple upgrade should get us there, but
+    # no further
+    current_version = 3
+    request.node.get_closest_marker("init_version").kwargs["version"] = current_version
+    result = cli_db_runner.invoke(swhdb, ["upgrade", module_name])
+    assert_result(result)
+    assert swh_db_version(conninfo) == 3
+
+    # an attempt to go further should generate an error
+    result = cli_db_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 5])
+    assert result.exit_code != 0
+    assert swh_db_version(conninfo) == 3
+    # an attempt to go lower should not do anything
+    result = cli_db_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 2])
+    assert_result(result)
+    assert swh_db_version(conninfo) == 3
+
+    # advertise current version as 6, an upgrade with --to-version 4 should
+    # stick to the given version 4 and no further
+    current_version = 6
+    request.node.get_closest_marker("init_version").kwargs["version"] = current_version
+    result = cli_db_runner.invoke(swhdb, ["upgrade", module_name, "--to-version", 4])
+    assert_result(result)
+    assert swh_db_version(conninfo) == 4
+    assert "migration was not complete" in result.output
+
+    # attempt to upgrade to a newer version than current code version fails
+    result = cli_db_runner.invoke(
+        swhdb,
+        ["upgrade", module_name, "--to-version", current_version + 1],
+    )
+    assert result.exit_code != 0
+    assert swh_db_version(conninfo) == 4
+
+    cnx = BaseDb.connect(conninfo)
+    with cnx:
+        with cnx.transaction() as cur:
+            assert_no_pending_transaction(cur)
+            cur.execute("drop table dbmodule")
+        assert swh_db_module(conninfo) is None
+
+    # db migration should recreate the missing dbmodule table
+    result = cli_db_runner.invoke(swhdb, ["upgrade", module_name], input="Y")
+    assert_result(result)
+    assert "Warning: the database does not have a dbmodule table." in result.output
+    assert (
+        "Write the module information (test:postgresql) in the database? [Y/n]"
+        in result.output
+    )
+    assert swh_db_module(conninfo) == "test:postgresql"
+
+
+@pytest.mark.init_version(version=1)
+@pytest.mark.parametrize(
+    "use_config_path",
+    [True, False],
+    ids=["use config path", "use pkg:cls"],
+)
+def test_cli_swh_db_upgrade_from_config_path(
+    request,
     mock_get_entry_points,
     postgresql,
     postgresql2,
     datadir,
     mocker,
     tmp_path,
+    use_config_path,
 ):
-    """Test the upgrade cli tool reading db cnx from a nested config file"""
+    """Test the upgrade cli tool -- one at a time -- from a nested config file
+
+    Test both the 'upgrade -p cfg.path.to.entry' form and the 'upgrade pkg:cls'
+    one.
+    """
     conninfo = craft_conninfo(postgresql)
     conninfo2 = craft_conninfo(postgresql2)
 
@@ -634,11 +595,16 @@ test:
           db: {conninfo2}
     """)
 
+    cli_runner = CliRunner(env={"SWH_CONFIG_FILENAME": str(cfgfile)})
     module_name = "test"
 
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", module_name])
+    # needed because the of the parametrization of the test...
+    # first call will let the marker set to 6
+    request.node.get_closest_marker("init_version").kwargs["version"] = 1
+
+    result = cli_runner.invoke(swhdb, ["init-admin", "--all", module_name])
     assert_result(result)
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", "-a", module_name])
+    result = cli_runner.invoke(swhdb, ["init", "--all", module_name])
     assert_result(result)
 
     assert swh_db_version(conninfo) == 1
@@ -648,6 +614,10 @@ test:
         ("test:postgresql", "test.backend.steps.0", conninfo),
         ("test:cli2", "test.backend.steps.1.backend", conninfo2),
     ):
+        if use_config_path:
+            args = ["upgrade", "-p", config_path]
+        else:
+            args = ["upgrade", module_name]
         current_version = 1
         # XXX hack hack hack: change the current test (pytest.)marker's
         # init_version arg, this one is used in mock_import_swhmodule...
@@ -656,7 +626,7 @@ test:
         ] = current_version
         # the upgrade should not do anything because the datastore does advertise
         # version 1
-        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", "-p", config_path])
+        result = cli_runner.invoke(swhdb, args)
         assert_result(result)
         assert swh_db_version(cnxstr) == 1
 
@@ -666,20 +636,16 @@ test:
         request.node.get_closest_marker("init_version").kwargs[
             "version"
         ] = current_version
-        result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", "-p", config_path])
+        result = cli_runner.invoke(swhdb, args)
         assert_result(result)
         assert swh_db_version(cnxstr) == 2
 
         # an attempt to go further should not do anything
-        result = cli_runner.invoke(
-            swhdb, ["-C", cfgfile, "upgrade", "-p", config_path, "--to-version", 5]
-        )
+        result = cli_runner.invoke(swhdb, args + ["--to-version", 5])
         assert result.exit_code != 0
         assert swh_db_version(cnxstr) == 2
         # an attempt to go lower should not do anything
-        result = cli_runner.invoke(
-            swhdb, ["-C", cfgfile, "upgrade", "-p", config_path, "--to-version", 1]
-        )
+        result = cli_runner.invoke(swhdb, args + ["--to-version", 1])
         assert_result(result)
         assert swh_db_version(cnxstr) == 2
 
@@ -689,9 +655,7 @@ test:
         request.node.get_closest_marker("init_version").kwargs[
             "version"
         ] = current_version
-        result = cli_runner.invoke(
-            swhdb, ["-C", cfgfile, "upgrade", "-p", config_path, "--to-version", 4]
-        )
+        result = cli_runner.invoke(swhdb, args + ["--to-version", 4])
         assert_result(result)
         assert swh_db_version(cnxstr) == 4
         assert "migration was not complete" in result.output
@@ -699,12 +663,8 @@ test:
         # attempt to upgrade to a newer version than current code version fails
         result = cli_runner.invoke(
             swhdb,
-            [
-                "-C",
-                cfgfile,
-                "upgrade",
-                "-p",
-                config_path,
+            args
+            + [
                 "--to-version",
                 current_version + 1,
             ],
@@ -718,9 +678,7 @@ test:
         assert swh_db_module(cnxstr) is None
 
         # db migration should recreate the missing dbmodule table
-        result = cli_runner.invoke(
-            swhdb, ["-C", cfgfile, "upgrade", "-p", config_path], input="Y"
-        )
+        result = cli_runner.invoke(swhdb, args, input="Y")
         assert_result(result)
         assert "Warning: the database does not have a dbmodule table." in result.output
         assert (
@@ -733,7 +691,6 @@ test:
 @pytest.mark.init_version(version=1)
 def test_cli_swh_db_upgrade_all(
     request,
-    cli_runner,
     mock_get_entry_points,
     postgresql,
     postgresql2,
@@ -741,7 +698,7 @@ def test_cli_swh_db_upgrade_all(
     mocker,
     tmp_path,
 ):
-    """Test the upgrade cli tool reading db cnx from a nested config file"""
+    """Test the 'upgrade --all' cli tool from a nested config file"""
     conninfo = craft_conninfo(postgresql)
     conninfo2 = craft_conninfo(postgresql2)
 
@@ -762,23 +719,24 @@ test:
 
     module_name = "test"
 
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init-admin", "-a", module_name])
+    cli_runner = CliRunner(env={"SWH_CONFIG_FILENAME": str(cfgfile)})
+
+    result = cli_runner.invoke(swhdb, ["init-admin", "--all", module_name])
     assert_result(result)
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "init", "-a", module_name])
+    result = cli_runner.invoke(swhdb, ["init", "--all", module_name])
     assert_result(result)
 
     assert swh_db_version(conninfo) == 1
     assert swh_db_version(conninfo2) == 1
 
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", "-a", module_name])
+    result = cli_runner.invoke(swhdb, ["upgrade", "--all", module_name])
     assert_result(result)
     assert swh_db_version(conninfo) == 1
     assert swh_db_version(conninfo2) == 1
 
-    current_version = 6
-    request.node.get_closest_marker("init_version").kwargs["version"] = current_version
+    request.node.get_closest_marker("init_version").kwargs["version"] = 6
 
-    result = cli_runner.invoke(swhdb, ["-C", cfgfile, "upgrade", "-a", module_name])
+    result = cli_runner.invoke(swhdb, ["upgrade", "--all", module_name])
     assert_result(result)
     assert swh_db_version(conninfo) == 6
     assert swh_db_version(conninfo2) == 6
