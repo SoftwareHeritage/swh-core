@@ -38,7 +38,7 @@ def test_backend_list_cls_ok(swhmain, mock_get_entry_points):
     assert_result(result)
     assert result.output.strip() == """\
 test: backend1
-  class: MockBackend
+  class: MockDataStore
   package: swh.test.backend1
 
 A mockup backend for tests\

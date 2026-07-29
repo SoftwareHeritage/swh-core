@@ -467,6 +467,28 @@ def clean_scopes():
     scope._current_scope.set(None)
 
 
+def mk_datastore(request):
+    class classproperty(object):
+        def __init__(self, f):
+            self.f = f
+
+        def __get__(self, obj, owner):
+            return self.f(owner)
+
+    class MockDataStore:
+        "A mockup backend for tests"
+
+        @classproperty
+        def current_version(cls):
+            m = request.node.get_closest_marker("init_version")
+            if m:
+                return m.kwargs.get("version", 1)
+            else:
+                return 3
+
+    return MockDataStore
+
+
 # Some test don't have "db" available, so we need too work around it.
 try:
     import swh.core.db
@@ -489,25 +511,17 @@ else:
             if not name.startswith("swh.test"):
                 return import_module(name, package)
 
-            m = request.node.get_closest_marker("init_version")
-            if m:
-                version = m.kwargs.get("version", 1)
-            else:
-                version = 3
             if name.startswith("swh."):
                 name = name[4:]
             modpath = name.split(".")
-
-            def get_datastore(*args, **kw):
-                return mock(current_version=version)
-
             return mock(
                 __name__=name.split(".")[-1],
                 __file__=str(Path(datadir, *modpath, "__init__.py")),
-                get_datastore=get_datastore,
+                get_datastore=lambda *args, **kw: mk_datastore(request),
             )
 
-        return mocker.patch("swh.core.config.import_module", import_module_mocker)
+        yield mocker.patch("swh.core.config.import_module", import_module_mocker)
+        swh.core.config.get_swh_backend_module.cache_clear()
 
 
 @pytest.fixture()
@@ -515,12 +529,6 @@ def mock_get_entry_points(request, mocker, datadir, mock_import_module):
     mock = mocker.MagicMock
 
     def get_entry_points_mocker(group):
-        m = request.node.get_closest_marker("init_version")
-        if m:
-            version = m.kwargs.get("version", 1)
-        else:
-            version = 3
-
         class EntryPoints(dict):
             def __iter__(self):
                 return iter(self.values())
@@ -533,11 +541,7 @@ def mock_get_entry_points(request, mocker, datadir, mock_import_module):
                 if not entry.name.startswith("_") and entry.is_dir():
                     ep = mock(
                         module=f"swh.{package}.{entry.name}",
-                        load=lambda: mock(
-                            current_version=version,
-                            __name__="MockBackend",
-                            __doc__="A mockup backend for tests",
-                        ),
+                        load=lambda: mk_datastore(request),
                     )
                     # needed to overwrite the Mock's name argument, see
                     # https://docs.python.org/3/library/unittest.mock.html#mock-names-and-the-name-attribute
@@ -545,7 +549,8 @@ def mock_get_entry_points(request, mocker, datadir, mock_import_module):
                     entrypoints[entry.name] = ep
         return entrypoints
 
-    return mocker.patch("swh.core.config.get_entry_points", get_entry_points_mocker)
+    yield mocker.patch("swh.core.config.get_entry_points", get_entry_points_mocker)
+    swh.core.config.get_swh_backend_module.cache_clear()
 
 
 # for bw compat
