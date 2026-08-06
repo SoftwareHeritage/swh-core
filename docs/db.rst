@@ -20,6 +20,9 @@ This :mod:`swh.core.db` only deals with the postgresql part and provides common
 features and tooling to manage the database lifecycle in a consistent and
 unified way among all the :mod:`swh` packages.
 
+Command line tools
+------------------
+
 It comes with a few command line tools to manage the specific :mod:`swh`
 package database.
 
@@ -31,23 +34,61 @@ helpful because you generally don't want to use superuser-level credentials in
 you configuration file for regular db access; these should only be used for the
 database creation -- if any -- and parts of its initialization).
 
-For example, for the :mod:`swh.storage` package, one will be able to create,
-initialize and upgrade the postgresql database using simple commands.
 
-To create the database and perform superuser initialization steps (see below):
+Database initialization
+~~~~~~~~~~~~~~~~~~~~~~~
+
+We are using the :mod:`swh.storage` package in this documentation as example of
+a swh package providing database backends. One will be able to create,
+initialize and upgrade databases for the :mod:`swh.storage` package using
+simple commands. In this case, the default backend for this package is the main
+storage postgresql backend (but this package provides more backends, which will
+be illustrated later).
+
+Creating and initializing the database can be done with or without any
+configuration file.
+
+To create the database and perform superuser initialization
+steps (see below):
 
 .. code-block:: bash
 
    $ swh db create storage --dbname=postgresql://superuser:passwd@localhost:5433/test-storage
 
-Then, superuser level initialization steps may be needed:
+This will create the database and run the superuser-level initialization steps.
+
+If the database already exists, superuser level initialization steps can be executed with:
 
 .. code-block:: bash
 
    $ swh db init-admin storage --dbname=postgresql://superuser:passwd@localhost:5433/test-storage
 
+The non-superuser level initialization can be done with:
 
-Then assuming the ``config.yml`` file existence:
+.. code-block:: bash
+
+   $ swh db init storage --dbname=postgresql://user:passwd@localhost:5433/test-storage
+
+
+.. hint::
+   A simple way of testing these commands is to use `pifpaf <https://github.com/jd/pifpaf>`_.
+
+   .. code-block:: bash
+
+      $ eval `pifpaf run -- postgresql`
+      $ swh db init-admin storage --dbname=$PIFPAF_URL
+      storage:postgresql Database postgresql://localhost/postgres[...] initialized (admin)
+      $ swh db init storage --dbname=$PIFPAF_URL
+      storage:postgresql Database initialized (flavor default) at version 195
+      $ pifpaf_stop
+
+
+Configuration file
+~~~~~~~~~~~~~~~~~~
+
+All the `swh db` commands can use (or need) a configuration file.
+
+Assuming the ``config.yml`` file existence:
 
 .. code-block:: yaml
 
@@ -67,11 +108,19 @@ then you can run:
 Note: you can define the ``SWH_CONFIG_FILENAME`` environment variable instead
 of using the ``--config-name`` command line option shown above.
 
+.. code-block:: bash
+
+   $ export SWH_CONFIG_FILENAME=$PWD/config.yml
+   $ swh db init storage
+   DONE database for storage initialized (flavor default) at version 182
+
+
 You can check the actual data model version of this database:
 
 .. code-block:: bash
 
-   $ swh --config-file=config.yml db version storage
+   $ export SWH_CONFIG_FILENAME=$PWD/config.yml
+   $ swh db version storage
    module: storage
    flavor: default
    version: 182
@@ -80,15 +129,96 @@ as well as the migration history for the database:
 
 .. code-block:: bash
 
-   $ swh --config-file=config.yml db version --all storage
+   $ swh db version --all storage
    module: storage
    flavor: default
    182 [2022-02-11 15:08:31.806070+01:00] Work In Progress
    181 [2022-02-11 14:06:27.435010+01:00] Work In Progress
 
 
-The database migration is done using the ``swh db upgrade`` command.
+Database migration
+~~~~~~~~~~~~~~~~~~
 
+The database migration is done using the ``swh db upgrade`` command:
+
+.. code-block:: bash
+
+   $ swh db version storage
+
+   module: storage:postgresql
+   flavor: default
+   current code version: 195
+   version: 192
+
+   $ swh db upgrade storage
+   Migration to version 195 done
+
+
+Multiple backends in a configuration file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A configuration file can store more than one database backend entries.
+
+.. code-block:: yaml
+
+   storage:
+     cls: pipeline
+     steps:
+       - cls: record_references
+       - cls: blocking
+         db: postgresql:///?service=blocking-proxy
+       - cls: masking
+         db: postgresql:///?service=masking-proxy-ro
+         max_pool_conns: 10
+         storage:
+           cls: postgresql
+           db: postgresql:///?service=storage
+           objstorage:
+             cls: remote
+             url: http://nginx/rpc/objstorage/
+
+   storage_masking_admin:
+     pkg: storage
+     cls: postgresql
+     db: postgresql:///?service=masking-proxy-rw
+
+In this configuration we have 3 database backends, the standard postgresql
+based storage, plus 2 databases for the blocking and masking proxy. The
+configuration for this later comes in 2 parts, because we want the connection
+used for the masking proxy to be read-only, but we may also need to be able to
+perform admin tasks from this configuration file.
+
+Initializing the databases:
+
+.. code-block:: bash
+
+   $ swh db init-admin storage
+   storage:postgresql Created database postgresql:///?service=storage
+   $ swh db init-admin storage:blocking
+   storage:postgresql Created database postgresql:///?service=blocking-proxy
+   $ swh db init-admin storage_masking_admin
+   storage:postgresql Created database postgresql:///?service=swh-masking-proxy
+
+In the fist command, we do not specify which backend we want to initialize the
+database for, so it will (recursively) pick the last one in the ``storage``
+configuration structure.
+
+We initialize the ``blocking`` database using the ``storage::blocking`` syntax.
+The first part is both the name of the configuration section and the swh
+package concerned. The second part is the backend ``cls`` registered for this
+package. The ``swh db`` command will look for the configuration section in the
+``storage`` structure which ``cls`` matches the given one.
+
+Note: the backend ``cls`` entries are registered in the
+``swh.<package>.classes`` entrypoint. Each ``swh`` package implementing
+database backends will register them. See below for more details.
+
+The third command is using an "aliased" configuration entry. In this form, the
+configuration section is only meant to be used by `swh db` command to perform
+administrative tasks. The name of the section can be arbitrary, but it must
+explicitly have a ``pkg`` entry in addition to the ``cls`` and ``db`` ones.
+This ``pkg`` is the name of the ``swh`` package to be used to look for the
+``cls`` backend.
 
 
 Implementation of a swh.core.db datastore
