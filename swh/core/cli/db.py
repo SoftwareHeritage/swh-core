@@ -95,7 +95,7 @@ def db_create(ctx, module, dbname, create_all, template):
         is_path=False,
     )
 
-    for package, cls, fullmodule, backend_class, dbname, cfg in args:
+    for cfgname, package, cls, fullmodule, backend_class, dbname, cfg in args:
         try:
             create_database_for_package(fullmodule, dbname, template)
             click.echo(f"{package}:{cls} Created database {dbname}")
@@ -228,8 +228,7 @@ def db_init_admin(
         dbname=dbname,
         is_path=module_is_path,
     )
-
-    for package, cls, fullmodule, _, dbname, cfg in args:
+    for cfgname, package, cls, fullmodule, _, dbname, cfg in args:
         dbmodule = f"{package}:{cls}"
         logger.debug(
             "db_init_admin %s:%s (actually %s) dbname=%s",
@@ -257,7 +256,7 @@ def db_list(ctx, module):
     from swh.core.config import list_db_config_entries
 
     cfg = ctx.obj["config"]
-    for swhmod, cls, path, dbcfg, db in list_db_config_entries(cfg):
+    for cfgname, swhmod, cls, path, dbcfg, db in list_db_config_entries(cfg):
         if module and module != swhmod:
             continue
         print(f"{path} {swhmod}:{cls} {db}")
@@ -348,21 +347,25 @@ def db_init(ctx, module, dbname, flavor, initialize_all, module_is_path):
         is_path=module_is_path,
     )
 
-    for package, cls, fullmodule, backend_class, dbname, cfg in args:
-        initialize_one(package, cls, fullmodule, backend_class, flavor, dbname, cfg)
+    for cfgname, package, cls, fullmodule, backend_class, dbname, cfg in args:
+        initialize_one(
+            cfgname, package, cls, fullmodule, backend_class, flavor, dbname, cfg
+        )
 
     # It seems to be required in some cases to prevent psycopg from complaining
     # that it cannot terminate pool worker in a timely manner...
     gc.collect()
 
 
-def initialize_one(package, cls, module, backend_class, flavor, dbname, cfg):
+def initialize_one(cfgname, package, cls, module, backend_class, flavor, dbname, cfg):
     from swh.core.config import import_swhmodule
     from swh.core.db.db_utils import (
         get_database_info,
         populate_database_for_package,
         swh_set_db_version,
     )
+
+    logger.debug("Initializing database %s:%s (%s)", package, cls, cfgname)
 
     # identify the datastore version first, otherwise if we start populating
     # the database but the backend cannot be initialized to retrieve the
@@ -383,7 +386,7 @@ def initialize_one(package, cls, module, backend_class, flavor, dbname, cfg):
         if hasattr(datastore, "current_version"):
             code_version = datastore.current_version
             logger.debug(
-                "Initializing database version to %s from the %s datastore",
+                "Initializing database version %s from the %s datastore",
                 code_version,
                 module,
             )
@@ -536,8 +539,8 @@ def db_version(ctx, module, show_history, all_backends, module_is_path):
 
     if not module and all_backends:
         backends = (
-            (pkg, cls, path, get_swh_backend_module(pkg, cls)[1], cnxstr, cfg)
-            for (pkg, cls, path, cfg, cnxstr) in list_db_config_entries(
+            (cfgname, pkg, cls, path, get_swh_backend_module(pkg, cls)[1], cnxstr, cfg)
+            for (cfgname, pkg, cls, path, cfg, cnxstr) in list_db_config_entries(
                 ctx.obj["config"]
             )
         )
@@ -549,7 +552,7 @@ def db_version(ctx, module, show_history, all_backends, module_is_path):
             is_path=module_is_path,
         )
 
-    for package, cls, _, backend_class, cnxstr, cfg in backends:
+    for cfgname, package, cls, _, backend_class, cnxstr, cfg in backends:
         click.echo("")
         db_module, db_version, db_flavor = get_database_info(cnxstr)
         if db_module is None:
@@ -677,7 +680,7 @@ def db_upgrade(
         dbname=dbname,
         is_path=module_is_path,
     )
-    for package, cls, fullmodule, backend_class, dbname, cfg in backends:
+    for cfgname, package, cls, fullmodule, backend_class, dbname, cfg in backends:
         logger.debug("db_version dbname=%s", dbname)
         go_to_version = to_version
         db_module, db_version, db_flavor = get_database_info(dbname)
@@ -814,7 +817,7 @@ def handle_cmd_args(
     is_path: bool = False,
     do_all: bool = False,
     dbname: Optional[str] = None,
-) -> List[Tuple[str, str, str, Optional[type], str, Dict[str, Any]]]:
+) -> List[Tuple[str, str, str, str, Optional[type], str, Dict[str, Any]]]:
     """Helper function to build the list of backends to handle in a cli command
 
     For each identified backend, returns a tuple:
@@ -872,11 +875,11 @@ def handle_cmd_args(
         # config file is not used at all here
         dbcfg = {"cls": cls, "db": dbname}
         fullmodule, backend_class = get_swh_backend_module(swh_package=module, cls=cls)
-        return [(module, cls, fullmodule, backend_class, dbname, dbcfg)]
+        return [("", module, cls, fullmodule, backend_class, dbname, dbcfg)]
 
     if is_path:
         config_entries = [
-            entry for entry in list_db_config_entries(cfg) if entry[2] == module
+            entry for entry in list_db_config_entries(cfg) if entry[3] == module
         ]
     else:
         if ":" in module:
@@ -886,14 +889,15 @@ def handle_cmd_args(
         config_entries = [
             entry
             for entry in list_db_config_entries(cfg)
-            if entry[0] == module and (cls is None or entry[1] == cls)
+            if entry[0] == module and (cls is None or entry[2] == cls)
         ]
 
     if not do_all:
         config_entries = config_entries[-1:]
 
     backends = []
-    for cfgmod, cls, path, dbcfg, cnxstr in config_entries:
-        fullmodule, backend_class = get_swh_backend_module(swh_package=cfgmod, cls=cls)
-        backends.append((cfgmod, cls, fullmodule, backend_class, cnxstr, dbcfg))
+    for cfgmod, pkg, cls, path, dbcfg, cnxstr in config_entries:
+        pkg = dbcfg.get("pkg", cfgmod)
+        fullmodule, backend_class = get_swh_backend_module(swh_package=pkg, cls=cls)
+        backends.append((cfgmod, pkg, cls, fullmodule, backend_class, cnxstr, dbcfg))
     return backends

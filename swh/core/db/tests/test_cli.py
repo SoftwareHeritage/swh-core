@@ -300,6 +300,73 @@ test:
         assert len(origins) == 1
 
 
+def test_cli_swh_db_initialization_from_config_aliases(
+    postgresql,
+    postgresql2,
+    mock_get_entry_points,
+    mocker,
+    tmp_path,
+):
+    """Test init-admin and init commands from a complex config file
+
+    It will test both the case where db cnx location in the config file are
+    given -- either by config path or via the pkg:cls syntax -- and the
+    automated mode (aka with --all).
+
+    """
+    conninfo = craft_conninfo(postgresql)
+    conninfo2 = craft_conninfo(postgresql2)
+
+    # This initializes the schema and data
+    cfgfile = tmp_path / "config.yml"
+    cfgfile.write_text(f"""
+test:
+  cls: something
+  backend:
+    cls: pipeline
+    steps:
+      - cls: postgresql
+        db: {conninfo}
+      - cls: stuff
+        backend:
+          cls: cli2
+          db: {conninfo2}
+
+test_admin:
+    pkg: test
+    cls: postgresql
+    db: {conninfo}
+
+test_cli2_admin:
+    pkg: test
+    cls: cli2
+    db: {conninfo2}
+    """)
+    cli_runner = CliRunner(env={"SWH_CONFIG_FILENAME": str(cfgfile)})
+
+    # the 'init(-admin) pkg:cls' scenarios
+    args = [["test_admin"], ["test_cli2_admin"]]
+
+    for arg in args:
+        result = cli_runner.invoke(swhdb, ["init-admin"] + arg)
+        assert_result(result)
+        result = cli_runner.invoke(swhdb, ["init"] + arg)
+        assert_result(result)
+
+    # the origin value in the scripts uses a hash function (which implementation wise
+    # uses a function from the pgcrypt extension, installed during db creation step)
+    with BaseDb.connect(conninfo).cursor() as cur:
+        cur.execute("select * from origin")
+        origins = cur.fetchall()
+        assert len(origins) == 1
+
+    # same with the origin2 table
+    with BaseDb.connect(conninfo2).cursor() as cur:
+        cur.execute("select * from origin2")
+        origins = cur.fetchall()
+        assert len(origins) == 1
+
+
 # tests for version management
 
 

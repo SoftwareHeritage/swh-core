@@ -374,13 +374,18 @@ def list_swh_backends(package: str) -> List[str]:
 
 def list_db_config_entries(
     cfg,
-) -> Generator[Tuple[str, str, str, dict, str], None, None]:
+) -> Generator[Tuple[str, str, str, str, dict, str], None, None]:
     """List all the db config entries in the given config structure
 
-    Generates quadruplets (module, path, cfg, cnxstr) where:
+    Generates tuples (configname, package, cls, path, cfg, cnxstr) where:
 
-    - the swh module name (aka top level config entries, eg. 'storage',
-      'scheduler', etc.)
+    - the config entry name
+
+    - the swh package name (aka top level config entries, eg. 'storage',
+      'scheduler', etc. or the 'pkg' entry if present in the config)
+
+    - the swh package backend class (as registered in the swh.<pkg>.classes
+      entrypoint)
 
     - path: the path within the config structure of the (sub)config entry in
       which the db connection has been found,
@@ -395,8 +400,9 @@ def list_db_config_entries(
     def look(cfg, cls, path):
         if "cls" in cfg:
             cls = cfg["cls"]
+        pkg = cfg.get("pkg", path.split(".")[0])
         if "db" in cfg:
-            yield cls, path, cfg, cfg["db"]
+            yield pkg, cls, path, cfg, cfg["db"]
         if "cls" in cfg:
             for key, value in cfg.items():
                 if isinstance(value, list):
@@ -405,7 +411,7 @@ def list_db_config_entries(
                 elif isinstance(value, dict):
                     yield from look(value, cls=cls, path=f"{path}.{key}")
 
-    for rootmodule, subcfg in cfg.items():
+    for cfgname, subcfg in cfg.items():
         if isinstance(subcfg, dict):
-            for cls, path, cfg_entry, cnxstr in look(subcfg, None, rootmodule):
-                yield rootmodule, cls, path, cfg_entry, cnxstr
+            for pkg, cls, path, cfg_entry, cnxstr in look(subcfg, None, cfgname):
+                yield cfgname, pkg, cls, path, cfg_entry, cnxstr
