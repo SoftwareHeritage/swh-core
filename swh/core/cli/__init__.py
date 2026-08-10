@@ -132,7 +132,8 @@ def setup_config(ctx, config_file, options=None):
     ctx.ensure_object(dict)
     if config_file and ctx.info_name != "swh":
         logger.warn(
-            f"Using --config-file on the {ctx.info_name} command group is deprecated"
+            f"Using 'swh {ctx.info_name} --config-file {config_file}' is deprecated, "
+            f"use 'swh --config-file {config_file} {ctx.info_name}' instead"
         )
     if "config" not in ctx.obj:
         if config_file is None:
