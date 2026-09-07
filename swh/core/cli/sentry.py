@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2025  The Software Heritage developers
+# Copyright (C) 2025-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -82,7 +82,7 @@ def _process_sentry_events_pages(
         if not events:
             break
         events_page_process_callback(events)
-        sentry_issue_events_url = response.links.get("next", {}).get("url")
+        sentry_issue_events_url = response.links.get("next", {}).get("url", "")
 
 
 @sentry.command(name="extract-origin-urls", context_settings=CONTEXT_SETTINGS)
