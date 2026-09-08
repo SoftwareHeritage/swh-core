@@ -713,7 +713,8 @@ def db_upgrade(
 
 
 def get_dburl_from_config(cfg):
-    if cfg["cls"] == "pipeline":
+    cls = cfg.get("cls")
+    if cls is not None and cls == "pipeline":
         # We know the database itself will always
         # come last in a pipeline configuration.
         cfg = cfg["steps"][-1]
