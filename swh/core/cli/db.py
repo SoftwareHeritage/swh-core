@@ -454,6 +454,7 @@ def initialize_one(cfgname, package, cls, module, backend_class, flavor, dbname,
 
 @db.command(name="shell", context_settings=CONTEXT_SETTINGS)
 @click.argument("module", required=True)
+@click.argument("psqlargs", nargs=-1)
 @click.option(
     "--dbname",
     "--db-name",
@@ -463,10 +464,15 @@ def initialize_one(cfgname, package, cls, module, backend_class, flavor, dbname,
     show_default=False,
 )
 @click.pass_context
-def db_shell(ctx, module, dbname):
+def db_shell(ctx, module, psqlargs, dbname):
     """A subcommand to ease starting a psql shell using swh module configuration file.
     This may be useful for extra troubleshooting session when the other 'swh db' clis
     are not enough.
+
+    Any addition argument (PSQLARGS) will be passed to the psql command. To
+    pass options to psql, put them after a --, e.g.
+
+      swh db shell vulns -- -c 'select * from dbversion'
 
     """
 
@@ -489,7 +495,7 @@ def db_shell(ctx, module, dbname):
     )
     logger.info("Opening database shell for %r", dbname_censored)
 
-    execlp("psql", dbname)
+    execlp("psql", dbname, *psqlargs)
 
 
 @db.command(name="version", context_settings=CONTEXT_SETTINGS)
