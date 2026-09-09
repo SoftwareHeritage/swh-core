@@ -470,7 +470,7 @@ def db_shell(ctx, module, dbname):
 
     """
 
-    from subprocess import run
+    from os import execlp
 
     if dbname is None:
         # use the db cnx from the config file; the expected config entry is either the given
@@ -489,7 +489,7 @@ def db_shell(ctx, module, dbname):
     )
     logger.info("Opening database shell for %r", dbname_censored)
 
-    run(["psql", dbname])
+    execlp("psql", dbname)
 
 
 @db.command(name="version", context_settings=CONTEXT_SETTINGS)
