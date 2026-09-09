@@ -469,7 +469,7 @@ def db_shell(ctx, module, psqlargs, dbname):
     This may be useful for extra troubleshooting session when the other 'swh db' clis
     are not enough.
 
-    Any addition argument (PSQLARGS) will be passed to the psql command. To
+    Any additional argument (PSQLARGS) will be passed to the psql command. To
     pass options to psql, put them after a --, e.g.
 
       swh db shell vulns -- -c 'select * from dbversion'
