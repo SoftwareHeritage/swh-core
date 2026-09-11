@@ -1,11 +1,13 @@
-# Copyright (C) 2015-2023  The Software Heritage developers
+# Copyright (C) 2015-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from io import StringIO
 import os
 from pathlib import Path
 import shutil
+import textwrap
 
 import pytest
 import yaml
@@ -364,3 +366,53 @@ def test_load_from_envvar_with_default_config(swh_config, monkeypatch):
     )
 
     assert actual_config == expected_config
+
+
+def test_list_config_entries():
+    storage_config_yaml = textwrap.dedent("""
+    storage:
+      cls: pipeline
+      steps:
+        - cls: record_references
+        - cls: postgresql
+          db: postgresql:///?service=swh-storage
+          objstorage:
+            cls: remote
+            url: http://nginx/rpc/objstorage/
+          journal_writer:
+            cls: kafka
+            brokers:
+              - kafka
+            prefix: swh.journal.objects
+            client_id: swh.storage.master
+            anonymize: true
+    """)
+    storage_config = yaml.safe_load(StringIO(storage_config_yaml))
+
+    assert list(config.list_db_config_entries(storage_config)) == [
+        (
+            # cfgname
+            "storage",
+            # pkg
+            "storage",
+            # cls
+            "postgresql",
+            # path
+            "storage.steps.1",
+            # cfg_entry
+            {
+                "cls": "postgresql",
+                "db": "postgresql:///?service=swh-storage",
+                "objstorage": {"cls": "remote", "url": "http://nginx/rpc/objstorage/"},
+                "journal_writer": {
+                    "cls": "kafka",
+                    "brokers": ["kafka"],
+                    "prefix": "swh.journal.objects",
+                    "client_id": "swh.storage.master",
+                    "anonymize": True,
+                },
+            },
+            # cnxstr
+            "postgresql:///?service=swh-storage",
+        )
+    ]

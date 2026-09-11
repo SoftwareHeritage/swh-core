@@ -406,7 +406,11 @@ def list_db_config_entries(
         if "cls" in cfg:
             for key, value in cfg.items():
                 if isinstance(value, list):
-                    for i, subcfg in enumerate(value):
+                    for i, subcfg in (
+                        (i, val)
+                        for (i, val) in enumerate(value)
+                        if isinstance(val, dict)
+                    ):
                         yield from look(subcfg, cls=cls, path=f"{path}.{key}.{i}")
                 elif isinstance(value, dict):
                     yield from look(value, cls=cls, path=f"{path}.{key}")

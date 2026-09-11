@@ -327,6 +327,12 @@ test:
     steps:
       - cls: postgresql
         db: {conninfo}
+        journal_writer:
+          cls: kafka
+          brokers:
+            - kafka
+          prefix: swh.journal.objects
+          client_id: swh.storage.master
       - cls: stuff
         backend:
           cls: cli2
