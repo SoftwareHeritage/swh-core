@@ -3,6 +3,9 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import io
+import os
+
 from click.testing import CliRunner
 import pytest
 from pytest_postgresql import factories
@@ -813,3 +816,47 @@ test:
     assert_result(result)
     assert swh_db_version(conninfo) == 6
     assert swh_db_version(conninfo2) == 6
+
+
+def test_cli_swh_db_shell(cli_db_runner, mock_import_module):
+
+    result = cli_db_runner.invoke(swhdb, ["init-admin", "test"])
+    assert_result(result)
+    result = cli_db_runner.invoke(swhdb, ["init", "test"])
+    assert_result(result)
+
+    # swh db shell replaces the current process, so we can't use cli_db_runner.invoke
+    # (pytest would get replaced), we have to fork manually. Use a pipe to capture the
+    # stdout of the new process
+    r_fileno, w_fileno = os.pipe()
+
+    child_pid = os.fork()
+    if child_pid == 0:
+        # replace stdout with the piped FD
+        os.close(r_fileno)
+        os.dup2(w_fileno, 1)
+
+        # populate SWH_CONFIG_FILENAME
+        os.environ = cli_db_runner.env
+        # and run swh db shell
+        swhdb.main(
+            [
+                "shell",
+                "test",
+                "--",
+                "--no-psqlrc",
+                "--csv",
+                "-c",
+                "select * from dbmodule",
+            ]
+        )
+
+    os.close(w_fileno)
+    with io.open(r_fileno, "r") as r:
+        output = r.read()
+
+    pid, status = os.waitpid(child_pid, 0)
+    assert pid == child_pid
+    assert os.waitstatus_to_exitcode(status) == 0
+
+    assert output == "dbmodule,single_row\ntest:postgresql,x\n"

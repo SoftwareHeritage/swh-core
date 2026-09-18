@@ -495,7 +495,7 @@ def db_shell(ctx, module, psqlargs, dbname):
     )
     logger.info("Opening database shell for %r", dbname_censored)
 
-    execlp("psql", dbname, *psqlargs)
+    execlp("psql", "psql", dbname, *psqlargs)
 
 
 @db.command(name="version", context_settings=CONTEXT_SETTINGS)
