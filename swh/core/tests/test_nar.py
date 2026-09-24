@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025  The Software Heritage developers
+# Copyright (C) 2023-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -172,3 +172,11 @@ def test_nar_unpack_content(tmpdir, content_with_nar_hashes):
     )
 
     assert nar_unpack_hashes == nar_hashes
+
+
+def test_nar_serialize_non_utf8_path(datadir):
+    tarball_path = Path(datadir) / "archives" / "invalid_utf_8_path.tar.gz"
+
+    assert compute_nar_hashes(tarball_path) == {
+        "sha256": "0eabcd1d70eb65bbd3e13e67efca4330eef0dd29cbdbc6b43d56632a43b08e22"
+    }

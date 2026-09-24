@@ -171,7 +171,7 @@ class Nar:
 
         # named 'int'
         if isinstance(thing, str):
-            byte_sequence = thing.encode("utf-8")
+            byte_sequence = thing.encode("utf-8", "surrogateescape")
             length = len(byte_sequence)
         elif isinstance(thing, io.BufferedReader):
             length = os.stat(thing.name).st_size
