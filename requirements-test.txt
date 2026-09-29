@@ -11,7 +11,6 @@ pytest-postgresql > 5
 pytz
 requests-mock
 swh.model
-systemd-python
 types-boto3[s3]
 types-deprecated
 types-pytz
