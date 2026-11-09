@@ -373,7 +373,7 @@ class S3Downloader:
                 not_done = futures
                 last_local_path_size = self._local_path_size()
                 progress.update(last_local_path_size)
-                while not_done:
+                while not_done and progress.total:
                     # poll future states every second in order to abort downloads
                     # on first detected error
                     done, not_done = concurrent.futures.wait(
